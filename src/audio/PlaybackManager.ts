@@ -92,20 +92,6 @@ class PlaybackManager {
     // Reset scrobble tracking
     this.scrobbled = false;
 
-    // Wait for enough data to play, with a timeout fallback
-    if (audio.readyState < 3) {
-      await Promise.race([
-        new Promise<void>((resolve) => {
-          const onCanPlay = () => {
-            audio.removeEventListener('canplay', onCanPlay);
-            resolve();
-          };
-          audio.addEventListener('canplay', onCanPlay);
-        }),
-        new Promise<void>((resolve) => setTimeout(resolve, 3000)),
-      ]);
-    }
-
     try {
       await audio.play();
     } catch (err) {

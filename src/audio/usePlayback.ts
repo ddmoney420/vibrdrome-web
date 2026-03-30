@@ -58,13 +58,21 @@ export function usePlayback() {
     manager.play(currentSong);
   }, [currentSong]);
 
+  // Track previous isPlaying to detect actual toggles
+  const prevIsPlayingRef = useRef(isPlaying);
+
   // Watch for isPlaying changes -> pause/resume
   useEffect(() => {
     if (!currentSong) return;
     if (playTriggeredRef.current) {
       playTriggeredRef.current = false;
+      prevIsPlayingRef.current = isPlaying;
       return;
     }
+    // Only act on actual isPlaying changes, not re-renders from currentSong changing
+    if (isPlaying === prevIsPlayingRef.current) return;
+    prevIsPlayingRef.current = isPlaying;
+
     if (isPlaying) {
       manager.resume();
     } else {

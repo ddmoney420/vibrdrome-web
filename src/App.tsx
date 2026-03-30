@@ -1,4 +1,5 @@
-import React, { Suspense, useEffect } from 'react';
+import React, { Suspense, useEffect, Component } from 'react';
+import type { ReactNode } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from './stores/authStore';
 import { useUIStore } from './stores/uiStore';
@@ -7,38 +8,77 @@ import LoadingSpinner from './components/common/LoadingSpinner';
 import Sidebar from './components/common/Sidebar';
 import { usePlayback } from './audio/usePlayback';
 
-// Lazy-loaded screens
-const LoginScreen = React.lazy(() => import('./screens/LoginScreen'));
-const LibraryScreen = React.lazy(() => import('./screens/LibraryScreen'));
-const ArtistsScreen = React.lazy(() => import('./screens/ArtistsScreen'));
-const ArtistDetailScreen = React.lazy(() => import('./screens/ArtistDetailScreen'));
-const AlbumsListScreen = React.lazy(() => import('./screens/AlbumsListScreen'));
-const AlbumDetailScreen = React.lazy(() => import('./screens/AlbumDetailScreen'));
-const SongsScreen = React.lazy(() => import('./screens/SongsScreen'));
-const GenresScreen = React.lazy(() => import('./screens/GenresScreen'));
-const GenerationsScreen = React.lazy(() => import('./screens/GenerationsScreen'));
-const FavoritesScreen = React.lazy(() => import('./screens/FavoritesScreen'));
-const FolderBrowserScreen = React.lazy(() => import('./screens/FolderBrowserScreen'));
-const FolderDetailScreen = React.lazy(() => import('./screens/FolderDetailScreen'));
-const PlaylistsScreen = React.lazy(() => import('./screens/PlaylistsScreen'));
-const PlaylistDetailScreen = React.lazy(() => import('./screens/PlaylistDetailScreen'));
-const PlaylistEditorScreen = React.lazy(() => import('./screens/PlaylistEditorScreen'));
-const SmartPlaylistScreen = React.lazy(() => import('./screens/SmartPlaylistScreen'));
-const RadioScreen = React.lazy(() => import('./screens/RadioScreen'));
-const StationSearchScreen = React.lazy(() => import('./screens/StationSearchScreen'));
-const AddStationScreen = React.lazy(() => import('./screens/AddStationScreen'));
-const SearchScreen = React.lazy(() => import('./screens/SearchScreen'));
-const SettingsScreen = React.lazy(() => import('./screens/SettingsScreen'));
-const ServerManagerScreen = React.lazy(() => import('./screens/ServerManagerScreen'));
-const DownloadsScreen = React.lazy(() => import('./screens/DownloadsScreen'));
-const NowPlayingScreen = React.lazy(() => import('./screens/NowPlayingScreen'));
-const QueueScreen = React.lazy(() => import('./screens/QueueScreen'));
-const LyricsScreen = React.lazy(() => import('./screens/LyricsScreen'));
-const EQScreen = React.lazy(() => import('./screens/EQScreen'));
-const VisualizerScreen = React.lazy(() => import('./screens/VisualizerScreen'));
+// Error boundary for stale chunk errors after deploys
+class ChunkErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  state = { hasError: false };
 
-// Lazy-loaded MiniPlayer (will be created later)
-const MiniPlayer = React.lazy(() => import('./components/player/MiniPlayer'));
+  static getDerivedStateFromError(error: Error) {
+    if (error.message.includes('dynamically imported module') || error.message.includes('Failed to fetch')) {
+      return { hasError: true };
+    }
+    throw error;
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex min-h-dvh flex-col items-center justify-center bg-bg-primary px-4 text-center">
+          <p className="mb-4 text-lg text-text-primary">A new version is available</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="rounded-lg bg-accent px-6 py-3 font-semibold text-white hover:bg-accent-hover"
+          >
+            Reload
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+// Lazy-loaded screens with auto-retry on chunk failure
+function lazyWithRetry(importFn: () => Promise<{ default: React.ComponentType }>) {
+  return React.lazy(() =>
+    importFn().catch(() => {
+      // Chunk failed to load — likely a new deploy. Force reload.
+      window.location.reload();
+      return new Promise(() => {}); // never resolves, page reloads
+    })
+  );
+}
+
+// Lazy-loaded screens
+const LoginScreen = lazyWithRetry(() => import('./screens/LoginScreen'));
+const LibraryScreen = lazyWithRetry(() => import('./screens/LibraryScreen'));
+const ArtistsScreen = lazyWithRetry(() => import('./screens/ArtistsScreen'));
+const ArtistDetailScreen = lazyWithRetry(() => import('./screens/ArtistDetailScreen'));
+const AlbumsListScreen = lazyWithRetry(() => import('./screens/AlbumsListScreen'));
+const AlbumDetailScreen = lazyWithRetry(() => import('./screens/AlbumDetailScreen'));
+const SongsScreen = lazyWithRetry(() => import('./screens/SongsScreen'));
+const GenresScreen = lazyWithRetry(() => import('./screens/GenresScreen'));
+const GenerationsScreen = lazyWithRetry(() => import('./screens/GenerationsScreen'));
+const FavoritesScreen = lazyWithRetry(() => import('./screens/FavoritesScreen'));
+const FolderBrowserScreen = lazyWithRetry(() => import('./screens/FolderBrowserScreen'));
+const FolderDetailScreen = lazyWithRetry(() => import('./screens/FolderDetailScreen'));
+const PlaylistsScreen = lazyWithRetry(() => import('./screens/PlaylistsScreen'));
+const PlaylistDetailScreen = lazyWithRetry(() => import('./screens/PlaylistDetailScreen'));
+const PlaylistEditorScreen = lazyWithRetry(() => import('./screens/PlaylistEditorScreen'));
+const SmartPlaylistScreen = lazyWithRetry(() => import('./screens/SmartPlaylistScreen'));
+const RadioScreen = lazyWithRetry(() => import('./screens/RadioScreen'));
+const StationSearchScreen = lazyWithRetry(() => import('./screens/StationSearchScreen'));
+const AddStationScreen = lazyWithRetry(() => import('./screens/AddStationScreen'));
+const SearchScreen = lazyWithRetry(() => import('./screens/SearchScreen'));
+const SettingsScreen = lazyWithRetry(() => import('./screens/SettingsScreen'));
+const ServerManagerScreen = lazyWithRetry(() => import('./screens/ServerManagerScreen'));
+const DownloadsScreen = lazyWithRetry(() => import('./screens/DownloadsScreen'));
+const NowPlayingScreen = lazyWithRetry(() => import('./screens/NowPlayingScreen'));
+const QueueScreen = lazyWithRetry(() => import('./screens/QueueScreen'));
+const LyricsScreen = lazyWithRetry(() => import('./screens/LyricsScreen'));
+const EQScreen = lazyWithRetry(() => import('./screens/EQScreen'));
+const VisualizerScreen = lazyWithRetry(() => import('./screens/VisualizerScreen'));
+
+const MiniPlayer = lazyWithRetry(() => import('./components/player/MiniPlayer'));
 
 const HIDE_MINIPLAYER_ROUTES = ['/now-playing', '/visualizer', '/login'];
 const HIDE_SIDEBAR_ROUTES = ['/login', '/now-playing', '/visualizer'];
@@ -77,6 +117,7 @@ export default function App() {
       <div className="flex flex-1 overflow-hidden">
         {showSidebar && <Sidebar />}
         <div className="flex-1 overflow-y-auto">
+        <ChunkErrorBoundary>
         <Suspense fallback={<LoadingSpinner />}>
           <Routes>
             <Route path="/login" element={<LoginScreen />} />
@@ -195,6 +236,7 @@ export default function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
+        </ChunkErrorBoundary>
         </div>
       </div>
 

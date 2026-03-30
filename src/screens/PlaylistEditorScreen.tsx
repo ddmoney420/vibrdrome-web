@@ -18,6 +18,8 @@ export default function PlaylistEditorScreen() {
 
   const [name, setName] = useState('');
   const [songs, setSongs] = useState<Song[]>([]);
+  const [originalSongCount, setOriginalSongCount] = useState(0);
+  const [addedSongId, setAddedSongId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Song[]>([]);
   const [searching, setSearching] = useState(false);
@@ -34,7 +36,9 @@ export default function PlaylistEditorScreen() {
         const client = getSubsonicClient();
         const playlist = await client.getPlaylist(playlistId);
         setName(playlist.name);
-        setSongs(playlist.entry ?? []);
+        const entries = playlist.entry ?? [];
+        setSongs(entries);
+        setOriginalSongCount(entries.length);
       } catch (err) {
         console.error('Failed to load playlist:', err);
       } finally {
@@ -69,6 +73,8 @@ export default function PlaylistEditorScreen() {
 
   const addSong = useCallback((song: Song) => {
     setSongs((prev) => [...prev, song]);
+    setAddedSongId(song.id);
+    setTimeout(() => setAddedSongId(null), 800);
   }, []);
 
   const removeSong = useCallback((index: number) => {
@@ -82,7 +88,18 @@ export default function PlaylistEditorScreen() {
       const client = getSubsonicClient();
       const songIds = songs.map((s) => s.id);
       if (isEditMode && playlistId) {
-        await client.updatePlaylist(playlistId, { name, songIdsToAdd: songIds });
+        // Remove all original songs by index (in reverse order doesn't matter
+        // since we pass all indices at once), then add the new set
+        const indexesToRemove = Array.from({ length: originalSongCount }, (_, i) => i);
+        await client.updatePlaylist(playlistId, {
+          name,
+          songIndexesToRemove: indexesToRemove,
+        });
+        if (songIds.length > 0) {
+          await client.updatePlaylist(playlistId, {
+            songIdsToAdd: songIds,
+          });
+        }
       } else {
         await client.createPlaylist(name, songIds);
       }
@@ -119,7 +136,7 @@ export default function PlaylistEditorScreen() {
         }
       />
 
-      <div className="flex-1 overflow-y-auto px-4">
+      <div className="flex-1 overflow-y-auto px-3 md:px-4">
         {/* Name input */}
         <div className="py-4">
           <label className="mb-1.5 block text-sm font-medium text-text-secondary">
@@ -130,7 +147,7 @@ export default function PlaylistEditorScreen() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Enter playlist name"
-            className="w-full rounded-lg border border-border bg-bg-secondary px-3 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none"
+            className="w-full rounded-lg border border-border bg-bg-secondary px-3 py-3 text-base text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none md:py-2.5 md:text-sm"
           />
         </div>
 
@@ -144,38 +161,50 @@ export default function PlaylistEditorScreen() {
             value={searchQuery}
             onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="Search for songs..."
-            className="w-full rounded-lg border border-border bg-bg-secondary px-3 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none"
+            className="w-full rounded-lg border border-border bg-bg-secondary px-3 py-3 text-base text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none md:py-2.5 md:text-sm"
           />
         </div>
 
         {/* Search results */}
         {(searchResults.length > 0 || searching) && (
-          <div className="mb-4 rounded-lg border border-border bg-bg-secondary">
+          <div className="mb-4 overflow-hidden rounded-lg border border-accent/30 bg-bg-secondary">
+            <div className="border-b border-accent/20 bg-accent/5 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-accent">
+              Search Results
+            </div>
             {searching && searchResults.length === 0 ? (
               <div className="px-3 py-4 text-center text-sm text-text-muted">Searching...</div>
             ) : (
-              searchResults.map((song) => (
-                <button
-                  key={song.id}
-                  onClick={() => addSong(song)}
-                  className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-bg-tertiary"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-text-primary">{song.title}</p>
-                    <p className="truncate text-xs text-text-secondary">{song.artist}</p>
-                  </div>
-                  <span className="shrink-0 text-xs text-text-muted">{formatDuration(song.duration)}</span>
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4 shrink-0 text-accent">
-                    <path strokeLinecap="round" d="M12 5v14M5 12h14" />
-                  </svg>
-                </button>
-              ))
+              searchResults.map((song) => {
+                const justAdded = addedSongId === song.id;
+                return (
+                  <button
+                    key={song.id}
+                    onClick={() => addSong(song)}
+                    className={`flex w-full items-center gap-3 px-3 py-3 min-h-[48px] text-left transition-colors hover:bg-bg-tertiary ${justAdded ? 'bg-accent/10' : ''}`}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-text-primary">{song.title}</p>
+                      <p className="truncate text-xs text-text-secondary">{song.artist}</p>
+                    </div>
+                    <span className="shrink-0 text-xs text-text-muted">{formatDuration(song.duration)}</span>
+                    {justAdded ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4 shrink-0 text-green-400">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4 shrink-0 text-accent">
+                        <path strokeLinecap="round" d="M12 5v14M5 12h14" />
+                      </svg>
+                    )}
+                  </button>
+                );
+              })
             )}
           </div>
         )}
 
         {/* Current playlist songs */}
-        <div className="pb-6">
+        <div className="pb-20 md:pb-6">
           <h3 className="mb-2 text-sm font-medium text-text-secondary">
             Playlist Songs ({songs.length})
           </h3>
@@ -188,7 +217,7 @@ export default function PlaylistEditorScreen() {
               {songs.map((song, index) => (
                 <div
                   key={`${song.id}-${index}`}
-                  className="group flex items-center gap-3 px-3 py-2.5"
+                  className="group flex items-center gap-3 px-3 py-3 min-h-[48px]"
                 >
                   <span className="w-6 shrink-0 text-right text-xs text-text-muted">
                     {index + 1}

@@ -91,6 +91,11 @@ export default function LoginScreen() {
             required
             className="rounded-lg border border-border bg-bg-secondary px-4 py-3 text-text-primary placeholder-text-muted outline-none transition-colors focus:border-accent"
           />
+          {url.startsWith('http://') && (
+            <p className="text-xs text-yellow-400">
+              Warning: This connection is not secure. Use HTTPS to protect your credentials.
+            </p>
+          )}
           <input
             type="text"
             placeholder="Username"

@@ -37,10 +37,10 @@ export default function ArtistsScreen() {
     <div className="flex h-full flex-col bg-bg-primary">
       <Header title="Artists" showBack />
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto pb-20">
         {indexes.map((index) => (
           <div key={index.name}>
-            <div className="sticky top-0 z-10 bg-bg-primary px-4 py-1.5">
+            <div className="sticky top-0 z-10 bg-bg-primary/95 backdrop-blur-sm px-4 py-1.5">
               <span className="text-xs font-semibold uppercase text-accent">
                 {index.name}
               </span>
@@ -50,7 +50,7 @@ export default function ArtistsScreen() {
               <button
                 key={artist.id}
                 onClick={() => navigate(`/artist/${artist.id}`)}
-                className="flex w-full items-center gap-3 px-4 py-2 text-left transition-colors hover:bg-bg-tertiary"
+                className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-bg-tertiary min-h-[48px]"
               >
                 <CoverArt
                   coverArt={artist.coverArt}

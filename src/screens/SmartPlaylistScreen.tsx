@@ -110,9 +110,15 @@ export default function SmartPlaylistScreen() {
         const client = getSubsonicClient();
         const albums = await client.getAlbumList2('newest', 10);
         const allSongs: Song[] = [];
+        // getAlbumList2 returns stubs without songs; fetch each album's details
         for (const album of albums) {
-          if (album.song) {
-            allSongs.push(...album.song);
+          try {
+            const full = await client.getAlbum(album.id);
+            if (full.song) {
+              allSongs.push(...full.song);
+            }
+          } catch {
+            // skip albums that fail to load
           }
         }
         return allSongs;
@@ -145,7 +151,7 @@ export default function SmartPlaylistScreen() {
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 overflow-y-auto p-4 pb-20">
         <div className="grid grid-cols-2 gap-3">
           {cards.map((card) => (
             <button

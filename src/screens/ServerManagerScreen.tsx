@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
+import { getSubsonicClient } from '../api/SubsonicClient';
 import { Header } from '../components/common';
 
 export default function ServerManagerScreen() {
@@ -9,7 +10,12 @@ export default function ServerManagerScreen() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const handleSwitch = (id: string) => {
-    setActiveServer(id);
+    const server = servers.find((s) => s.id === id);
+    if (server) {
+      setActiveServer(id);
+      const client = getSubsonicClient();
+      client.setConfig(server);
+    }
   };
 
   const handleDelete = (id: string) => {
@@ -41,12 +47,15 @@ export default function ServerManagerScreen() {
                   <div className="flex items-start justify-between">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
+                        {isActive && (
+                          <span className="flex-shrink-0 h-2.5 w-2.5 rounded-full bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.5)]" />
+                        )}
                         <p className="truncate text-sm font-medium text-text-primary">
                           {server.name}
                         </p>
                         {isActive && (
-                          <span className="flex-shrink-0 rounded-full bg-accent/20 px-2 py-0.5 text-[10px] font-semibold text-accent">
-                            Active
+                          <span className="flex-shrink-0 rounded-full bg-green-500/15 px-2 py-0.5 text-[10px] font-semibold text-green-400">
+                            Connected
                           </span>
                         )}
                       </div>

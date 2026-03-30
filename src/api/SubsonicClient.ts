@@ -22,9 +22,10 @@ const CLIENT_NAME = 'vibrdrome';
 
 function generateSalt(length = 12): string {
   const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  const randomValues = crypto.getRandomValues(new Uint32Array(length));
   let salt = '';
   for (let i = 0; i < length; i++) {
-    salt += chars.charAt(Math.floor(Math.random() * chars.length));
+    salt += chars.charAt(randomValues[i] % chars.length);
   }
   return salt;
 }

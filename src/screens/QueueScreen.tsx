@@ -28,7 +28,7 @@ export default function QueueScreen() {
         }
       />
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto pb-20">
         {queue.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="h-12 w-12 text-text-muted">
@@ -44,7 +44,7 @@ export default function QueueScreen() {
               <div
                 key={`${song.id}-${index}`}
                 onClick={() => skipToIndex(index)}
-                className={`group flex cursor-pointer items-center gap-3 px-4 py-2.5 transition-colors hover:bg-bg-tertiary ${
+                className={`group flex cursor-pointer items-center gap-3 px-4 py-3 min-h-[48px] transition-colors hover:bg-bg-tertiary ${
                   isCurrent ? 'border-l-2 border-accent bg-accent/5' : ''
                 }`}
               >

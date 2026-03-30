@@ -24,3 +24,8 @@ dist-ssr
 *.sw?
 screenshot.png
 screenshot2.png
+
+# Environment files
+.env
+.env.local
+.env.production

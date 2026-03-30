@@ -1,13 +1,15 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
 import { getPlaybackManager } from './PlaybackManager';
 import { usePlayerStore } from '../stores/playerStore';
 import { useEQStore } from '../stores/eqStore';
 
+// The PlaybackManager is a singleton — grab it once at module level
+const manager = getPlaybackManager();
+
 export function usePlayback() {
-  const managerRef = useRef(getPlaybackManager());
   const initializedRef = useRef(false);
   const lastSongIdRef = useRef<string | null>(null);
-  const playTriggeredRef = useRef(false); // guard against resume() right after play()
+  const playTriggeredRef = useRef(false);
 
   const currentSong = usePlayerStore((s) => s.currentSong);
   const isPlaying = usePlayerStore((s) => s.isPlaying);
@@ -16,26 +18,26 @@ export function usePlayback() {
   const eqEnabled = useEQStore((s) => s.enabled);
 
   // Initialize audio context on first user interaction
-  const initAudio = useCallback(() => {
-    if (initializedRef.current) return;
-    initializedRef.current = true;
-    managerRef.current.init();
-    document.removeEventListener('click', initAudio);
-    document.removeEventListener('keydown', initAudio);
-    document.removeEventListener('touchstart', initAudio);
-  }, []);
-
   useEffect(() => {
-    document.addEventListener('click', initAudio, { once: false });
-    document.addEventListener('keydown', initAudio, { once: false });
-    document.addEventListener('touchstart', initAudio, { once: false });
+    const handler = () => {
+      if (initializedRef.current) return;
+      initializedRef.current = true;
+      manager.init();
+      document.removeEventListener('click', handler);
+      document.removeEventListener('keydown', handler);
+      document.removeEventListener('touchstart', handler);
+    };
+
+    document.addEventListener('click', handler);
+    document.addEventListener('keydown', handler);
+    document.addEventListener('touchstart', handler);
 
     return () => {
-      document.removeEventListener('click', initAudio);
-      document.removeEventListener('keydown', initAudio);
-      document.removeEventListener('touchstart', initAudio);
+      document.removeEventListener('click', handler);
+      document.removeEventListener('keydown', handler);
+      document.removeEventListener('touchstart', handler);
     };
-  }, [initAudio]);
+  }, []);
 
   // Watch for currentSong changes -> call play()
   useEffect(() => {
@@ -49,47 +51,36 @@ export function usePlayback() {
 
     if (!initializedRef.current) {
       initializedRef.current = true;
-      managerRef.current.init();
+      manager.init();
     }
 
-    // Mark that play was just triggered so the isPlaying effect doesn't also call resume
     playTriggeredRef.current = true;
-    managerRef.current.play(currentSong);
+    manager.play(currentSong);
   }, [currentSong]);
 
-  // Watch for isPlaying changes -> pause/resume (only for user-initiated toggles)
+  // Watch for isPlaying changes -> pause/resume
   useEffect(() => {
     if (!currentSong) return;
-
-    // Skip if play() was just called — it already starts playback
     if (playTriggeredRef.current) {
       playTriggeredRef.current = false;
       return;
     }
-
     if (isPlaying) {
-      managerRef.current.resume();
+      manager.resume();
     } else {
-      managerRef.current.pause();
+      manager.pause();
     }
-  }, [isPlaying]);
+  }, [isPlaying, currentSong]);
 
   // Watch for playback speed changes
   useEffect(() => {
-    managerRef.current.setPlaybackRate(playbackSpeed);
+    manager.setPlaybackRate(playbackSpeed);
   }, [playbackSpeed]);
 
   // Watch for EQ changes
   useEffect(() => {
-    managerRef.current.updateEQ(eqBands, eqEnabled);
+    manager.updateEQ(eqBands, eqEnabled);
   }, [eqBands, eqEnabled]);
 
-  // Reset refs on unmount
-  useEffect(() => {
-    return () => {
-      lastSongIdRef.current = null;
-    };
-  }, []);
-
-  return managerRef.current;
+  return manager;
 }

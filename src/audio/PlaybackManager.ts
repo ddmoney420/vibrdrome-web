@@ -44,8 +44,8 @@ class PlaybackManager {
     this.playerB.addEventListener('ended', () => this.handleTrackEnded('B'));
 
     // Handle errors
-    this.playerA.addEventListener('error', (e) => this.handleError('A', e));
-    this.playerB.addEventListener('error', (e) => this.handleError('B', e));
+    this.playerA.addEventListener('error', () => this.handleError('A'));
+    this.playerB.addEventListener('error', () => this.handleError('B'));
 
     // Handle duration metadata
     this.playerA.addEventListener('loadedmetadata', () => this.handleMetadata('A'));
@@ -585,7 +585,7 @@ class PlaybackManager {
     }
   }
 
-  private handleError(player: 'A' | 'B', _event: Event): void {
+  private handleError(player: 'A' | 'B'): void {
     if (player !== this.activePlayer) return;
     console.error(`[PlaybackManager] Audio error on player ${player}`);
     // Try to skip to next track

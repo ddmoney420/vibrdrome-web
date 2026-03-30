@@ -71,40 +71,37 @@ export default function CoverArt({ coverArt, size, className = '' }: CoverArtPro
   const sizeStyle = size ? { width: size, height: size, minWidth: size } : undefined;
   const sizeClass = size ? '' : 'w-full aspect-square';
 
-  if (!coverArt) {
-    return (
-      <div
-        className={`flex items-center justify-center rounded-lg bg-bg-tertiary ${sizeClass} ${className}`}
-        style={sizeStyle}
-      >
-        <PlaceholderIcon />
-      </div>
-    );
+  const fetchSize = size ? size * 2 : 320;
+
+  // Stable URL — same coverArt+size always returns the same URL string.
+  // When coverArt is undefined we pass a dummy value; the URL won't be used.
+  const url = useMemo(
+    () => (coverArt ? stableCoverArtUrl(coverArt, fetchSize) : ''),
+    [coverArt, fetchSize],
+  );
+
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Track which URL the active/loaded state belongs to. When url changes,
+  // we reset by detecting the mismatch during render (no effect needed).
+  const [imgState, setImgState] = useState(() => {
+    const cached = url ? loadedUrls.has(url) : false;
+    return { url, active: cached, loaded: cached };
+  });
+
+  // If the url changed since last render, reset state synchronously (derived state pattern)
+  if (imgState.url !== url) {
+    const cached = url ? loadedUrls.has(url) : false;
+    setImgState({ url, active: cached, loaded: cached });
   }
 
-  const fetchSize = size ? size * 2 : 320;
-  // Stable URL — same coverArt+size always returns the same URL string
-  const url = useMemo(() => stableCoverArtUrl(coverArt, fetchSize), [coverArt, fetchSize]);
-
-  const cached = loadedUrls.has(url);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [active, setActive] = useState(cached);  // whether to render <img>
-  const [loaded, setLoaded] = useState(cached);   // whether img has loaded
-
-  // When coverArt changes, reset
-  const prevUrl = useRef(url);
-  useEffect(() => {
-    if (prevUrl.current !== url) {
-      prevUrl.current = url;
-      const nowCached = loadedUrls.has(url);
-      setActive(nowCached);
-      setLoaded(nowCached);
-    }
-  }, [url]);
+  const { active, loaded } = imgState;
+  const setActive = (v: boolean) => setImgState((s) => ({ ...s, active: v }));
+  const setLoaded = (v: boolean) => setImgState((s) => ({ ...s, loaded: v }));
 
   // Observe for lazy loading
   useEffect(() => {
-    if (active) return;
+    if (active || !coverArt) return;
 
     const el = containerRef.current;
     if (!el) return;
@@ -117,12 +114,24 @@ export default function CoverArt({ coverArt, size, className = '' }: CoverArtPro
       callbacks.delete(el);
       obs.unobserve(el);
     };
-  }, [url, active]);
+  }, [url, active, coverArt]);
 
   const handleLoad = () => {
     loadedUrls.add(url);
     setLoaded(true);
   };
+
+  // No cover art — show placeholder without image machinery
+  if (!coverArt) {
+    return (
+      <div
+        className={`flex items-center justify-center rounded-lg bg-bg-tertiary ${sizeClass} ${className}`}
+        style={sizeStyle}
+      >
+        <PlaceholderIcon />
+      </div>
+    );
+  }
 
   return (
     <div

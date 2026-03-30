@@ -9,14 +9,14 @@ interface Decade {
 }
 
 const DECADES: Decade[] = [
-  { label: '1950s', fromYear: 1950, toYear: 1959, gradient: 'from-amber-800 to-amber-600' },
-  { label: '1960s', fromYear: 1960, toYear: 1969, gradient: 'from-orange-700 to-yellow-500' },
-  { label: '1970s', fromYear: 1970, toYear: 1979, gradient: 'from-yellow-700 to-lime-500' },
-  { label: '1980s', fromYear: 1980, toYear: 1989, gradient: 'from-pink-600 to-purple-500' },
-  { label: '1990s', fromYear: 1990, toYear: 1999, gradient: 'from-teal-600 to-cyan-400' },
-  { label: '2000s', fromYear: 2000, toYear: 2009, gradient: 'from-blue-600 to-indigo-400' },
-  { label: '2010s', fromYear: 2010, toYear: 2019, gradient: 'from-violet-600 to-fuchsia-400' },
-  { label: '2020s', fromYear: 2020, toYear: 2029, gradient: 'from-rose-600 to-red-400' },
+  { label: '1950s', fromYear: 1950, toYear: 1959, gradient: 'from-amber-900 via-amber-700 to-yellow-600' },
+  { label: '1960s', fromYear: 1960, toYear: 1969, gradient: 'from-orange-800 via-orange-600 to-yellow-400' },
+  { label: '1970s', fromYear: 1970, toYear: 1979, gradient: 'from-emerald-800 via-lime-600 to-yellow-500' },
+  { label: '1980s', fromYear: 1980, toYear: 1989, gradient: 'from-fuchsia-700 via-pink-500 to-purple-400' },
+  { label: '1990s', fromYear: 1990, toYear: 1999, gradient: 'from-teal-700 via-cyan-500 to-sky-400' },
+  { label: '2000s', fromYear: 2000, toYear: 2009, gradient: 'from-blue-800 via-blue-500 to-indigo-400' },
+  { label: '2010s', fromYear: 2010, toYear: 2019, gradient: 'from-violet-700 via-purple-500 to-fuchsia-400' },
+  { label: '2020s', fromYear: 2020, toYear: 2029, gradient: 'from-rose-700 via-red-500 to-orange-400' },
 ];
 
 export default function GenerationsScreen() {
@@ -36,15 +36,21 @@ export default function GenerationsScreen() {
     <div className="flex h-full flex-col bg-bg-primary">
       <Header title="Generations" showBack />
 
-      <div className="flex-1 overflow-y-auto px-4 pb-4">
+      <div className="flex-1 overflow-y-auto px-4 pb-20 pt-2">
         <div className="grid grid-cols-2 gap-3">
           {DECADES.map((decade) => (
             <button
               key={decade.label}
               onClick={() => handleDecadeClick(decade)}
-              className={`flex h-28 items-center justify-center rounded-xl bg-gradient-to-br ${decade.gradient} text-2xl font-bold text-white shadow-md transition-transform hover:scale-[1.03] active:scale-[0.98]`}
+              className={`relative flex h-36 flex-col items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br ${decade.gradient} shadow-lg transition-transform hover:scale-[1.03] active:scale-[0.97]`}
             >
-              {decade.label}
+              <div className="absolute inset-0 bg-black/10" />
+              <span className="relative text-3xl font-extrabold tracking-tight text-white drop-shadow-md">
+                {decade.label}
+              </span>
+              <span className="relative mt-1 text-[11px] font-medium text-white/70">
+                {decade.fromYear} &ndash; {decade.toYear}
+              </span>
             </button>
           ))}
         </div>

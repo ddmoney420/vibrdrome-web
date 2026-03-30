@@ -119,29 +119,29 @@ export default function NowPlayingScreen() {
           </svg>
         </button>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1.5 md:gap-3">
           {/* Visualizer */}
-          <button onClick={() => navigate('/visualizer')} className="flex h-8 w-8 items-center justify-center rounded-full text-text-secondary hover:bg-bg-tertiary" aria-label="Visualizer">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5">
+          <button onClick={() => navigate('/visualizer')} className="flex h-7 w-7 md:h-8 md:w-8 items-center justify-center rounded-full text-text-secondary hover:bg-bg-tertiary" aria-label="Visualizer">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4 md:h-5 md:w-5">
               <path strokeLinecap="round" d="M3 12h2M7 8v8M11 5v14M15 9v6M19 7v10M21 12h2" />
             </svg>
           </button>
           {/* Lyrics */}
-          <button onClick={() => navigate('/lyrics')} className="flex h-8 w-8 items-center justify-center rounded-full text-text-secondary hover:bg-bg-tertiary" aria-label="Lyrics">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5">
+          <button onClick={() => navigate('/lyrics')} className="flex h-7 w-7 md:h-8 md:w-8 items-center justify-center rounded-full text-text-secondary hover:bg-bg-tertiary" aria-label="Lyrics">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4 md:h-5 md:w-5">
               <path strokeLinecap="round" d="M4 6h16M4 10h12M4 14h14M4 18h10" />
             </svg>
           </button>
           {/* EQ */}
-          <button onClick={() => navigate('/eq')} className="flex h-8 w-8 items-center justify-center rounded-full text-text-secondary hover:bg-bg-tertiary" aria-label="Equalizer">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5">
+          <button onClick={() => navigate('/eq')} className="flex h-7 w-7 md:h-8 md:w-8 items-center justify-center rounded-full text-text-secondary hover:bg-bg-tertiary" aria-label="Equalizer">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4 md:h-5 md:w-5">
               <path strokeLinecap="round" d="M4 21V14M4 10V3M12 21V12M12 8V3M20 21V16M20 12V3" />
               <path strokeLinecap="round" d="M1 14h6M9 8h6M17 16h6" />
             </svg>
           </button>
           {/* Queue */}
-          <button onClick={() => navigate('/queue')} className="flex h-8 w-8 items-center justify-center rounded-full text-text-secondary hover:bg-bg-tertiary" aria-label="Queue">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5">
+          <button onClick={() => navigate('/queue')} className="flex h-7 w-7 md:h-8 md:w-8 items-center justify-center rounded-full text-text-secondary hover:bg-bg-tertiary" aria-label="Queue">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4 md:h-5 md:w-5">
               <path strokeLinecap="round" d="M4 6h16M4 10h16M4 14h16M4 18h12" />
             </svg>
           </button>
@@ -154,7 +154,7 @@ export default function NowPlayingScreen() {
         <div className="flex flex-1 items-center justify-center py-4">
           <CoverArt
             coverArt={currentSong?.coverArt}
-            className="shadow-2xl !aspect-square !h-full max-h-[min(70vh,70vw)] !w-auto rounded-xl"
+            className="shadow-2xl !aspect-square !h-full max-h-[min(60vh,90vw)] md:max-h-[min(70vh,70vw)] !w-auto rounded-xl"
           />
         </div>
 

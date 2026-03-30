@@ -15,20 +15,21 @@ interface CachedAlbums {
 
 const albumCache: Record<string, CachedAlbums> = {};
 
+function isCacheValid(type: string): boolean {
+  const cached = albumCache[type];
+  return !!cached && Date.now() - cached.fetchedAt < CACHE_DURATION;
+}
+
 function useCachedAlbums(type: 'newest' | 'frequent' | 'random', size = 10) {
-  const [albums, setAlbums] = useState<Album[]>(albumCache[type]?.data ?? []);
-  const [loading, setLoading] = useState(!albumCache[type]);
+  const [albums, setAlbums] = useState<Album[]>(() => albumCache[type]?.data ?? []);
+  const [loading, setLoading] = useState(() => !isCacheValid(type));
 
   useEffect(() => {
-    const cached = albumCache[type];
-    if (cached && Date.now() - cached.fetchedAt < CACHE_DURATION) {
-      setAlbums(cached.data);
-      setLoading(false);
+    if (isCacheValid(type)) {
       return;
     }
 
     let cancelled = false;
-    setLoading(true);
 
     getSubsonicClient()
       .getAlbumList2(type, size)
@@ -200,16 +201,16 @@ export default function LibraryScreen() {
   );
 
   return (
-    <div className="pb-4">
+    <div className="pb-20 md:pb-4">
       <Header title="Library" rightActions={rightActions} />
 
       {/* Quick access pills */}
-      <div className="grid grid-cols-2 gap-2 px-4 pb-6">
+      <div className="grid grid-cols-2 gap-1.5 px-3 pb-4 md:gap-2 md:px-4 md:pb-6">
         {pills.map((pill) => (
           <button
             key={pill.label}
             onClick={pill.action}
-            className="flex items-center gap-2.5 rounded-full bg-bg-secondary px-4 py-2.5 text-sm font-medium text-text-primary transition-colors hover:bg-bg-tertiary"
+            className="flex items-center gap-2 rounded-full bg-bg-secondary px-3 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-bg-tertiary md:gap-2.5 md:px-4 md:py-2.5"
           >
             <span className="text-text-secondary">{pill.icon}</span>
             <span className="truncate">{pill.label}</span>
@@ -270,9 +271,9 @@ function AlbumCarousel({
       ) : albums.length === 0 ? (
         <p className="px-4 text-sm text-text-muted">No albums found</p>
       ) : (
-        <div className="flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-hide">
+        <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory px-3 pb-2 scrollbar-hide md:px-4">
           {albums.map((album) => (
-            <div key={album.id} className="shrink-0">
+            <div key={album.id} className="snap-start shrink-0">
               <AlbumCard album={album} size="small" />
             </div>
           ))}

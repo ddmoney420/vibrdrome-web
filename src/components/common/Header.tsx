@@ -10,7 +10,7 @@ export default function Header({ title, showBack = false, rightActions }: Header
   const navigate = useNavigate();
 
   return (
-    <header className="flex items-center gap-3 px-4 py-3">
+    <header className="flex items-center gap-2 px-3 py-3 md:gap-3 md:px-4">
       {showBack && (
         <button
           onClick={() => navigate(-1)}
@@ -30,12 +30,12 @@ export default function Header({ title, showBack = false, rightActions }: Header
         </button>
       )}
 
-      <h1 className="min-w-0 flex-1 truncate text-xl font-bold text-text-primary">
+      <h1 className="min-w-0 flex-1 truncate text-lg font-bold text-text-primary md:text-xl">
         {title}
       </h1>
 
       {rightActions && (
-        <div className="flex items-center gap-2">{rightActions}</div>
+        <div className="flex shrink-0 items-center gap-1.5 md:gap-2">{rightActions}</div>
       )}
     </header>
   );

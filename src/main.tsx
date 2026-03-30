@@ -24,9 +24,11 @@ class ErrorBoundary extends React.Component<
         <div style={{ padding: 40, color: '#f87171', fontFamily: 'monospace' }}>
           <h1>App Crash</h1>
           <pre style={{ whiteSpace: 'pre-wrap' }}>{this.state.error.message}</pre>
-          <pre style={{ whiteSpace: 'pre-wrap', color: '#9ca3af', fontSize: 12 }}>
-            {this.state.error.stack}
-          </pre>
+          {import.meta.env.DEV && (
+            <pre style={{ whiteSpace: 'pre-wrap', color: '#9ca3af', fontSize: 12 }}>
+              {this.state.error.stack}
+            </pre>
+          )}
         </div>
       );
     }

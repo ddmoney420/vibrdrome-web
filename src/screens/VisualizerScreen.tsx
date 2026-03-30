@@ -371,6 +371,7 @@ export default function VisualizerScreen() {
       butterchurnRef.current = null;
       setMilkdropReady(false);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode]);
 
   // Update milkdrop preset when index changes

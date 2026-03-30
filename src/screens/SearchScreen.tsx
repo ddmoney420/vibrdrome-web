@@ -15,11 +15,25 @@ export default function SearchScreen() {
 
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [artists, setArtists] = useState<Artist[]>([]);
-  const [albums, setAlbums] = useState<Album[]>([]);
-  const [songs, setSongs] = useState<Song[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [searched, setSearched] = useState(false);
+  const [results, setResults] = useState<{
+    artists: Artist[];
+    albums: Album[];
+    songs: Song[];
+    loading: boolean;
+    searched: boolean;
+    forQuery: string;
+  }>({ artists: [], albums: [], songs: [], loading: false, searched: false, forQuery: '' });
+
+  // Derive — if debounced query changed, reset or start loading
+  if (results.forQuery !== debouncedQuery) {
+    if (!debouncedQuery) {
+      setResults({ artists: [], albums: [], songs: [], loading: false, searched: false, forQuery: '' });
+    } else {
+      setResults((s) => ({ ...s, loading: true, forQuery: debouncedQuery }));
+    }
+  }
+
+  const { artists, albums, songs, loading, searched } = results;
 
   // Auto-focus on mount
   useEffect(() => {
@@ -36,36 +50,30 @@ export default function SearchScreen() {
 
   // Perform search
   useEffect(() => {
-    if (!debouncedQuery) {
-      setArtists([]);
-      setAlbums([]);
-      setSongs([]);
-      setSearched(false);
-      return;
-    }
+    if (!debouncedQuery) return;
 
     let cancelled = false;
-    setLoading(true);
 
     getSubsonicClient()
       .search3(debouncedQuery, 5, 5, 50)
       .then((result) => {
         if (cancelled) return;
-        setArtists(result.artist ?? []);
-        setAlbums(result.album ?? []);
-        setSongs(result.song ?? []);
-        setSearched(true);
+        setResults({
+          artists: result.artist ?? [],
+          albums: result.album ?? [],
+          songs: result.song ?? [],
+          loading: false,
+          searched: true,
+          forQuery: debouncedQuery,
+        });
       })
       .catch(() => {
         if (!cancelled) {
-          setArtists([]);
-          setAlbums([]);
-          setSongs([]);
-          setSearched(true);
+          setResults({
+            artists: [], albums: [], songs: [],
+            loading: false, searched: true, forQuery: debouncedQuery,
+          });
         }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
       });
 
     return () => {
@@ -83,11 +91,11 @@ export default function SearchScreen() {
   const hasResults = artists.length > 0 || albums.length > 0 || songs.length > 0;
 
   return (
-    <div className="pb-4">
+    <div className="pb-20 md:pb-4">
       <Header title="Search" showBack />
 
       {/* Search input */}
-      <div className="px-4 pb-4">
+      <div className="px-3 pb-4 md:px-4">
         <div className="relative">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -151,7 +159,7 @@ export default function SearchScreen() {
                   <button
                     key={artist.id}
                     onClick={() => navigate(`/artist/${artist.id}`)}
-                    className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-bg-tertiary"
+                    className="flex items-center gap-3 px-4 py-3 min-h-[48px] transition-colors hover:bg-bg-tertiary"
                   >
                     <CoverArt coverArt={artist.coverArt} size={40} className="rounded-full" />
                     <span className="truncate text-sm font-medium text-text-primary">

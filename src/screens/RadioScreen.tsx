@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getSubsonicClient } from '../api/SubsonicClient';
 import type { InternetRadioStation } from '../types/subsonic';
@@ -9,8 +9,10 @@ export default function RadioScreen() {
   const [stations, setStations] = useState<InternetRadioStation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [playingId, setPlayingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const fetchStations = async () => {
     setLoading(true);
@@ -45,8 +47,40 @@ export default function RadioScreen() {
   };
 
   const handlePlay = (station: InternetRadioStation) => {
-    window.open(station.streamUrl, '_blank');
+    // If already playing this station, stop it
+    if (playingId === station.id && audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = '';
+      audioRef.current = null;
+      setPlayingId(null);
+      return;
+    }
+
+    // Stop any currently playing stream
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = '';
+    }
+
+    const audio = new Audio(station.streamUrl);
+    audio.play().catch((err) => {
+      console.error('Failed to play radio stream:', err);
+      setPlayingId(null);
+    });
+    audio.addEventListener('error', () => setPlayingId(null));
+    audioRef.current = audio;
+    setPlayingId(station.id);
   };
+
+  // Cleanup audio on unmount
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = '';
+      }
+    };
+  }, []);
 
   return (
     <div className="flex h-full flex-col bg-bg-primary">
@@ -116,12 +150,23 @@ export default function RadioScreen() {
 
                 <button
                   onClick={() => handlePlay(station)}
-                  className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-accent text-white transition-colors hover:bg-accent-hover"
-                  aria-label={`Play ${station.name}`}
+                  className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full transition-colors ${
+                    playingId === station.id
+                      ? 'bg-accent text-white animate-pulse'
+                      : 'bg-accent text-white hover:bg-accent-hover'
+                  }`}
+                  aria-label={playingId === station.id ? `Stop ${station.name}` : `Play ${station.name}`}
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
-                    <path d="M8 5v14l11-7z" />
-                  </svg>
+                  {playingId === station.id ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+                      <rect x="6" y="5" width="4" height="14" rx="1" />
+                      <rect x="14" y="5" width="4" height="14" rx="1" />
+                    </svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  )}
                 </button>
 
                 {confirmDeleteId === station.id ? (

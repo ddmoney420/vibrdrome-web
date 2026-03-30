@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { getSubsonicClient } from '../api/SubsonicClient';
 import { usePlayerStore } from '../stores/playerStore';
+import { getPlaybackManager } from '../audio/PlaybackManager';
 import type { StructuredLyrics, LyricLine } from '../types/subsonic';
 import { Header, LoadingSpinner } from '../components/common';
 
 export default function LyricsScreen() {
   const currentSong = usePlayerStore((s) => s.currentSong);
   const positionMs = usePlayerStore((s) => s.positionMs);
-  const seek = usePlayerStore((s) => s.seek);
 
   const [lyrics, setLyrics] = useState<StructuredLyrics | null>(null);
   const [loading, setLoading] = useState(false);
@@ -84,7 +84,7 @@ export default function LyricsScreen() {
         </div>
       )}
 
-      <div ref={containerRef} className="flex-1 overflow-y-auto px-4 pb-8">
+      <div ref={containerRef} className="flex-1 overflow-y-auto px-4 pb-20">
         {loading && <LoadingSpinner />}
 
         {!loading && !currentSong && (
@@ -109,14 +109,17 @@ export default function LyricsScreen() {
                   key={index}
                   ref={isCurrent ? currentLineRef : null}
                   onClick={() => {
-                    if (line.start !== undefined) seek(line.start);
+                    if (line.start !== undefined) {
+                      getPlaybackManager().seek(line.start);
+                      usePlayerStore.getState().setPosition(line.start);
+                    }
                   }}
-                  className={`block w-full text-left text-lg font-medium transition-all duration-300 ${
+                  className={`block w-full text-left transition-all duration-300 ${
                     isCurrent
-                      ? 'scale-105 text-accent'
+                      ? 'scale-105 text-xl font-bold text-accent'
                       : index < currentIdx
-                        ? 'text-text-muted'
-                        : 'text-text-secondary'
+                        ? 'text-lg font-medium text-text-muted'
+                        : 'text-lg font-medium text-text-secondary'
                   }`}
                 >
                   {line.value || '\u00A0'}

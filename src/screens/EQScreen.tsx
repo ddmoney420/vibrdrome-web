@@ -11,7 +11,7 @@ export default function EQScreen() {
     <div className="flex h-full flex-col bg-bg-primary">
       <Header title="Equalizer" showBack />
 
-      <div className="flex-1 overflow-y-auto px-4 pb-8">
+      <div className="flex-1 overflow-y-auto px-4 pb-20 md:pb-8">
         {/* ON/OFF toggle */}
         <div className="flex items-center justify-between py-4">
           <span className="text-sm font-medium text-text-primary">
@@ -33,8 +33,8 @@ export default function EQScreen() {
         </div>
 
         {/* Preset chips */}
-        <div className="mb-6 -mx-4 overflow-x-auto px-4">
-          <div className="flex gap-2">
+        <div className="mb-6 -mx-4 overflow-x-auto px-4 scrollbar-hide">
+          <div className="flex gap-2 pb-1">
             {presetNames.map((name) => (
               <button
                 key={name}
@@ -55,9 +55,9 @@ export default function EQScreen() {
         </div>
 
         {/* EQ Sliders */}
-        <div className="flex items-end justify-between gap-1">
+        <div className="flex items-end justify-between gap-1 overflow-x-auto scrollbar-hide min-w-0">
           {bands.map((gain, index) => (
-            <div key={index} className="flex flex-1 flex-col items-center gap-1.5">
+            <div key={index} className="flex flex-1 shrink-0 min-w-[32px] flex-col items-center gap-1.5">
               {/* dB value */}
               <span
                 className={`text-[10px] font-medium ${

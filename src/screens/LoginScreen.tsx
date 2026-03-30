@@ -53,11 +53,13 @@ export default function LoginScreen() {
   };
 
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center bg-bg-primary px-4">
-      <div className="w-full max-w-sm">
+    <div className="login-bg flex min-h-dvh flex-col items-center justify-center px-4">
+      <div className="w-full max-w-sm relative z-10">
         {/* Logo */}
         <div className="mb-8 flex flex-col items-center gap-4">
-          <h1 className="logo-text text-2xl sm:text-3xl tracking-wider">VIBRDROME</h1>
+          <div className="logo-text-wrap">
+            <h1 className="logo-text text-2xl sm:text-3xl tracking-wider">VIBRDROME</h1>
+          </div>
           <img src="/favicon.svg" alt="Vibrdrome" className="h-16 w-16 rounded-xl" />
         </div>
 

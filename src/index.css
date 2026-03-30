@@ -42,9 +42,64 @@ body {
 .logo-text {
   font-family: 'Press Start 2P', cursive;
   background: linear-gradient(135deg, #fff 0%, #c4b5fd 50%, #8b5cf6 100%);
+  background-size: 200% 200%;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  animation: gradientShift 6s ease infinite;
+  will-change: background-position;
+  position: relative;
+}
+
+.logo-text-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.logo-text-wrap::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(ellipse at center, rgba(107, 70, 193, 0.35) 0%, rgba(107, 70, 193, 0.15) 30%, rgba(107, 70, 193, 0.05) 50%, transparent 70%);
+  pointer-events: none;
+  z-index: -1;
+  animation: glowPulse 6s ease infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes glowPulse {
+  0%, 100% { opacity: 0.8; transform: translate(-50%, -50%) scale(1); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+}
+
+/* Login screen background glow */
+.login-bg {
+  background: var(--color-bg-primary);
+  position: relative;
+  overflow: hidden;
+}
+
+.login-bg::before {
+  content: '';
+  position: absolute;
+  top: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(ellipse at center, rgba(107, 70, 193, 0.2) 0%, rgba(107, 70, 193, 0.08) 35%, transparent 65%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 .logo-text-sm {

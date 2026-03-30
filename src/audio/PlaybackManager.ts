@@ -52,6 +52,14 @@ class PlaybackManager {
     this.playerB.addEventListener('loadedmetadata', () => this.handleMetadata('B'));
   }
 
+  /** Call from a user gesture to ensure AudioContext is running before async work. */
+  warmup(): void {
+    if (!this.audioContext) this.init();
+    if (this.audioContext?.state === 'suspended') {
+      this.audioContext.resume();
+    }
+  }
+
   init(): void {
     if (this.audioContext && this.sourceA) return; // Already fully initialized
 

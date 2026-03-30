@@ -17,15 +17,14 @@ export function usePlayback() {
   const eqBands = useEQStore((s) => s.bands);
   const eqEnabled = useEQStore((s) => s.enabled);
 
-  // Initialize audio context on first user interaction
+  // Warmup audio context on every user interaction so that async flows
+  // (e.g. fetch then play) don't lose the user-gesture context.
   useEffect(() => {
     const handler = () => {
-      if (initializedRef.current) return;
-      initializedRef.current = true;
-      manager.init();
-      document.removeEventListener('click', handler);
-      document.removeEventListener('keydown', handler);
-      document.removeEventListener('touchstart', handler);
+      if (!initializedRef.current) {
+        initializedRef.current = true;
+      }
+      manager.warmup();
     };
 
     document.addEventListener('click', handler);

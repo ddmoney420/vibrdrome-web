@@ -36,6 +36,8 @@ class PlaybackManager {
     this.playerB = new Audio();
     this.playerA.preload = 'auto';
     this.playerB.preload = 'auto';
+    this.playerA.crossOrigin = 'anonymous';
+    this.playerB.crossOrigin = 'anonymous';
 
     // Handle track ended events
     this.playerA.addEventListener('ended', () => this.handleTrackEnded('A'));
@@ -70,11 +72,6 @@ class PlaybackManager {
     if (this.sourceA) return; // Already connected
 
     this.ensureAudioContext();
-
-    // crossOrigin is required for Web Audio API to read audio data
-    this.playerA.crossOrigin = 'anonymous';
-    this.playerB.crossOrigin = 'anonymous';
-
     this.setupAudioChain();
 
     // Subscribe to EQ store changes (only once)
@@ -277,12 +274,6 @@ class PlaybackManager {
 
   private setupAudioChain(): void {
     const ctx = this.audioContext!;
-
-    // crossOrigin is required for Web Audio API to read audio data.
-    // Set it here (before createMediaElementSource) rather than in constructor
-    // so basic playback works without CORS overhead.
-    this.playerA.crossOrigin = 'anonymous';
-    this.playerB.crossOrigin = 'anonymous';
 
     // createMediaElementSource can only be called once per HTMLAudioElement.
     // If sources already exist (e.g. React StrictMode re-mount), reuse them.

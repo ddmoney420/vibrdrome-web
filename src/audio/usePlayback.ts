@@ -48,7 +48,9 @@ export function usePlayback() {
     if (currentSong.id === lastSongIdRef.current) return;
     lastSongIdRef.current = currentSong.id;
 
-    initializedRef.current = true;
+    // Don't auto-play on page load — wait for a user gesture first
+    if (!initializedRef.current) return;
+
     playTriggeredRef.current = true;
     manager.play(currentSong);
   }, [currentSong]);

@@ -87,9 +87,24 @@ class PlaybackManager {
     const url = getSubsonicClient().stream(song.id);
 
     audio.src = url;
+    audio.load();
 
     // Reset scrobble tracking
     this.scrobbled = false;
+
+    // Wait for enough data to play, with a timeout fallback
+    if (audio.readyState < 3) {
+      await Promise.race([
+        new Promise<void>((resolve) => {
+          const onCanPlay = () => {
+            audio.removeEventListener('canplay', onCanPlay);
+            resolve();
+          };
+          audio.addEventListener('canplay', onCanPlay);
+        }),
+        new Promise<void>((resolve) => setTimeout(resolve, 3000)),
+      ]);
+    }
 
     try {
       await audio.play();
@@ -123,13 +138,15 @@ class PlaybackManager {
     this.stopPositionTracking();
   }
 
-  resume(): void {
+  async resume(): Promise<void> {
     if (this.audioContext?.state === 'suspended') {
-      this.audioContext.resume();
+      await this.audioContext.resume();
     }
-    this.getActiveAudio().play().catch((err) => {
+    try {
+      await this.getActiveAudio().play();
+    } catch (err) {
       console.error('[PlaybackManager] Resume error:', err);
-    });
+    }
     this.startPositionTracking();
   }
 

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getPlaybackManager } from '../audio/PlaybackManager';
+import { useUIStore } from '../stores/uiStore';
 
 // --- Shader Presets ---
 
@@ -128,8 +129,51 @@ function createProgram(gl: WebGLRenderingContext, vertexSource: string, fragment
 
 // --- Component ---
 
+function EpilepsyWarning({ onContinue, onDontShowAgain, onExit }: {
+  onContinue: () => void;
+  onDontShowAgain: () => void;
+  onExit: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4">
+      <div className="w-full max-w-md rounded-2xl bg-bg-secondary p-6 text-center shadow-xl">
+        <div className="mb-4 text-4xl">⚠️</div>
+        <h2 className="mb-2 text-lg font-bold text-text-primary">Photosensitivity Warning</h2>
+        <p className="mb-2 text-sm text-text-secondary">
+          The visualizer contains flashing lights, rapid color changes, and strobing effects that may cause discomfort or trigger seizures in people with photosensitive epilepsy.
+        </p>
+        <p className="mb-6 text-xs text-text-muted">
+          You can disable visual effects anytime in <strong className="text-text-secondary">Settings &gt; Accessibility &gt; Reduce Motion</strong>.
+        </p>
+        <div className="flex flex-col gap-2">
+          <button
+            onClick={onContinue}
+            className="w-full rounded-lg bg-accent py-2.5 text-sm font-semibold text-white transition-colors hover:bg-accent-hover"
+          >
+            Continue
+          </button>
+          <button
+            onClick={onDontShowAgain}
+            className="w-full rounded-lg bg-bg-tertiary py-2.5 text-sm font-medium text-text-secondary transition-colors hover:text-text-primary"
+          >
+            Don't Show Again
+          </button>
+          <button
+            onClick={onExit}
+            className="w-full rounded-lg py-2.5 text-sm font-medium text-text-muted transition-colors hover:text-text-primary"
+          >
+            Exit
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function VisualizerScreen() {
   const navigate = useNavigate();
+  const { epilepsyWarningDismissed, setEpilepsyWarningDismissed } = useUIStore();
+  const [showWarning, setShowWarning] = useState(!epilepsyWarningDismissed);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const milkdropCanvasRef = useRef<HTMLCanvasElement>(null);
   const glRef = useRef<WebGLRenderingContext | null>(null);
@@ -436,6 +480,16 @@ export default function VisualizerScreen() {
       onClick={handleCanvasClick}
       onDoubleClick={handleCanvasDoubleClick}
     >
+      {showWarning && (
+        <EpilepsyWarning
+          onContinue={() => setShowWarning(false)}
+          onDontShowAgain={() => {
+            setEpilepsyWarningDismissed(true);
+            setShowWarning(false);
+          }}
+          onExit={() => navigate(-1)}
+        />
+      )}
       {/* WebGL Canvas (Shader mode) */}
       <canvas
         ref={canvasRef}

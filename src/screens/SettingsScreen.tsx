@@ -8,7 +8,7 @@ import { Header } from '../components/common';
 export default function SettingsScreen() {
   const navigate = useNavigate();
   const { servers, activeServerId, logout } = useAuthStore();
-  const { theme, setTheme } = useUIStore();
+  const { theme, setTheme, reduceMotion, setReduceMotion } = useUIStore();
   const { crossfadeEnabled, crossfadeDuration, setCrossfade, setCrossfadeDuration } = usePlayerStore();
   const eqEnabled = useEQStore((s) => s.enabled);
 
@@ -139,6 +139,33 @@ export default function SettingsScreen() {
                     {t}
                   </button>
                 ))}
+              </div>
+            </div>
+          </section>
+
+          {/* Accessibility */}
+          <section>
+            <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-text-muted">
+              Accessibility
+            </h2>
+            <div className="space-y-3 rounded-lg bg-bg-secondary p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-sm text-text-primary">Reduce Motion</span>
+                  <p className="text-xs text-text-muted">Disables visualizer animations and flashing effects</p>
+                </div>
+                <button
+                  onClick={() => setReduceMotion(!reduceMotion)}
+                  className={`relative h-6 w-11 rounded-full transition-colors ${
+                    reduceMotion ? 'bg-accent' : 'bg-bg-tertiary'
+                  }`}
+                >
+                  <span
+                    className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                      reduceMotion ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
               </div>
             </div>
           </section>

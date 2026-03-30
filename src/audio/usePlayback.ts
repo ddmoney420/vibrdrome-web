@@ -48,11 +48,7 @@ export function usePlayback() {
     if (currentSong.id === lastSongIdRef.current) return;
     lastSongIdRef.current = currentSong.id;
 
-    if (!initializedRef.current) {
-      initializedRef.current = true;
-      manager.init();
-    }
-
+    initializedRef.current = true;
     playTriggeredRef.current = true;
     manager.play(currentSong);
   }, [currentSong]);

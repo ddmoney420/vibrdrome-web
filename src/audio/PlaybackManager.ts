@@ -36,8 +36,6 @@ class PlaybackManager {
     this.playerB = new Audio();
     this.playerA.preload = 'auto';
     this.playerB.preload = 'auto';
-    this.playerA.crossOrigin = 'anonymous';
-    this.playerB.crossOrigin = 'anonymous';
 
     // Handle track ended events
     this.playerA.addEventListener('ended', () => this.handleTrackEnded('A'));
@@ -54,18 +52,29 @@ class PlaybackManager {
 
   /** Call from a user gesture to ensure AudioContext is running before async work. */
   warmup(): void {
-    if (!this.audioContext) this.init();
-    if (this.audioContext?.state === 'suspended') {
+    this.ensureAudioContext();
+  }
+
+  /** Create AudioContext if needed and resume if suspended. */
+  private ensureAudioContext(): void {
+    if (!this.audioContext) {
+      this.audioContext = new AudioContext();
+    }
+    if (this.audioContext.state === 'suspended') {
       this.audioContext.resume();
     }
   }
 
-  init(): void {
-    if (this.audioContext && this.sourceA) return; // Already fully initialized
+  /** Connect audio elements to Web Audio graph (for EQ, visualizer). Lazy — called after first play. */
+  private ensureAudioChain(): void {
+    if (this.sourceA) return; // Already connected
 
-    if (!this.audioContext) {
-      this.audioContext = new AudioContext();
-    }
+    this.ensureAudioContext();
+
+    // crossOrigin is required for Web Audio API to read audio data
+    this.playerA.crossOrigin = 'anonymous';
+    this.playerB.crossOrigin = 'anonymous';
+
     this.setupAudioChain();
 
     // Subscribe to EQ store changes (only once)
@@ -80,20 +89,19 @@ class PlaybackManager {
     this.updateEQ(eqState.bands, eqState.enabled);
   }
 
+  init(): void {
+    this.ensureAudioChain();
+  }
+
   async play(song: Song): Promise<void> {
-    if (!this.audioContext) this.init();
-
-    // Resume audio context if suspended (autoplay policy)
-    if (this.audioContext?.state === 'suspended') {
-      await this.audioContext.resume();
-    }
-
     // Cancel any active crossfade
     this.cancelCrossfade();
 
     const audio = this.getActiveAudio();
     const url = getSubsonicClient().stream(song.id);
 
+    // If audio chain already connected, crossOrigin is already set.
+    // Otherwise play without CORS first — chain connects after.
     audio.src = url;
     audio.load();
 
@@ -107,6 +115,12 @@ class PlaybackManager {
       // Try to skip to next on failure
       usePlayerStore.getState().next();
       return;
+    }
+
+    // Connect to Web Audio graph after first successful play.
+    // On subsequent plays crossOrigin is already set so no re-fetch.
+    if (!this.sourceA) {
+      this.ensureAudioChain();
     }
 
     // Set active gain to full, inactive to zero — use setTargetAtTime to avoid clicks
@@ -263,6 +277,12 @@ class PlaybackManager {
 
   private setupAudioChain(): void {
     const ctx = this.audioContext!;
+
+    // crossOrigin is required for Web Audio API to read audio data.
+    // Set it here (before createMediaElementSource) rather than in constructor
+    // so basic playback works without CORS overhead.
+    this.playerA.crossOrigin = 'anonymous';
+    this.playerB.crossOrigin = 'anonymous';
 
     // createMediaElementSource can only be called once per HTMLAudioElement.
     // If sources already exist (e.g. React StrictMode re-mount), reuse them.

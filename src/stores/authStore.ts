@@ -20,10 +20,32 @@ interface AuthState {
   loadFromStorage: () => void;
 }
 
+// Load persisted auth state synchronously at store creation time
+// so SubsonicClient is configured before any playback attempts.
+function loadInitialAuth() {
+  try {
+    const raw = localStorage.getItem(SERVERS_KEY);
+    const servers: ServerConfig[] = raw ? JSON.parse(raw) : [];
+    const activeServerId = localStorage.getItem(ACTIVE_SERVER_KEY) || null;
+    const activeServer = servers.find((s) => s.id === activeServerId);
+
+    if (activeServer) {
+      const client = getSubsonicClient();
+      client.setConfig(activeServer);
+    }
+
+    return { servers, activeServerId, isAuthenticated: !!activeServer };
+  } catch {
+    return { servers: [] as ServerConfig[], activeServerId: null, isAuthenticated: false };
+  }
+}
+
+const initialAuth = loadInitialAuth();
+
 export const useAuthStore = create<AuthState>((set, get) => ({
-  servers: [],
-  activeServerId: null,
-  isAuthenticated: false,
+  servers: initialAuth.servers,
+  activeServerId: initialAuth.activeServerId,
+  isAuthenticated: initialAuth.isAuthenticated,
   isLoading: false,
   error: null,
 

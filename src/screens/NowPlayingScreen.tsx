@@ -151,11 +151,13 @@ export default function NowPlayingScreen() {
       {/* Main content — artwork expands to fill available space */}
       <div className="flex flex-1 flex-col items-center overflow-hidden px-6 pb-4">
         {/* Album art — grows to fill available vertical space */}
-        <div className="flex flex-1 items-center justify-center py-4">
-          <CoverArt
-            coverArt={currentSong?.coverArt}
-            className="shadow-2xl !aspect-square !h-full max-h-[min(60vh,90vw)] md:max-h-[min(70vh,70vw)] !w-auto rounded-xl"
-          />
+        <div className="flex flex-1 items-center justify-center w-full py-4">
+          <div className="aspect-square h-full max-h-[min(60vh,85vw)] md:max-h-[min(70vh,70vw)] w-auto">
+            <CoverArt
+              coverArt={currentSong?.coverArt}
+              className="shadow-2xl !h-full !w-full rounded-xl"
+            />
+          </div>
         </div>
 
         {/* Controls section — fixed at bottom, full width */}

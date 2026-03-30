@@ -1,12 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getSubsonicClient } from '../api/SubsonicClient';
 import { usePlayerStore } from '../stores/playerStore';
+import { useLibraryStore } from '../stores/libraryStore';
+import type { LibraryItem } from '../stores/libraryStore';
 import AlbumCard from '../components/common/AlbumCard';
 import Header from '../components/common/Header';
 import type { Album } from '../types/subsonic';
 
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const CAROUSEL_SIZE = 20;
 
 interface CachedAlbums {
   data: Album[];
@@ -20,7 +23,7 @@ function isCacheValid(type: string): boolean {
   return !!cached && Date.now() - cached.fetchedAt < CACHE_DURATION;
 }
 
-function useCachedAlbums(type: 'newest' | 'frequent' | 'random', size = 10) {
+function useCachedAlbums(type: string, size = CAROUSEL_SIZE) {
   const [albums, setAlbums] = useState<Album[]>(() => albumCache[type]?.data ?? []);
   const [loading, setLoading] = useState(() => !isCacheValid(type));
 
@@ -32,15 +35,13 @@ function useCachedAlbums(type: 'newest' | 'frequent' | 'random', size = 10) {
     let cancelled = false;
 
     getSubsonicClient()
-      .getAlbumList2(type, size)
+      .getAlbumList2(type as 'newest' | 'frequent' | 'random', size)
       .then((data) => {
         if (cancelled) return;
         albumCache[type] = { data, fetchedAt: Date.now() };
         setAlbums(data);
       })
-      .catch(() => {
-        // silently fail
-      })
+      .catch(() => {})
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
@@ -51,12 +52,6 @@ function useCachedAlbums(type: 'newest' | 'frequent' | 'random', size = 10) {
   }, [type, size]);
 
   return { albums, loading };
-}
-
-interface PillButton {
-  label: string;
-  icon: React.ReactNode;
-  action: () => void;
 }
 
 // SVG icon helpers
@@ -122,7 +117,23 @@ const IconSparkles = (
   </svg>
 );
 
-// Search and Settings icons for header
+const PILL_ICONS: Record<string, React.ReactNode> = {
+  genres: IconTag,
+  radio: IconRadio,
+  artists: IconUsers,
+  favorites: IconStar,
+  albums: IconDisc,
+  folders: IconFolder,
+  songs: IconMusic,
+  downloads: IconDownload,
+  playlists: IconList,
+  recentlyAdded: IconClock,
+  generations: IconSparkles,
+  recentlyPlayed: IconClock,
+  randomMix: IconShuffle,
+  randomAlbum: IconShuffle,
+};
+
 const SearchIcon = (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
     <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clipRule="evenodd" />
@@ -133,14 +144,30 @@ const SettingsIcon = (
     <path fillRule="evenodd" d="M7.84 1.804A1 1 0 018.82 1h2.36a1 1 0 01.98.804l.331 1.652a6.993 6.993 0 011.929 1.115l1.598-.54a1 1 0 011.186.447l1.18 2.044a1 1 0 01-.205 1.251l-1.267 1.113a7.047 7.047 0 010 2.228l1.267 1.113a1 1 0 01.206 1.25l-1.18 2.045a1 1 0 01-1.187.447l-1.598-.54a6.993 6.993 0 01-1.929 1.115l-.33 1.652a1 1 0 01-.98.804H8.82a1 1 0 01-.98-.804l-.331-1.652a6.993 6.993 0 01-1.929-1.115l-1.598.54a1 1 0 01-1.186-.447l-1.18-2.044a1 1 0 01.205-1.251l1.267-1.114a7.05 7.05 0 010-2.227L1.821 7.773a1 1 0 01-.206-1.25l1.18-2.045a1 1 0 011.187-.447l1.598.54A6.993 6.993 0 017.51 3.456l.33-1.652zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
   </svg>
 );
+const CustomizeIcon = (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+    <path d="M3.505 2.365A41.369 41.369 0 019 2c1.863 0 3.697.124 5.495.365 1.247.167 2.18 1.108 2.435 2.268a4.45 4.45 0 00-.577-.069 43.141 43.141 0 00-4.706 0C9.229 4.696 7.5 6.727 7.5 8.998v2.24c0 1.413.67 2.735 1.76 3.562l-2.98 2.98A.75.75 0 015 17.25v-3.443c-.501-.048-1-.106-1.495-.172C2.033 13.438 1 12.162 1 10.72V5.28c0-1.441 1.033-2.717 2.505-2.914z" />
+    <path d="M14 6c-.762 0-1.52.02-2.271.062C10.157 6.148 9 7.472 9 8.998v2.24c0 1.519 1.147 2.839 2.71 2.935.214.013.428.024.642.034.2.009.385.09.518.224l2.35 2.35a.75.75 0 001.28-.531v-2.07c1.453-.195 2.5-1.463 2.5-2.942V8.998c0-1.526-1.157-2.85-2.729-2.936A41.645 41.645 0 0014 6z" />
+  </svg>
+);
+
+const CAROUSEL_LABELS: Record<string, string> = {
+  newest: 'Recently Added',
+  frequent: 'Most Played',
+  random: 'Random Picks',
+};
+
+const CAROUSEL_SEE_ALL: Record<string, string> = {
+  newest: '/albums?type=newest',
+  frequent: '/albums?type=frequent',
+  random: '/albums?type=random',
+};
 
 export default function LibraryScreen() {
   const navigate = useNavigate();
   const playSongs = usePlayerStore((s) => s.playSongs);
-
-  const { albums: recentlyAdded, loading: loadingRecent } = useCachedAlbums('newest');
-  const { albums: mostPlayed, loading: loadingFrequent } = useCachedAlbums('frequent');
-  const { albums: randomPicks, loading: loadingRandom } = useCachedAlbums('random');
+  const { pills, carousels } = useLibraryStore();
+  const [showCustomize, setShowCustomize] = useState(false);
 
   const handleRandomMix = async () => {
     try {
@@ -148,9 +175,7 @@ export default function LibraryScreen() {
       if (songs.length > 0) {
         playSongs(songs, 0);
       }
-    } catch {
-      // silently fail
-    }
+    } catch {}
   };
 
   const handleRandomAlbum = async () => {
@@ -159,30 +184,38 @@ export default function LibraryScreen() {
       if (albums.length > 0) {
         navigate(`/album/${albums[0].id}`);
       }
-    } catch {
-      // silently fail
-    }
+    } catch {}
   };
 
-  const pills: PillButton[] = [
-    { label: 'Genres', icon: IconTag, action: () => navigate('/genres') },
-    { label: 'Radio', icon: IconRadio, action: () => navigate('/radio') },
-    { label: 'Artists', icon: IconUsers, action: () => navigate('/artists') },
-    { label: 'Favorites', icon: IconStar, action: () => navigate('/favorites') },
-    { label: 'Albums', icon: IconDisc, action: () => navigate('/albums') },
-    { label: 'Folders', icon: IconFolder, action: () => navigate('/folders') },
-    { label: 'Songs', icon: IconMusic, action: () => navigate('/songs') },
-    { label: 'Downloads', icon: IconDownload, action: () => navigate('/downloads') },
-    { label: 'Playlists', icon: IconList, action: () => navigate('/playlists') },
-    { label: 'Recently Added', icon: IconClock, action: () => navigate('/albums?type=newest') },
-    { label: 'Generations', icon: IconSparkles, action: () => navigate('/generations') },
-    { label: 'Recently Played', icon: IconClock, action: () => navigate('/albums?type=recent') },
-    { label: 'Random Mix', icon: IconShuffle, action: handleRandomMix },
-    { label: 'Random Album', icon: IconShuffle, action: handleRandomAlbum },
-  ];
+  const PILL_ACTIONS: Record<string, () => void> = {
+    genres: () => navigate('/genres'),
+    radio: () => navigate('/radio'),
+    artists: () => navigate('/artists'),
+    favorites: () => navigate('/favorites'),
+    albums: () => navigate('/albums'),
+    folders: () => navigate('/folders'),
+    songs: () => navigate('/songs'),
+    downloads: () => navigate('/downloads'),
+    playlists: () => navigate('/playlists'),
+    recentlyAdded: () => navigate('/albums?type=newest'),
+    generations: () => navigate('/generations'),
+    recentlyPlayed: () => navigate('/albums?type=recent'),
+    randomMix: handleRandomMix,
+    randomAlbum: handleRandomAlbum,
+  };
+
+  const visiblePills = pills.filter((p) => p.visible);
+  const visibleCarousels = carousels.filter((c) => c.visible);
 
   const rightActions = (
     <>
+      <button
+        onClick={() => setShowCustomize(true)}
+        className="flex h-8 w-8 items-center justify-center rounded-full text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-text-primary"
+        aria-label="Customize"
+      >
+        {CustomizeIcon}
+      </button>
       <button
         onClick={() => navigate('/search')}
         className="flex h-8 w-8 items-center justify-center rounded-full text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-text-primary"
@@ -205,53 +238,49 @@ export default function LibraryScreen() {
       <Header title="Library" rightActions={rightActions} />
 
       {/* Quick access pills */}
-      <div className="grid grid-cols-2 gap-1.5 px-3 pb-4 md:gap-2 md:px-4 md:pb-6">
-        {pills.map((pill) => (
-          <button
-            key={pill.label}
-            onClick={pill.action}
-            className="flex items-center gap-2 rounded-full bg-bg-secondary px-3 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-bg-tertiary md:gap-2.5 md:px-4 md:py-2.5"
-          >
-            <span className="text-text-secondary">{pill.icon}</span>
-            <span className="truncate">{pill.label}</span>
-          </button>
-        ))}
-      </div>
+      {visiblePills.length > 0 && (
+        <div className="grid grid-cols-2 gap-1.5 px-3 pb-4 md:gap-2 md:px-4 md:pb-6">
+          {visiblePills.map((pill) => (
+            <button
+              key={pill.id}
+              onClick={PILL_ACTIONS[pill.id]}
+              className="flex items-center gap-2 rounded-full bg-bg-secondary px-3 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-bg-tertiary md:gap-2.5 md:px-4 md:py-2.5"
+            >
+              <span className="text-text-secondary">{PILL_ICONS[pill.id]}</span>
+              <span className="truncate">{pill.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Carousels */}
-      <AlbumCarousel
-        title="Recently Added"
-        albums={recentlyAdded}
-        loading={loadingRecent}
-        onSeeAll={() => navigate('/albums?type=newest')}
-      />
-      <AlbumCarousel
-        title="Most Played"
-        albums={mostPlayed}
-        loading={loadingFrequent}
-        onSeeAll={() => navigate('/albums?type=frequent')}
-      />
-      <AlbumCarousel
-        title="Random Picks"
-        albums={randomPicks}
-        loading={loadingRandom}
-        onSeeAll={() => navigate('/albums?type=random')}
-      />
+      {visibleCarousels.map((carousel) => (
+        <AlbumCarousel
+          key={carousel.id}
+          type={carousel.id}
+          title={CAROUSEL_LABELS[carousel.id] ?? carousel.label}
+          onSeeAll={() => navigate(CAROUSEL_SEE_ALL[carousel.id] ?? '/albums')}
+        />
+      ))}
+
+      {showCustomize && (
+        <CustomizeModal onClose={() => setShowCustomize(false)} />
+      )}
     </div>
   );
 }
 
 function AlbumCarousel({
+  type,
   title,
-  albums,
-  loading,
   onSeeAll,
 }: {
+  type: string;
   title: string;
-  albums: Album[];
-  loading: boolean;
   onSeeAll: () => void;
 }) {
+  const { albums, loading } = useCachedAlbums(type, CAROUSEL_SIZE);
+
   return (
     <section className="mb-6">
       <div className="flex items-center justify-between px-4 pb-3">
@@ -280,5 +309,159 @@ function AlbumCarousel({
         </div>
       )}
     </section>
+  );
+}
+
+// --- Customize Modal ---
+
+function CustomizeModal({ onClose }: { onClose: () => void }) {
+  const { pills, carousels, togglePill, toggleCarousel, movePill, moveCarousel } = useLibraryStore();
+  const [tab, setTab] = useState<'pills' | 'carousels'>('pills');
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 px-0 sm:px-4" onClick={onClose}>
+      <div
+        className="w-full max-w-lg rounded-t-2xl sm:rounded-2xl bg-bg-secondary max-h-[85vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-border px-5 py-4">
+          <h2 className="text-lg font-bold text-text-primary">Customize Library</h2>
+          <button
+            onClick={onClose}
+            className="flex h-8 w-8 items-center justify-center rounded-full text-text-secondary hover:bg-bg-tertiary"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+              <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex border-b border-border">
+          <button
+            onClick={() => setTab('pills')}
+            className={`flex-1 py-3 text-center text-sm font-medium transition-colors ${
+              tab === 'pills' ? 'text-accent border-b-2 border-accent' : 'text-text-muted'
+            }`}
+          >
+            Shortcuts
+          </button>
+          <button
+            onClick={() => setTab('carousels')}
+            className={`flex-1 py-3 text-center text-sm font-medium transition-colors ${
+              tab === 'carousels' ? 'text-accent border-b-2 border-accent' : 'text-text-muted'
+            }`}
+          >
+            Carousels
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-4">
+          <p className="mb-3 text-xs text-text-muted">
+            Toggle visibility and drag to reorder.
+          </p>
+          {tab === 'pills' ? (
+            <ReorderList items={pills} onToggle={togglePill} onMove={movePill} />
+          ) : (
+            <ReorderList items={carousels} onToggle={toggleCarousel} onMove={moveCarousel} />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ReorderList({
+  items,
+  onToggle,
+  onMove,
+}: {
+  items: LibraryItem[];
+  onToggle: (id: string) => void;
+  onMove: (from: number, to: number) => void;
+}) {
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+
+  const handleDragStart = useCallback((index: number) => {
+    setDragIndex(index);
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (dragIndex !== null && dragIndex !== index) {
+      onMove(dragIndex, index);
+      setDragIndex(index);
+    }
+  }, [dragIndex, onMove]);
+
+  const handleDragEnd = useCallback(() => {
+    setDragIndex(null);
+  }, []);
+
+  return (
+    <div className="space-y-1">
+      {items.map((item, index) => (
+        <div
+          key={item.id}
+          draggable
+          onDragStart={() => handleDragStart(index)}
+          onDragOver={(e) => handleDragOver(e, index)}
+          onDragEnd={handleDragEnd}
+          className={`flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors ${
+            dragIndex === index ? 'bg-accent/10' : 'bg-bg-tertiary/50'
+          }`}
+        >
+          {/* Drag handle */}
+          <span className="cursor-grab text-text-muted active:cursor-grabbing">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+              <path fillRule="evenodd" d="M2 4.75A.75.75 0 012.75 4h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 4.75zm0 5A.75.75 0 012.75 9h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 9.75zm0 5a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75a.75.75 0 01-.75-.75z" clipRule="evenodd" />
+            </svg>
+          </span>
+
+          {/* Label */}
+          <span className={`flex-1 text-sm ${item.visible ? 'text-text-primary' : 'text-text-muted'}`}>
+            {item.label}
+          </span>
+
+          {/* Move buttons for touch */}
+          <button
+            onClick={() => index > 0 && onMove(index, index - 1)}
+            className="flex h-7 w-7 items-center justify-center rounded text-text-muted hover:bg-bg-tertiary hover:text-text-primary disabled:opacity-30"
+            disabled={index === 0}
+            aria-label="Move up"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+              <path fillRule="evenodd" d="M14.77 12.79a.75.75 0 01-1.06-.02L10 8.832 6.29 12.77a.75.75 0 11-1.08-1.04l4.25-4.5a.75.75 0 011.08 0l4.25 4.5a.75.75 0 01-.02 1.06z" clipRule="evenodd" />
+            </svg>
+          </button>
+          <button
+            onClick={() => index < items.length - 1 && onMove(index, index + 1)}
+            className="flex h-7 w-7 items-center justify-center rounded text-text-muted hover:bg-bg-tertiary hover:text-text-primary disabled:opacity-30"
+            disabled={index === items.length - 1}
+            aria-label="Move down"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+              <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+            </svg>
+          </button>
+
+          {/* Toggle */}
+          <button
+            onClick={() => onToggle(item.id)}
+            className={`relative h-6 w-11 rounded-full transition-colors ${
+              item.visible ? 'bg-accent' : 'bg-bg-tertiary'
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                item.visible ? 'translate-x-5' : 'translate-x-0'
+              }`}
+            />
+          </button>
+        </div>
+      ))}
+    </div>
   );
 }

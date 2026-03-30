@@ -38,6 +38,20 @@ body {
   border-radius: 3px;
 }
 
+/* Logo text styling */
+.logo-text {
+  font-family: 'Press Start 2P', cursive;
+  background: linear-gradient(135deg, #fff 0%, #c4b5fd 50%, #8b5cf6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.logo-text-sm {
+  font-family: 'Press Start 2P', cursive;
+  color: var(--color-text-primary);
+}
+
 /* Light theme */
 [data-theme="light"] {
   --color-bg-primary: #ffffff;

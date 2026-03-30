@@ -56,22 +56,9 @@ export default function LoginScreen() {
     <div className="flex min-h-dvh flex-col items-center justify-center bg-bg-primary px-4">
       <div className="w-full max-w-sm">
         {/* Logo */}
-        <div className="mb-8 flex flex-col items-center gap-3">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={1.5}
-            className="h-12 w-12 text-accent"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M9 19V6l12-3v13M9 19c0 1.1-1.34 2-3 2s-3-.9-3-2 1.34-2 3-2 3 .9 3 2zm12-3c0 1.1-1.34 2-3 2s-3-.9-3-2 1.34-2 3-2 3 .9 3 2z"
-            />
-          </svg>
-          <h1 className="text-3xl font-bold text-text-primary">Vibrdrome</h1>
+        <div className="mb-8 flex flex-col items-center gap-4">
+          <h1 className="logo-text text-2xl sm:text-3xl tracking-wider">VIBRDROME</h1>
+          <img src="/favicon.svg" alt="Vibrdrome" className="h-16 w-16 rounded-xl" />
         </div>
 
         {/* Login form */}

@@ -1,4 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
+import FolderPicker from './FolderPicker';
 
 const NAV_ITEMS = [
   { path: '/', label: 'Library', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1' },
@@ -29,6 +30,9 @@ export default function Sidebar() {
         <img src="/favicon.svg" alt="" className="h-7 w-7 rounded" />
         <span className="logo-text-sm text-xs">VIBRDROME</span>
       </div>
+
+      {/* Library folder picker */}
+      <FolderPicker />
 
       {/* Nav items */}
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-2">

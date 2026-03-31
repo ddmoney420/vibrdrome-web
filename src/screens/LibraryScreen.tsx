@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getSubsonicClient } from '../api/SubsonicClient';
 import { usePlayerStore } from '../stores/playerStore';
 import { useLibraryStore } from '../stores/libraryStore';
+import { useMusicFolderStore } from '../stores/musicFolderStore';
 import type { LibraryItem } from '../stores/libraryStore';
 import AlbumCard from '../components/common/AlbumCard';
 import Header from '../components/common/Header';
@@ -18,27 +19,31 @@ interface CachedAlbums {
 
 const albumCache: Record<string, CachedAlbums> = {};
 
-function isCacheValid(type: string): boolean {
-  const cached = albumCache[type];
+function isCacheValid(key: string): boolean {
+  const cached = albumCache[key];
   return !!cached && Date.now() - cached.fetchedAt < CACHE_DURATION;
 }
 
-function useCachedAlbums(type: string, size = CAROUSEL_SIZE) {
-  const [albums, setAlbums] = useState<Album[]>(() => albumCache[type]?.data ?? []);
-  const [loading, setLoading] = useState(() => !isCacheValid(type));
+function useCachedAlbums(type: string, folderId: string | null, size = CAROUSEL_SIZE) {
+  const cacheKey = `${type}:${folderId ?? 'all'}`;
+  const [albums, setAlbums] = useState<Album[]>(() => albumCache[cacheKey]?.data ?? []);
+  const [loading, setLoading] = useState(() => !isCacheValid(cacheKey));
 
   useEffect(() => {
-    if (isCacheValid(type)) {
+    if (isCacheValid(cacheKey)) {
+      setAlbums(albumCache[cacheKey].data);
+      setLoading(false);
       return;
     }
 
     let cancelled = false;
+    setLoading(true);
 
     getSubsonicClient()
-      .getAlbumList2(type as 'newest' | 'frequent' | 'random', size)
+      .getAlbumList2(type as 'newest' | 'frequent' | 'random', size, undefined, undefined, undefined, undefined, folderId ?? undefined)
       .then((data) => {
         if (cancelled) return;
-        albumCache[type] = { data, fetchedAt: Date.now() };
+        albumCache[cacheKey] = { data, fetchedAt: Date.now() };
         setAlbums(data);
       })
       .catch(() => {})
@@ -49,7 +54,7 @@ function useCachedAlbums(type: string, size = CAROUSEL_SIZE) {
     return () => {
       cancelled = true;
     };
-  }, [type, size]);
+  }, [type, size, cacheKey, folderId]);
 
   return { albums, loading };
 }
@@ -167,11 +172,12 @@ export default function LibraryScreen() {
   const navigate = useNavigate();
   const playSongs = usePlayerStore((s) => s.playSongs);
   const { pills, carousels } = useLibraryStore();
+  const activeFolderId = useMusicFolderStore((s) => s.activeFolderId);
   const [showCustomize, setShowCustomize] = useState(false);
 
   const handleRandomMix = async () => {
     try {
-      const songs = await getSubsonicClient().getRandomSongs(50);
+      const songs = await getSubsonicClient().getRandomSongs(50, undefined, activeFolderId ?? undefined);
       if (songs.length > 0) {
         playSongs(songs, 0);
       }
@@ -180,7 +186,7 @@ export default function LibraryScreen() {
 
   const handleRandomAlbum = async () => {
     try {
-      const albums = await getSubsonicClient().getAlbumList2('random', 1);
+      const albums = await getSubsonicClient().getAlbumList2('random', 1, undefined, undefined, undefined, undefined, activeFolderId ?? undefined);
       if (albums.length > 0) {
         navigate(`/album/${albums[0].id}`);
       }
@@ -256,8 +262,9 @@ export default function LibraryScreen() {
       {/* Carousels */}
       {visibleCarousels.map((carousel) => (
         <AlbumCarousel
-          key={carousel.id}
+          key={`${carousel.id}:${activeFolderId ?? 'all'}`}
           type={carousel.id}
+          folderId={activeFolderId}
           title={CAROUSEL_LABELS[carousel.id] ?? carousel.label}
           onSeeAll={() => navigate(CAROUSEL_SEE_ALL[carousel.id] ?? '/albums')}
         />
@@ -273,13 +280,15 @@ export default function LibraryScreen() {
 function AlbumCarousel({
   type,
   title,
+  folderId,
   onSeeAll,
 }: {
   type: string;
   title: string;
+  folderId: string | null;
   onSeeAll: () => void;
 }) {
-  const { albums, loading } = useCachedAlbums(type, CAROUSEL_SIZE);
+  const { albums, loading } = useCachedAlbums(type, folderId, CAROUSEL_SIZE);
 
   return (
     <section className="mb-6">

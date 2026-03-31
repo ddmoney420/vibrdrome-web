@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getSubsonicClient } from '../api/SubsonicClient';
 import { usePlayerStore } from '../stores/playerStore';
+import { useMusicFolderStore } from '../stores/musicFolderStore';
 import type { Song } from '../types/subsonic';
 import { Header, SongRow, LoadingSpinner } from '../components/common';
 
@@ -8,19 +9,20 @@ export default function SongsScreen() {
   const playSongs = usePlayerStore((s) => s.playSongs);
   const [songs, setSongs] = useState<Song[]>([]);
   const [loading, setLoading] = useState(true);
+  const activeFolderId = useMusicFolderStore((s) => s.activeFolderId);
 
   const loadSongs = useCallback(async () => {
     setLoading(true);
     try {
       const client = getSubsonicClient();
-      const data = await client.getRandomSongs(100);
+      const data = await client.getRandomSongs(100, undefined, activeFolderId ?? undefined);
       setSongs(data);
     } catch (err) {
       console.error('Failed to load songs:', err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [activeFolderId]);
 
   useEffect(() => {
     loadSongs();

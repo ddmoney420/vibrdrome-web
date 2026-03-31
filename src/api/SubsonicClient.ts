@@ -170,8 +170,10 @@ class SubsonicClient {
 
   // --- Browsing ---
 
-  async getArtists(): Promise<ArtistIndex[]> {
-    const data = await this.request<{ artists: { index?: ArtistIndex[] } }>('getArtists');
+  async getArtists(musicFolderId?: string): Promise<ArtistIndex[]> {
+    const data = await this.request<{ artists: { index?: ArtistIndex[] } }>('getArtists', {
+      musicFolderId,
+    });
     return data.artists?.index ?? [];
   }
 
@@ -221,6 +223,7 @@ class SubsonicClient {
     genre?: string,
     fromYear?: number,
     toYear?: number,
+    musicFolderId?: string,
   ): Promise<Album[]> {
     const data = await this.request<{ albumList2: { album?: Album[] } }>('getAlbumList2', {
       type,
@@ -229,14 +232,16 @@ class SubsonicClient {
       genre,
       fromYear,
       toYear,
+      musicFolderId,
     });
     return data.albumList2?.album ?? [];
   }
 
-  async getRandomSongs(size: number, genre?: string): Promise<Song[]> {
+  async getRandomSongs(size: number, genre?: string, musicFolderId?: string): Promise<Song[]> {
     const data = await this.request<{ randomSongs: { song?: Song[] } }>('getRandomSongs', {
       size,
       genre,
+      musicFolderId,
     });
     return data.randomSongs?.song ?? [];
   }
@@ -253,12 +258,14 @@ class SubsonicClient {
     artistCount?: number,
     albumCount?: number,
     songCount?: number,
+    musicFolderId?: string,
   ): Promise<SearchResult3> {
     const data = await this.request<{ searchResult3: SearchResult3 }>('search3', {
       query,
       artistCount,
       albumCount,
       songCount,
+      musicFolderId,
     });
     return data.searchResult3 ?? { artist: [], album: [], song: [] };
   }

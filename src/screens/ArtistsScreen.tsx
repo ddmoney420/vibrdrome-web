@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getSubsonicClient } from '../api/SubsonicClient';
+import { useMusicFolderStore } from '../stores/musicFolderStore';
 import type { ArtistIndex } from '../types/subsonic';
 import { Header, CoverArt, LoadingSpinner } from '../components/common';
 
@@ -8,12 +9,14 @@ export default function ArtistsScreen() {
   const navigate = useNavigate();
   const [indexes, setIndexes] = useState<ArtistIndex[]>([]);
   const [loading, setLoading] = useState(true);
+  const activeFolderId = useMusicFolderStore((s) => s.activeFolderId);
 
   useEffect(() => {
+    setLoading(true);
     const load = async () => {
       try {
         const client = getSubsonicClient();
-        const data = await client.getArtists();
+        const data = await client.getArtists(activeFolderId ?? undefined);
         setIndexes(data);
       } catch (err) {
         console.error('Failed to load artists:', err);
@@ -22,7 +25,7 @@ export default function ArtistsScreen() {
       }
     };
     load();
-  }, []);
+  }, [activeFolderId]);
 
   if (loading) {
     return (

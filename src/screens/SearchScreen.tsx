@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getSubsonicClient } from '../api/SubsonicClient';
+import { useMusicFolderStore } from '../stores/musicFolderStore';
 import Header from '../components/common/Header';
 import AlbumCard from '../components/common/AlbumCard';
 import SongRow from '../components/common/SongRow';
@@ -55,7 +56,7 @@ export default function SearchScreen() {
     let cancelled = false;
 
     getSubsonicClient()
-      .search3(debouncedQuery, 5, 5, 50)
+      .search3(debouncedQuery, 5, 5, 50, useMusicFolderStore.getState().activeFolderId ?? undefined)
       .then((result) => {
         if (cancelled) return;
         setResults({

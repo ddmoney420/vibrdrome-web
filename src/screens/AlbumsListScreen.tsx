@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { getSubsonicClient } from '../api/SubsonicClient';
+import { useMusicFolderStore } from '../stores/musicFolderStore';
 import type { Album, AlbumListType } from '../types/subsonic';
 import { Header, AlbumCard, LoadingSpinner } from '../components/common';
 
@@ -13,6 +14,7 @@ export default function AlbumsListScreen() {
   const fromYear = searchParams.get('fromYear') ? Number(searchParams.get('fromYear')) : undefined;
   const toYear = searchParams.get('toYear') ? Number(searchParams.get('toYear')) : undefined;
   const title = searchParams.get('title') || 'Albums';
+  const activeFolderId = useMusicFolderStore((s) => s.activeFolderId);
 
   const [albums, setAlbums] = useState<Album[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,7 +29,7 @@ export default function AlbumsListScreen() {
 
     try {
       const client = getSubsonicClient();
-      const page = await client.getAlbumList2(type, PAGE_SIZE, offset, genre, fromYear, toYear);
+      const page = await client.getAlbumList2(type, PAGE_SIZE, offset, genre, fromYear, toYear, activeFolderId ?? undefined);
       if (page.length < PAGE_SIZE) setHasMore(false);
 
       setAlbums((prev) => (isInitial ? page : [...prev, ...page]));
@@ -38,7 +40,7 @@ export default function AlbumsListScreen() {
       if (isInitial) setLoading(false);
       else setLoadingMore(false);
     }
-  }, [type, genre, fromYear, toYear]);
+  }, [type, genre, fromYear, toYear, activeFolderId]);
 
   useEffect(() => {
     offsetRef.current = 0;

@@ -27,5 +27,14 @@ screenshot2.png
 
 # Environment files
 .env
+.env.*
 .env.local
 .env.production
+
+# Secrets / credentials
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+secrets.json

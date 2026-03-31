@@ -73,7 +73,7 @@ Output lands in `dist/` — deploy to any static host (Cloudflare Pages, Vercel,
 
 ---
 
-## Tech Stack
+## (⌐■_■) Tech Stack
 
 | Tech | What |
 |------|------|

@@ -22,7 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-screenshot.png
 screenshot2.png
 
 # Environment files

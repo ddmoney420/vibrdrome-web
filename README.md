@@ -71,6 +71,26 @@ npm run build
 
 Output lands in `dist/` — deploy to any static host (Cloudflare Pages, Vercel, Netlify, etc.).
 
+### Docker
+
+```bash
+docker build -t vibrdrome-web .
+docker run -p 8080:80 vibrdrome-web
+```
+
+Open `http://localhost:8080` and connect to your server.
+
+Or with docker-compose:
+
+```yaml
+services:
+  vibrdrome-web:
+    build: .
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+```
+
 ---
 
 ## (⌐■_■) Tech Stack

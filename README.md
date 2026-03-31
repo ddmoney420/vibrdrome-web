@@ -6,15 +6,15 @@
     \_/    |___| |____/  |_| \_\ |____/  |_| \_\  \___/  |_|  |_| |_____|
 ```
 
-### ♪♫(◕‿◕)♫♪ *A modern web music player for Navidrome & Subsonic*
+### *A modern web music player for Navidrome & Subsonic*
 
-**[Try it live at web.vibrdrome.io](https://web.vibrdrome.io)** ✧･ﾟ:*✧･ﾟ:*
+**[Try it live at web.vibrdrome.io](https://web.vibrdrome.io)**
 
 ![Vibrdrome Web](screenshot.png)
 
 ---
 
-## ♪(๑ᴖ◡ᴖ๑)♪ Features
+## Features
 
 **Library & Browsing**
 - Stream your full music library from any Navidrome/Subsonic server
@@ -23,7 +23,7 @@
 - Playlist management and smart playlists
 - Search across your entire collection
 
-**Playback** ♪┏(・o･)┛♪
+**Playback**
 - Gapless queue with drag-to-reorder
 - Shuffle, repeat (all/one), and crossfade
 - 10-band equalizer powered by Web Audio API
@@ -31,7 +31,7 @@
 - Sleep timer with fade-out
 - Scrobbling support
 
-**Visualizer** (ﾉ◕ヮ◕)ﾉ*:・゚✧
+**Visualizer**
 - 6 WebGL shader presets (Plasma, Kaleidoscope, Tunnel, Fractal Pulse, Nebula, Warp Speed)
 - Milkdrop mode via Butterchurn
 - Photosensitivity warning with accessibility controls
@@ -45,7 +45,7 @@
 
 ---
 
-## (ﾉ◕ヮ◕)ﾉ*:・゚✧ Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -73,7 +73,7 @@ Output lands in `dist/` — deploy to any static host (Cloudflare Pages, Vercel,
 
 ---
 
-## ★☆★☆★ Tech Stack
+## Tech Stack
 
 | Tech | What |
 |------|------|
@@ -87,7 +87,7 @@ Output lands in `dist/` — deploy to any static host (Cloudflare Pages, Vercel,
 
 ---
 
-## ヽ(>∀<☆)ノ🎉 Other Vibrdrome Apps
+## Other Vibrdrome Apps
 
 | Platform | Link |
 |----------|------|
@@ -97,7 +97,7 @@ Output lands in `dist/` — deploy to any static host (Cloudflare Pages, Vercel,
 
 ---
 
-## (♥‿♥) Community
+## Community
 
 - **Website:** [vibrdrome.io](https://vibrdrome.io)
 - **Discord:** [Join the server](https://discord.gg/9q5uw3CfN)
@@ -107,7 +107,7 @@ Output lands in `dist/` — deploy to any static host (Cloudflare Pages, Vercel,
 
 ## Contributing
 
-Contributions are welcome! ♪♫(◕‿◕)♫♪
+Contributions are welcome!
 
 1. Fork the repo
 2. Create a feature branch (`git checkout -b feature/my-feature`)

@@ -19,22 +19,76 @@ export function usePlayback() {
 
   // Warmup audio context on every user interaction so that async flows
   // (e.g. fetch then play) don't lose the user-gesture context.
+  // Also handle global keyboard shortcuts for playback.
   useEffect(() => {
-    const handler = () => {
+    const warmupHandler = () => {
       if (!initializedRef.current) {
         initializedRef.current = true;
       }
       manager.warmup();
     };
 
-    document.addEventListener('click', handler);
-    document.addEventListener('keydown', handler);
-    document.addEventListener('touchstart', handler);
+    const keyHandler = (e: KeyboardEvent) => {
+      // Don't intercept when typing in inputs
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+      const store = usePlayerStore.getState();
+
+      switch (e.key) {
+        case ' ':
+          e.preventDefault();
+          if (store.currentSong) store.togglePlay();
+          break;
+        case 'ArrowRight':
+          if (e.shiftKey) {
+            // Shift+Right: skip forward 10s
+            manager.seek(Math.min((manager.getPosition() + 10) * 1000, store.durationMs));
+          } else {
+            store.next();
+          }
+          break;
+        case 'ArrowLeft':
+          if (e.shiftKey) {
+            // Shift+Left: skip back 10s
+            manager.seek(Math.max((manager.getPosition() - 10) * 1000, 0));
+          } else {
+            store.previous();
+          }
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          manager.setVolume(Math.min(1, manager.getVolume() + 0.05));
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          manager.setVolume(Math.max(0, manager.getVolume() - 0.05));
+          break;
+        case 'm':
+        case 'M':
+          manager.toggleMute();
+          break;
+        case 's':
+        case 'S':
+          store.toggleShuffle();
+          break;
+        case 'r':
+        case 'R':
+          store.cycleRepeat();
+          break;
+      }
+    };
+
+    document.addEventListener('click', warmupHandler);
+    document.addEventListener('keydown', warmupHandler);
+    document.addEventListener('keydown', keyHandler);
+    document.addEventListener('touchstart', warmupHandler);
 
     return () => {
-      document.removeEventListener('click', handler);
-      document.removeEventListener('keydown', handler);
-      document.removeEventListener('touchstart', handler);
+      document.removeEventListener('click', warmupHandler);
+      document.removeEventListener('keydown', warmupHandler);
+      document.removeEventListener('keydown', keyHandler);
+      document.removeEventListener('touchstart', warmupHandler);
     };
   }, []);
 

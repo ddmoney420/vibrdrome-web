@@ -29,6 +29,7 @@ class PlaybackManager {
   private sleepFadeInterval: number | null = null;
   private sleepRemainingMs = 0;
   private currentVolume = 1;
+  private previousVolume = 1;
   private unsubscribeEQ: (() => void) | null = null;
 
   constructor() {
@@ -159,6 +160,23 @@ class PlaybackManager {
     const audio = this.getActiveAudio();
     audio.currentTime = timeMs / 1000;
     usePlayerStore.getState().setPosition(timeMs);
+  }
+
+  getPosition(): number {
+    return this.getActiveAudio().currentTime;
+  }
+
+  getVolume(): number {
+    return this.currentVolume;
+  }
+
+  toggleMute(): void {
+    if (this.currentVolume > 0) {
+      this.previousVolume = this.currentVolume;
+      this.setVolume(0);
+    } else {
+      this.setVolume(this.previousVolume || 1);
+    }
   }
 
   setVolume(volume: number): void {

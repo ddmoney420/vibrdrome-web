@@ -4,6 +4,20 @@ import { usePlayerStore } from '../stores/playerStore';
 import { getPlaybackManager } from '../audio/PlaybackManager';
 import { CoverArt } from '../components/common';
 
+function useSwipeDown(onSwipe: () => void, threshold = 80) {
+  const startY = useRef(0);
+  const handlers = {
+    onTouchStart: (e: React.TouchEvent) => {
+      startY.current = e.touches[0].clientY;
+    },
+    onTouchEnd: (e: React.TouchEvent) => {
+      const delta = e.changedTouches[0].clientY - startY.current;
+      if (delta > threshold) onSwipe();
+    },
+  };
+  return handlers;
+}
+
 function formatTime(ms: number): string {
   const totalSeconds = Math.max(0, Math.floor(ms / 1000));
   const m = Math.floor(totalSeconds / 60);
@@ -105,8 +119,10 @@ export default function NowPlayingScreen() {
     pm.current.setVolume(v / 100);
   }, []);
 
+  const swipeHandlers = useSwipeDown(() => navigate(-1));
+
   return (
-    <div className="flex h-full flex-col bg-bg-primary">
+    <div className="flex h-full flex-col bg-bg-primary" {...swipeHandlers}>
       {/* Top bar */}
       <div className="flex items-center justify-between px-4 py-3">
         <button

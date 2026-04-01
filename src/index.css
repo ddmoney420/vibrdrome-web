@@ -107,6 +107,20 @@ body {
   color: var(--color-text-primary);
 }
 
+/* Theme radius override — Apple themes use extra rounding */
+[data-theme="apple"] .rounded-lg,
+[data-theme="apple-dark"] .rounded-lg {
+  border-radius: 14px;
+}
+[data-theme="apple"] .rounded-xl,
+[data-theme="apple-dark"] .rounded-xl {
+  border-radius: 18px;
+}
+[data-theme="apple"] .rounded-full,
+[data-theme="apple-dark"] .rounded-full {
+  border-radius: 9999px;
+}
+
 /* Spinning album art animation */
 @keyframes spin-album {
   from { transform: rotate(0deg); }
@@ -124,7 +138,7 @@ body {
   --color-border: #e5e7eb;
 }
 
-/* Apple Music theme — clean, airy, rounded */
+/* Apple Music Light — clean, airy, extra rounded */
 [data-theme="apple"] {
   --color-bg-primary: #f5f5f7;
   --color-bg-secondary: #ffffff;
@@ -136,6 +150,22 @@ body {
   --color-text-muted: #aeaeb2;
   --color-border: #d2d2d7;
   --font-primary: -apple-system, 'SF Pro Display', 'Helvetica Neue', system-ui, sans-serif;
+  --radius-base: 14px;
+}
+
+/* Apple Music Dark — sleek, rounded, red accent */
+[data-theme="apple-dark"] {
+  --color-bg-primary: #1c1c1e;
+  --color-bg-secondary: #2c2c2e;
+  --color-bg-tertiary: #3a3a3c;
+  --color-accent: #fc3c44;
+  --color-accent-hover: #ff5960;
+  --color-text-primary: #f5f5f7;
+  --color-text-secondary: #a1a1a6;
+  --color-text-muted: #636366;
+  --color-border: #48484a;
+  --font-primary: -apple-system, 'SF Pro Display', 'Helvetica Neue', system-ui, sans-serif;
+  --radius-base: 14px;
 }
 
 /* Spotify theme — dark, vibrant green */

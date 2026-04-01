@@ -28,9 +28,15 @@ const THEMES: ThemeOption[] = [
   },
   {
     id: 'apple',
-    label: 'Apple Music',
+    label: 'Apple Light',
     colors: { bg: '#f5f5f7', secondary: '#ffffff', accent: '#fc3c44', text: '#1d1d1f' },
-    description: 'Clean, airy, red accent',
+    description: 'Clean, airy, rounded',
+  },
+  {
+    id: 'apple-dark',
+    label: 'Apple Dark',
+    colors: { bg: '#1c1c1e', secondary: '#2c2c2e', accent: '#fc3c44', text: '#f5f5f7' },
+    description: 'Sleek, rounded, red accent',
   },
   {
     id: 'spotify',

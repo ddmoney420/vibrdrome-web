@@ -66,10 +66,10 @@ export default function DesktopNowPlaying() {
   return (
     <DynamicBackground coverArt={currentSong?.coverArt} className="flex h-full flex-col">
       {/* Top bar */}
-      <div className="flex items-center justify-between px-6 py-4">
+      <div className="relative z-20 flex items-center justify-between px-6 py-4">
         <button
           onClick={() => navigate(-1)}
-          className="flex h-8 w-8 items-center justify-center rounded-full text-white/60 hover:bg-white/10 hover:text-white"
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-black/30 text-white backdrop-blur-sm hover:bg-black/50"
           aria-label="Close"
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5">

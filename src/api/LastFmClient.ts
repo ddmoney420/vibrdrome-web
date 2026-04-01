@@ -64,10 +64,16 @@ function parseArtistResponse(data: any): LastFmArtistInfo | null {
   // Parse similar artists
   const similar = (artist.similar?.artist ?? [])
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .map((s: any) => ({
-      name: s.name,
-      image: s.image?.find((i: { size: string }) => i.size === 'medium')?.['#text'] || undefined,
-    }));
+    .map((s: any) => {
+      const imgUrl = s.image?.find((i: { size: string }) => i.size === 'large')?.['#text']
+        || s.image?.find((i: { size: string }) => i.size === 'medium')?.['#text']
+        || '';
+      return {
+        name: s.name,
+        // Last.fm returns empty strings or placeholder URLs — filter them out
+        image: imgUrl && !imgUrl.includes('2a96cbd8b46e442fc41c2b86b821562f') ? imgUrl : undefined,
+      };
+    });
 
   // Parse tags
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

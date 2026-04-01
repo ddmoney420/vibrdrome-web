@@ -115,6 +115,9 @@ class PlaybackManager {
       return;
     }
 
+    // Send "now playing" notification so the server shows this session
+    getSubsonicClient().scrobble(song.id, false).catch(() => {});
+
     // Connect to Web Audio graph after first successful play.
     // On subsequent plays crossOrigin is already set so no re-fetch.
     if (!this.sourceA) {

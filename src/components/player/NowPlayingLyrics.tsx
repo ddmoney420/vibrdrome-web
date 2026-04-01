@@ -84,7 +84,7 @@ export default function NowPlayingLyrics() {
   if (lyrics.synced && lyrics.line) {
     const currentIdx = getCurrentLineIndex(lyrics.line);
     return (
-      <div className="overflow-y-auto px-4 py-4 space-y-2">
+      <div className="h-full overflow-y-auto px-4 py-4 space-y-2">
         {lyrics.line.map((line, i) => (
           <button
             key={i}
@@ -111,7 +111,7 @@ export default function NowPlayingLyrics() {
   }
 
   return (
-    <div className="overflow-y-auto px-4 py-4 space-y-1.5">
+    <div className="h-full overflow-y-auto px-4 py-4 space-y-1.5">
       {lyrics.line?.map((line, i) => (
         <p key={i} className="text-sm text-text-primary">{line.value || '\u00A0'}</p>
       ))}

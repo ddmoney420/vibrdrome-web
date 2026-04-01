@@ -4,6 +4,14 @@ import { usePlayerStore } from '../stores/playerStore';
 import { getPlaybackManager } from '../audio/PlaybackManager';
 import { CoverArt } from '../components/common';
 import DynamicBackground from '../components/player/DynamicBackground';
+import DesktopNowPlaying from '../components/player/DesktopNowPlaying';
+import { useIsDesktop } from '../hooks/useMediaQuery';
+
+export default function NowPlayingScreen() {
+  const isDesktop = useIsDesktop();
+  if (isDesktop) return <DesktopNowPlaying />;
+  return <MobileNowPlaying />;
+}
 
 function useSwipeDown(onSwipe: () => void, threshold = 80) {
   const startY = useRef(0);
@@ -28,7 +36,7 @@ function formatTime(ms: number): string {
 
 const SLEEP_OPTIONS = [5, 10, 15, 30, 45, 60, 120];
 
-export default function NowPlayingScreen() {
+function MobileNowPlaying() {
   const navigate = useNavigate();
   const {
     currentSong,

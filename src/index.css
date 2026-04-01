@@ -107,6 +107,12 @@ body {
   color: var(--color-text-primary);
 }
 
+/* Spinning album art animation */
+@keyframes spin-album {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 /* Light theme */
 [data-theme="light"] {
   --color-bg-primary: #ffffff;

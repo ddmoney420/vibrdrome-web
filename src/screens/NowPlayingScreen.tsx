@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { usePlayerStore } from '../stores/playerStore';
 import { getPlaybackManager } from '../audio/PlaybackManager';
 import { CoverArt } from '../components/common';
+import DynamicBackground from '../components/player/DynamicBackground';
 
 function useSwipeDown(onSwipe: () => void, threshold = 80) {
   const startY = useRef(0);
@@ -122,7 +123,7 @@ export default function NowPlayingScreen() {
   const swipeHandlers = useSwipeDown(() => navigate(-1));
 
   return (
-    <div className="flex h-full flex-col bg-bg-primary" {...swipeHandlers}>
+    <DynamicBackground coverArt={currentSong?.coverArt} className="flex h-full flex-col" {...swipeHandlers}>
       {/* Top bar */}
       <div className="flex items-center justify-between px-4 py-3">
         <button
@@ -342,6 +343,6 @@ export default function NowPlayingScreen() {
           </div>
         </div>
       )}
-    </div>
+    </DynamicBackground>
   );
 }

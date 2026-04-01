@@ -7,6 +7,7 @@ import { usePlayerStore } from './stores/playerStore';
 import LoadingSpinner from './components/common/LoadingSpinner';
 import Sidebar from './components/common/Sidebar';
 import { usePlayback } from './audio/usePlayback';
+import { darkenHex } from './utils/color';
 
 // Error boundary for stale chunk errors after deploys
 class ChunkErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
@@ -86,6 +87,7 @@ const HIDE_SIDEBAR_ROUTES = ['/login', '/now-playing', '/visualizer'];
 export default function App() {
   const { isAuthenticated, loadFromStorage } = useAuthStore();
   const theme = useUIStore((s) => s.theme);
+  const accentColor = useUIStore((s) => s.accentColor);
   const currentSong = usePlayerStore((s) => s.currentSong);
   const location = useLocation();
 
@@ -106,6 +108,13 @@ export default function App() {
       root.setAttribute('data-theme', theme);
     }
   }, [theme]);
+
+  // Apply accent color to CSS custom properties
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty('--color-accent', accentColor);
+    root.style.setProperty('--color-accent-hover', darkenHex(accentColor, 8));
+  }, [accentColor]);
 
   const showMiniPlayer =
     currentSong !== null && !HIDE_MINIPLAYER_ROUTES.includes(location.pathname);

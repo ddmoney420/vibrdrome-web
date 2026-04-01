@@ -3,12 +3,17 @@ import { create } from 'zustand';
 const THEME_KEY = 'vibrdrome_theme';
 const REDUCE_MOTION_KEY = 'vibrdrome_reduce_motion';
 const EPILEPSY_DISMISSED_KEY = 'vibrdrome_epilepsy_dismissed';
+const ACCENT_COLOR_KEY = 'vibrdrome_accent_color';
+const DEFAULT_ACCENT = '#8b5cf6';
 
 type Theme = 'system' | 'dark' | 'light';
 
 interface UIState {
   theme: Theme;
   setTheme: (theme: Theme) => void;
+
+  accentColor: string;
+  setAccentColor: (color: string) => void;
 
   reduceMotion: boolean;
   setReduceMotion: (value: boolean) => void;
@@ -43,6 +48,16 @@ export const useUIStore = create<UIState>((set) => ({
   setTheme: (theme) => {
     try { localStorage.setItem(THEME_KEY, theme); } catch { /* ignore */ }
     set({ theme });
+  },
+
+  accentColor: (() => {
+    try { return localStorage.getItem(ACCENT_COLOR_KEY) || DEFAULT_ACCENT; }
+    catch { return DEFAULT_ACCENT; }
+  })(),
+
+  setAccentColor: (color) => {
+    try { localStorage.setItem(ACCENT_COLOR_KEY, color); } catch { /* ignore */ }
+    set({ accentColor: color });
   },
 
   reduceMotion: loadBool(REDUCE_MOTION_KEY, false),

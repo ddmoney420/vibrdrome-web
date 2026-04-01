@@ -198,11 +198,7 @@ export const usePlayerStore = create<PlaybackState>((set, get) => ({
     const { queue, currentIndex, shuffleEnabled, shuffleOrder, repeatMode } = get();
     if (queue.length === 0) return;
 
-    if (repeatMode === 'one') {
-      set({ positionMs: 0, isPlaying: true });
-      return;
-    }
-
+    // Repeat-one only applies to auto-advance (track ended), not manual skip
     let nextIndex: number;
     if (shuffleEnabled && shuffleOrder.length > 0) {
       const shufflePos = shuffleOrder.indexOf(currentIndex);

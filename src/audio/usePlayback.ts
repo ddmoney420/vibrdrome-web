@@ -125,7 +125,12 @@ export function usePlayback() {
     prevIsPlayingRef.current = isPlaying;
 
     if (isPlaying) {
-      manager.resume();
+      // If audio has no source (e.g. persisted song after reload), do a full play
+      if (!manager.hasSource()) {
+        manager.play(currentSong);
+      } else {
+        manager.resume();
+      }
     } else {
       manager.pause();
     }

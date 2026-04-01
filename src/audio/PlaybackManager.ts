@@ -165,6 +165,10 @@ class PlaybackManager {
     this.startPositionTracking();
   }
 
+  hasSource(): boolean {
+    return !!this.getActiveAudio().src && this.getActiveAudio().src !== window.location.href;
+  }
+
   seek(timeMs: number): void {
     const audio = this.getActiveAudio();
     audio.currentTime = timeMs / 1000;

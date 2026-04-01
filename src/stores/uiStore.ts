@@ -8,7 +8,7 @@ const LASTFM_KEY = 'vibrdrome_lastfm_key';
 const FANART_KEY = 'vibrdrome_fanart_key';
 const DEFAULT_ACCENT = '#8b5cf6';
 
-type Theme = 'system' | 'dark' | 'light' | 'apple' | 'apple-dark' | 'spotify' | 'retro' | 'terminal' | 'midnight' | 'sunset';
+type Theme = 'system' | 'dark' | 'light' | 'apple' | 'apple-dark' | 'retro' | 'terminal' | 'midnight' | 'sunset';
 
 interface UIState {
   theme: Theme;
@@ -37,7 +37,7 @@ interface UIState {
   setSleepTimer: (minutes: number | null) => void;
 }
 
-const VALID_THEMES: Theme[] = ['system', 'dark', 'light', 'apple', 'apple-dark', 'spotify', 'retro', 'terminal', 'midnight', 'sunset'];
+const VALID_THEMES: Theme[] = ['system', 'dark', 'light', 'apple', 'apple-dark', 'retro', 'terminal', 'midnight', 'sunset'];
 
 function loadTheme(): Theme {
   try {

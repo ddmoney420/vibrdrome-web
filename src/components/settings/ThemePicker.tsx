@@ -28,21 +28,15 @@ const THEMES: ThemeOption[] = [
   },
   {
     id: 'apple',
-    label: 'Apple Light',
+    label: 'zApple Light',
     colors: { bg: '#f5f5f7', secondary: '#ffffff', accent: '#fc3c44', text: '#1d1d1f' },
     description: 'Clean, airy, rounded',
   },
   {
     id: 'apple-dark',
-    label: 'Apple Dark',
+    label: 'zApple Dark',
     colors: { bg: '#1c1c1e', secondary: '#2c2c2e', accent: '#fc3c44', text: '#f5f5f7' },
     description: 'Sleek, rounded, red accent',
-  },
-  {
-    id: 'spotify',
-    label: 'Spotify',
-    colors: { bg: '#121212', secondary: '#181818', accent: '#1db954', text: '#ffffff' },
-    description: 'Dark with vibrant green',
   },
   {
     id: 'retro',

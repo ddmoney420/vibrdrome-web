@@ -25,9 +25,16 @@ export default function MiniPlayer() {
         className="flex h-16 cursor-pointer items-center gap-3 px-3"
         onClick={handleBarClick}
       >
-        {/* Cover art with progress ring */}
+        {/* Cover art with progress ring + spin */}
         <ProgressRing progress={progress} size={46}>
-          <CoverArt coverArt={currentSong.coverArt} size={38} className="rounded" />
+          <div
+            className="h-full w-full overflow-hidden rounded-full"
+            style={{
+              animation: isPlaying ? 'spin-album 8s linear infinite' : 'none',
+            }}
+          >
+            <CoverArt coverArt={currentSong.coverArt} size={38} className="!rounded-full" />
+          </div>
         </ProgressRing>
 
         {/* Song info + waveform */}
@@ -71,17 +78,18 @@ export default function MiniPlayer() {
             </svg>
           </button>
 
-          {/* Visualizer */}
-          <button
-            onClick={(e) => { e.stopPropagation(); navigate('/visualizer'); }}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-text-secondary transition-colors hover:bg-bg-tertiary"
-            aria-label="Visualizer"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4">
-              <path strokeLinecap="round" d="M3 12h2M7 8v8M11 5v14M15 9v6M19 7v10M21 12h2" />
-            </svg>
-          </button>
         </div>
+
+        {/* Visualizer — always visible */}
+        <button
+          onClick={(e) => { e.stopPropagation(); navigate('/visualizer'); }}
+          className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-accent"
+          aria-label="Visualizer"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5">
+            <path strokeLinecap="round" d="M3 12h2M7 8v8M11 5v14M15 9v6M19 7v10M21 12h2" />
+          </svg>
+        </button>
 
         {/* Play/Pause */}
         <button

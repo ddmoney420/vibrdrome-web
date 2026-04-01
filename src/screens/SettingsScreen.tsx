@@ -6,11 +6,12 @@ import { usePlayerStore } from '../stores/playerStore';
 import { useEQStore } from '../stores/eqStore';
 import { isValidHex } from '../utils/color';
 import { Header } from '../components/common';
+import ThemePicker from '../components/settings/ThemePicker';
 
 export default function SettingsScreen() {
   const navigate = useNavigate();
   const { servers, activeServerId, logout } = useAuthStore();
-  const { theme, setTheme, accentColor, setAccentColor, lastfmApiKey, setLastfmApiKey, fanartApiKey, setFanartApiKey, reduceMotion, setReduceMotion } = useUIStore();
+  const { accentColor, setAccentColor, lastfmApiKey, setLastfmApiKey, fanartApiKey, setFanartApiKey, reduceMotion, setReduceMotion } = useUIStore();
   const { crossfadeEnabled, crossfadeDuration, setCrossfade, setCrossfadeDuration } = usePlayerStore();
   const eqEnabled = useEQStore((s) => s.enabled);
 
@@ -127,21 +128,7 @@ export default function SettingsScreen() {
               Appearance
             </h2>
             <div className="rounded-lg bg-bg-secondary p-4">
-              <div className="flex gap-2">
-                {(['system', 'dark', 'light'] as const).map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setTheme(t)}
-                    className={`flex-1 rounded-lg py-2 text-center text-sm font-medium capitalize transition-colors ${
-                      theme === t
-                        ? 'bg-accent text-white'
-                        : 'bg-bg-tertiary text-text-secondary hover:text-text-primary'
-                    }`}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
+              <ThemePicker />
 
               {/* Accent Color */}
               <div className="mt-4 border-t border-border pt-4">

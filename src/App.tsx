@@ -8,6 +8,7 @@ import LoadingSpinner from './components/common/LoadingSpinner';
 import Sidebar from './components/common/Sidebar';
 import { usePlayback } from './audio/usePlayback';
 import { darkenHex } from './utils/color';
+import CommandPalette from './components/common/CommandPalette';
 
 // Error boundary for stale chunk errors after deploys
 class ChunkErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
@@ -116,6 +117,20 @@ export default function App() {
     root.style.setProperty('--color-accent-hover', darkenHex(accentColor, 8));
   }, [accentColor]);
 
+  // Command palette shortcut (Ctrl+K / Cmd+K)
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        const { commandPaletteOpen, openCommandPalette, closeCommandPalette } = useUIStore.getState();
+        if (commandPaletteOpen) closeCommandPalette();
+        else openCommandPalette();
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, []);
+
   const showMiniPlayer =
     currentSong !== null && !HIDE_MINIPLAYER_ROUTES.includes(location.pathname);
   const showSidebar =
@@ -123,6 +138,7 @@ export default function App() {
 
   return (
     <div className="flex h-dvh flex-col bg-bg-primary text-text-primary">
+      {isAuthenticated && <CommandPalette />}
       <div className="flex flex-1 overflow-hidden">
         {showSidebar && <Sidebar />}
         <div className="flex-1 overflow-y-auto">

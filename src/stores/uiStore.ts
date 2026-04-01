@@ -21,6 +21,10 @@ interface UIState {
   epilepsyWarningDismissed: boolean;
   setEpilepsyWarningDismissed: (value: boolean) => void;
 
+  commandPaletteOpen: boolean;
+  openCommandPalette: () => void;
+  closeCommandPalette: () => void;
+
   sleepTimer: { endTime: number | null; duration: number | null };
   setSleepTimer: (minutes: number | null) => void;
 }
@@ -73,6 +77,10 @@ export const useUIStore = create<UIState>((set) => ({
     try { localStorage.setItem(EPILEPSY_DISMISSED_KEY, String(value)); } catch { /* ignore */ }
     set({ epilepsyWarningDismissed: value });
   },
+
+  commandPaletteOpen: false,
+  openCommandPalette: () => set({ commandPaletteOpen: true }),
+  closeCommandPalette: () => set({ commandPaletteOpen: false }),
 
   sleepTimer: { endTime: null, duration: null },
 

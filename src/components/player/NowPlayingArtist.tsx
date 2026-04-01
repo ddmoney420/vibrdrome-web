@@ -1,0 +1,142 @@
+import { useNavigate } from 'react-router-dom';
+import { usePlayerStore } from '../../stores/playerStore';
+import { useArtistInfo } from '../../hooks/useArtistInfo';
+import { getSubsonicClient } from '../../api/SubsonicClient';
+import { useUIStore } from '../../stores/uiStore';
+import { useState } from 'react';
+
+export default function NowPlayingArtist() {
+  const navigate = useNavigate();
+  const currentSong = usePlayerStore((s) => s.currentSong);
+  const hasApiKey = !!useUIStore((s) => s.lastfmApiKey);
+  const { info, loading } = useArtistInfo(currentSong?.artist);
+  const [expanded, setExpanded] = useState(false);
+
+  if (!hasApiKey) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-2 px-4 text-center">
+        <p className="text-sm text-text-muted">Add a Last.fm API key in Settings to see artist info</p>
+        <button
+          onClick={() => navigate('/settings')}
+          className="rounded-lg bg-accent/10 px-3 py-1.5 text-xs font-medium text-accent hover:bg-accent/20"
+        >
+          Go to Settings
+        </button>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="h-5 w-5 animate-spin rounded-full border-2 border-bg-tertiary border-t-accent" />
+      </div>
+    );
+  }
+
+  if (!info) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <p className="text-sm text-text-muted">No artist info available</p>
+      </div>
+    );
+  }
+
+  const bio = expanded ? info.bio.content : info.bio.summary;
+  const showExpand = info.bio.content.length > info.bio.summary.length;
+
+  // Find the largest image
+  const image = info.image.find((i) => i.size === 'extralarge' || i.size === 'large')?.url
+    || info.image.find((i) => i.size === 'medium')?.url;
+
+  return (
+    <div className="overflow-y-auto px-4 py-4 space-y-4">
+      {/* Artist header */}
+      <div className="flex items-center gap-3">
+        {image ? (
+          <img src={image} alt="" className="h-14 w-14 rounded-full object-cover" />
+        ) : (
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/10">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="h-6 w-6 text-white/40">
+              <path strokeLinecap="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate text-base font-bold text-white">{info.name}</h3>
+          <div className="flex gap-3 text-[10px] text-white/40">
+            {info.listeners && <span>{Number(info.listeners).toLocaleString()} listeners</span>}
+            {info.playcount && <span>{Number(info.playcount).toLocaleString()} plays</span>}
+          </div>
+        </div>
+        {/* Navigate to full artist page */}
+        {currentSong?.artistId && (
+          <button
+            onClick={() => navigate(`/artist/${currentSong.artistId}`)}
+            className="rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white/60 hover:bg-white/20"
+          >
+            View
+          </button>
+        )}
+      </div>
+
+      {/* Tags */}
+      {info.tags.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {info.tags.slice(0, 5).map((tag) => (
+            <span key={tag} className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] font-medium text-white/40">
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Bio */}
+      {bio && (
+        <div>
+          <p className="text-xs leading-relaxed text-white/50">{bio}</p>
+          {showExpand && (
+            <button
+              onClick={() => setExpanded(!expanded)}
+              className="mt-1 text-[10px] font-medium text-accent hover:underline"
+            >
+              {expanded ? 'Show less' : 'Read more'}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Similar artists */}
+      {info.similar.length > 0 && (
+        <div>
+          <h4 className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-white/30">Similar Artists</h4>
+          <div className="space-y-1">
+            {info.similar.map((s) => (
+              <button
+                key={s.name}
+                onClick={() => {
+                  getSubsonicClient().search3(s.name, 1, 0, 0).then((result) => {
+                    const match = result.artist?.[0];
+                    if (match) navigate(`/artist/${match.id}`);
+                  });
+                }}
+                className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-white/5"
+              >
+                {s.image ? (
+                  <img src={s.image} alt="" className="h-8 w-8 rounded-full object-cover bg-white/5" />
+                ) : (
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-white/30">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="h-4 w-4">
+                      <path strokeLinecap="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
+                )}
+                <span className="truncate text-xs font-medium text-white/60">{s.name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -6,6 +6,7 @@ import DynamicBackground from './DynamicBackground';
 import SpinningAlbumArt from './SpinningAlbumArt';
 import NowPlayingQueue from './NowPlayingQueue';
 import NowPlayingLyrics from './NowPlayingLyrics';
+import NowPlayingArtist from './NowPlayingArtist';
 
 function formatTime(ms: number): string {
   const totalSeconds = Math.max(0, Math.floor(ms / 1000));
@@ -14,7 +15,7 @@ function formatTime(ms: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-type RightTab = 'queue' | 'lyrics';
+type RightTab = 'queue' | 'lyrics' | 'artist';
 
 export default function DesktopNowPlaying() {
   const navigate = useNavigate();
@@ -94,10 +95,16 @@ export default function DesktopNowPlaying() {
       <div className="flex flex-1 gap-6 overflow-hidden px-6 pb-6">
         {/* Left: Spinning album art */}
         <div className="flex flex-1 flex-col items-center justify-center">
-          <SpinningAlbumArt
-            coverArt={currentSong?.coverArt}
-            className="w-full max-w-[min(50vh,400px)] aspect-square"
-          />
+          <button
+            onClick={() => setActiveTab('artist')}
+            className="cursor-pointer transition-transform hover:scale-[1.02]"
+            aria-label="View artist info"
+          >
+            <SpinningAlbumArt
+              coverArt={currentSong?.coverArt}
+              className="w-full max-w-[min(50vh,400px)] aspect-square"
+            />
+          </button>
           {/* Artist info below art */}
           <div className="mt-6 text-center">
             {currentSong?.artist && (
@@ -204,7 +211,7 @@ export default function DesktopNowPlaying() {
         <div className="flex w-80 flex-col overflow-hidden rounded-xl bg-black/20 backdrop-blur-sm">
           {/* Tabs */}
           <div className="flex border-b border-white/10">
-            {(['queue', 'lyrics'] as const).map((tab) => (
+            {(['queue', 'lyrics', 'artist'] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -221,6 +228,7 @@ export default function DesktopNowPlaying() {
           <div className="flex-1 overflow-hidden">
             {activeTab === 'queue' && <NowPlayingQueue />}
             {activeTab === 'lyrics' && <NowPlayingLyrics />}
+            {activeTab === 'artist' && <NowPlayingArtist />}
           </div>
         </div>
       </div>

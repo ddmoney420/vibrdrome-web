@@ -46,8 +46,19 @@ function useCachedAlbums(type: string, folderId: string | null, size = CAROUSEL_
 
     let cancelled = false;
 
-    getSubsonicClient()
-      .getAlbumList2(type as 'newest' | 'frequent' | 'random', size, undefined, undefined, undefined, undefined, folderId ?? undefined)
+    const client = getSubsonicClient();
+    let promise: Promise<Album[]>;
+
+    if (type === 'starred') {
+      promise = client.getStarred2().then((s) => s.album ?? []);
+    } else if (type === 'thisYear') {
+      const year = new Date().getFullYear();
+      promise = client.getAlbumList2('byYear' as 'newest', size, undefined, undefined, year, year, folderId ?? undefined);
+    } else {
+      promise = client.getAlbumList2(type as 'newest' | 'frequent' | 'random' | 'recent', size, undefined, undefined, undefined, undefined, folderId ?? undefined);
+    }
+
+    promise
       .then((data) => {
         if (cancelled) return;
         albumCache[cacheKey] = { data, fetchedAt: Date.now() };
@@ -167,12 +178,18 @@ const CAROUSEL_LABELS: Record<string, string> = {
   newest: 'Recently Added',
   frequent: 'Most Played',
   random: 'Random Picks',
+  starred: 'Starred Albums',
+  thisYear: `Released in ${new Date().getFullYear()}`,
+  recent: 'Recently Played',
 };
 
 const CAROUSEL_SEE_ALL: Record<string, string> = {
   newest: '/albums?type=newest',
   frequent: '/albums?type=frequent',
   random: '/albums?type=random',
+  starred: '/favorites',
+  thisYear: `/albums?type=byYear&fromYear=${new Date().getFullYear()}&toYear=${new Date().getFullYear()}`,
+  recent: '/albums?type=recent',
 };
 
 export default function LibraryScreen() {

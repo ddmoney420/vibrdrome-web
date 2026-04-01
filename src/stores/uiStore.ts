@@ -4,6 +4,7 @@ const THEME_KEY = 'vibrdrome_theme';
 const REDUCE_MOTION_KEY = 'vibrdrome_reduce_motion';
 const EPILEPSY_DISMISSED_KEY = 'vibrdrome_epilepsy_dismissed';
 const ACCENT_COLOR_KEY = 'vibrdrome_accent_color';
+const LASTFM_KEY = 'vibrdrome_lastfm_key';
 const DEFAULT_ACCENT = '#8b5cf6';
 
 type Theme = 'system' | 'dark' | 'light';
@@ -20,6 +21,9 @@ interface UIState {
 
   epilepsyWarningDismissed: boolean;
   setEpilepsyWarningDismissed: (value: boolean) => void;
+
+  lastfmApiKey: string;
+  setLastfmApiKey: (key: string) => void;
 
   commandPaletteOpen: boolean;
   openCommandPalette: () => void;
@@ -76,6 +80,16 @@ export const useUIStore = create<UIState>((set) => ({
   setEpilepsyWarningDismissed: (value) => {
     try { localStorage.setItem(EPILEPSY_DISMISSED_KEY, String(value)); } catch { /* ignore */ }
     set({ epilepsyWarningDismissed: value });
+  },
+
+  lastfmApiKey: (() => {
+    try { return localStorage.getItem(LASTFM_KEY) || ''; }
+    catch { return ''; }
+  })(),
+
+  setLastfmApiKey: (key) => {
+    try { localStorage.setItem(LASTFM_KEY, key); } catch { /* ignore */ }
+    set({ lastfmApiKey: key });
   },
 
   commandPaletteOpen: false,

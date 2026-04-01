@@ -99,13 +99,14 @@ export const useUIStore = create<UIState>((set) => ({
   },
 
   fanartApiKey: (() => {
-    try { return localStorage.getItem(FANART_KEY) || ''; }
+    try { return (localStorage.getItem(FANART_KEY) || '').replace(/['"]/g, '').trim(); }
     catch { return ''; }
   })(),
 
   setFanartApiKey: (key) => {
-    try { localStorage.setItem(FANART_KEY, key); } catch { /* ignore */ }
-    set({ fanartApiKey: key });
+    const clean = key.replace(/['"]/g, '').trim();
+    try { localStorage.setItem(FANART_KEY, clean); } catch { /* ignore */ }
+    set({ fanartApiKey: clean });
   },
 
   commandPaletteOpen: false,

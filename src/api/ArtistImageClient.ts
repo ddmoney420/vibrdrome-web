@@ -57,7 +57,8 @@ async function mbRateLimit() {
 async function getMusicBrainzId(artistName: string): Promise<string | null> {
   const cacheKey = `mbid:${artistName.toLowerCase()}`;
   const cached = await getCached(cacheKey);
-  if (cached !== undefined) return cached;
+  // Only use cached positive results
+  if (cached !== undefined && cached !== null) return cached;
 
   try {
     await mbRateLimit();
@@ -73,9 +74,7 @@ async function getMusicBrainzId(artistName: string): Promise<string | null> {
     });
 
     if (!response.ok) {
-      if (response.status === 503) return null; // Rate limited — don't cache, retry later
-      await setCache(cacheKey, null);
-      return null;
+      return null; // Don't cache failures — allow retry
     }
 
     const data = await response.json();
@@ -93,7 +92,7 @@ async function getMusicBrainzId(artistName: string): Promise<string | null> {
 async function getFanartImage(mbid: string, apiKey: string): Promise<string | null> {
   const cacheKey = `fanart:${mbid}`;
   const cached = await getCached(cacheKey);
-  if (cached !== undefined) return cached;
+  if (cached !== undefined && cached !== null) return cached;
 
   try {
     const response = await fetch(
@@ -101,21 +100,20 @@ async function getFanartImage(mbid: string, apiKey: string): Promise<string | nu
     );
 
     if (!response.ok) {
-      await setCache(cacheKey, null);
-      return null;
+      return null; // Don't cache failures
     }
 
     const data = await response.json();
 
-    // Try artistthumb first, then artistbackground, then hdmusiclogo
+    // Try artistthumb first, then artistbackground
     const thumb = data?.artistthumb?.[0]?.url
       ?? data?.artistbackground?.[0]?.url
       ?? null;
 
-    await setCache(cacheKey, thumb);
+    // Only cache positive results
+    if (thumb) await setCache(cacheKey, thumb);
     return thumb;
   } catch {
-    await setCache(cacheKey, null);
     return null;
   }
 }
@@ -130,10 +128,11 @@ export async function getArtistImageUrl(
 ): Promise<string | null> {
   if (!fanartApiKey || !artistName) return null;
 
-  // Full chain cache key
-  const cacheKey = `artist-img:${artistName.toLowerCase()}`;
+  // Full chain cache key — include a flag so changing API key invalidates cache
+  const cacheKey = `artist-img:${artistName.toLowerCase()}:${fanartApiKey.slice(0, 8)}`;
   const cached = await getCached(cacheKey);
-  if (cached !== undefined) return cached;
+  // Only use cached positive results — don't cache "not found" to allow retry with new config
+  if (cached !== undefined && cached !== null) return cached;
 
   const mbid = await getMusicBrainzId(artistName);
   if (!mbid) {

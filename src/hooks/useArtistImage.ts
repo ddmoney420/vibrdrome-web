@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getSubsonicClient } from '../api/SubsonicClient';
 import { getArtistImageUrl } from '../api/ArtistImageClient';
 import { useUIStore } from '../stores/uiStore';
@@ -11,55 +11,78 @@ interface ArtistImageResult {
 
 const EMPTY: ArtistImageResult = { imageUrl: null, artistId: null, coverArt: null };
 
+// Module-level cache to avoid re-fetching across component re-mounts
+const resolvedCache = new Map<string, ArtistImageResult>();
+const pendingResolves = new Map<string, Promise<ArtistImageResult>>();
+
+async function resolveArtistImage(artistName: string, fanartApiKey: string): Promise<ArtistImageResult> {
+  const cacheKey = `${artistName.toLowerCase()}:${fanartApiKey ? 'fk' : 'nk'}`;
+
+  const cached = resolvedCache.get(cacheKey);
+  // Only use cache if we found an image, or if we searched with the same key config
+  if (cached && cached.imageUrl) return cached;
+
+  // Deduplicate concurrent requests for the same artist
+  const pending = pendingResolves.get(cacheKey);
+  if (pending) return pending;
+
+  const promise = (async (): Promise<ArtistImageResult> => {
+    let foundArtistId: string | null = null;
+
+    // Step 1: Try Subsonic server
+    try {
+      const searchResult = await getSubsonicClient().search3(artistName, 5, 0, 0);
+      const artists = searchResult.artist ?? [];
+      const match = artists.find((a) => a.name.toLowerCase() === artistName.toLowerCase()) ?? artists[0];
+      if (match) {
+        foundArtistId = match.id;
+        const coverArt = match.coverArt ?? null;
+        if (coverArt) {
+          const url = getSubsonicClient().getCoverArt(coverArt, 150);
+          const result = { imageUrl: url, artistId: match.id, coverArt };
+          resolvedCache.set(cacheKey, result);
+          return result;
+        }
+      }
+    } catch { /* continue */ }
+
+    // Step 2: Try fanart.tv
+    if (fanartApiKey) {
+      try {
+        const fanartUrl = await getArtistImageUrl(artistName, fanartApiKey);
+        if (fanartUrl) {
+          const result = { imageUrl: fanartUrl, artistId: foundArtistId, coverArt: null };
+          resolvedCache.set(cacheKey, result);
+          return result;
+        }
+      } catch { /* continue */ }
+    }
+
+    const result = { imageUrl: null, artistId: foundArtistId, coverArt: null };
+    resolvedCache.set(cacheKey, result);
+    return result;
+  })();
+
+  pendingResolves.set(cacheKey, promise);
+  promise.finally(() => pendingResolves.delete(cacheKey));
+
+  return promise;
+}
+
 export function useArtistImage(artistName: string | undefined): ArtistImageResult {
   const fanartApiKey = useUIStore((s) => s.fanartApiKey);
   const [result, setResult] = useState<ArtistImageResult>(EMPTY);
+  const nameRef = useRef(artistName);
 
   useEffect(() => {
+    nameRef.current = artistName;
     if (!artistName) return;
 
-    let cancelled = false;
-
-    const resolve = async () => {
-      let foundArtistId: string | null = null;
-
-      // Step 1: Try Subsonic server
-      try {
-        const searchResult = await getSubsonicClient().search3(artistName, 1, 0, 0);
-        if (cancelled) return;
-        const match = searchResult.artist?.[0];
-        if (match) {
-          foundArtistId = match.id;
-          const coverArt = match.coverArt ?? null;
-          if (coverArt) {
-            const url = getSubsonicClient().getCoverArt(coverArt, 150);
-            setResult({ imageUrl: url, artistId: match.id, coverArt });
-            return;
-          }
-        }
-      } catch { /* continue to fanart */ }
-
-      // Step 2: Try fanart.tv
-      if (fanartApiKey && !cancelled) {
-        try {
-          const fanartUrl = await getArtistImageUrl(artistName, fanartApiKey);
-          if (cancelled) return;
-          if (fanartUrl) {
-            setResult({ imageUrl: fanartUrl, artistId: foundArtistId, coverArt: null });
-            return;
-          }
-        } catch { /* continue */ }
+    resolveArtistImage(artistName, fanartApiKey).then((res) => {
+      if (nameRef.current === artistName) {
+        setResult(res);
       }
-
-      // No image found
-      if (!cancelled) {
-        setResult({ imageUrl: null, artistId: foundArtistId, coverArt: null });
-      }
-    };
-
-    resolve();
-
-    return () => { cancelled = true; };
+    });
   }, [artistName, fanartApiKey]);
 
   return result;

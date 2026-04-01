@@ -225,7 +225,7 @@ export default function DesktopNowPlaying() {
           </div>
 
           {/* Tab content */}
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-y-auto">
             {activeTab === 'queue' && <NowPlayingQueue />}
             {activeTab === 'lyrics' && <NowPlayingLyrics />}
             {activeTab === 'artist' && <NowPlayingArtist />}

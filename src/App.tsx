@@ -164,7 +164,7 @@ export default function App() {
               element={isAuthenticated ? <FolderBrowserScreen /> : <Navigate to="/login" replace />}
             />
             <Route
-              path="/folder/:directoryId"
+              path="/folder/:folderId"
               element={isAuthenticated ? <FolderDetailScreen /> : <Navigate to="/login" replace />}
             />
             <Route

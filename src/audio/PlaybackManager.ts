@@ -111,6 +111,8 @@ class PlaybackManager {
     try {
       await audio.play();
     } catch (err) {
+      // AbortError is expected when a new play() call interrupts a pending one — ignore it
+      if (err instanceof DOMException && err.name === 'AbortError') return;
       console.error('[PlaybackManager] Play error:', err);
       usePlayerStore.getState().setPlaying(false);
       return;

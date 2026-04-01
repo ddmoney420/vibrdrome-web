@@ -1,16 +1,17 @@
 import { useNavigate } from 'react-router-dom';
 import { usePlayerStore } from '../../stores/playerStore';
 import { useArtistInfo } from '../../hooks/useArtistInfo';
-import { getSubsonicClient } from '../../api/SubsonicClient';
+import { useArtistImage } from '../../hooks/useArtistImage';
 import { useUIStore } from '../../stores/uiStore';
 import CoverArt from '../common/CoverArt';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 export default function NowPlayingArtist() {
   const navigate = useNavigate();
   const currentSong = usePlayerStore((s) => s.currentSong);
   const hasApiKey = !!useUIStore((s) => s.lastfmApiKey);
   const { info, loading } = useArtistInfo(currentSong?.artist);
+  const { imageUrl: artistImage, coverArt: artistCoverArt } = useArtistImage(currentSong?.artist);
   const [expanded, setExpanded] = useState(false);
 
   if (!hasApiKey) {
@@ -46,16 +47,14 @@ export default function NowPlayingArtist() {
   const bio = expanded ? info.bio.content : info.bio.summary;
   const showExpand = info.bio.content.length > info.bio.summary.length;
 
-  // Find the largest image
-  const image = info.image.find((i) => i.size === 'extralarge' || i.size === 'large')?.url
-    || info.image.find((i) => i.size === 'medium')?.url;
-
   return (
     <div className="overflow-y-auto px-4 py-4 space-y-4">
       {/* Artist header */}
       <div className="flex items-center gap-3">
-        {image ? (
-          <img src={image} alt="" className="h-14 w-14 rounded-full object-cover" />
+        {artistCoverArt ? (
+          <CoverArt coverArt={artistCoverArt} size={56} className="!rounded-full" />
+        ) : artistImage ? (
+          <img src={artistImage} alt="" className="h-14 w-14 rounded-full object-cover" />
         ) : (
           <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/10">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="h-6 w-6 text-white/40">
@@ -123,25 +122,17 @@ export default function NowPlayingArtist() {
 }
 
 function SimilarArtistRow({ name, navigate }: { name: string; navigate: (path: string) => void }) {
-  const [artistData, setArtistData] = useState<{ id: string; coverArt?: string } | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    getSubsonicClient().search3(name, 1, 0, 0).then((result) => {
-      if (cancelled) return;
-      const match = result.artist?.[0];
-      if (match) setArtistData({ id: match.id, coverArt: match.coverArt });
-    });
-    return () => { cancelled = true; };
-  }, [name]);
+  const { imageUrl, artistId, coverArt } = useArtistImage(name);
 
   return (
     <button
-      onClick={() => { if (artistData) navigate(`/artist/${artistData.id}`); }}
+      onClick={() => { if (artistId) navigate(`/artist/${artistId}`); }}
       className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-white/5"
     >
-      {artistData?.coverArt ? (
-        <CoverArt coverArt={artistData.coverArt} size={32} className="!rounded-full shrink-0" />
+      {coverArt ? (
+        <CoverArt coverArt={coverArt} size={32} className="!rounded-full shrink-0" />
+      ) : imageUrl ? (
+        <img src={imageUrl} alt="" className="h-8 w-8 shrink-0 rounded-full object-cover" />
       ) : (
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/5 text-white/30">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="h-4 w-4">

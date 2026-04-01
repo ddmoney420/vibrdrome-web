@@ -5,6 +5,7 @@ import { usePlayerStore } from '../stores/playerStore';
 import { shareUrl } from '../utils/share';
 import { useArtistInfo } from '../hooks/useArtistInfo';
 import type { Artist, Song } from '../types/subsonic';
+import { useArtistImage } from '../hooks/useArtistImage';
 import { Header, AlbumCard, CoverArt, LoadingSpinner } from '../components/common';
 
 export default function ArtistDetailScreen() {
@@ -209,25 +210,17 @@ function ArtistBio({ artistName }: { artistName: string }) {
 
 function SimilarArtistCard({ name }: { name: string }) {
   const navigate = useNavigate();
-  const [artistData, setArtistData] = useState<{ id: string; coverArt?: string } | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    getSubsonicClient().search3(name, 1, 0, 0).then((result) => {
-      if (cancelled) return;
-      const match = result.artist?.[0];
-      if (match) setArtistData({ id: match.id, coverArt: match.coverArt });
-    });
-    return () => { cancelled = true; };
-  }, [name]);
+  const { imageUrl, artistId, coverArt } = useArtistImage(name);
 
   return (
     <button
-      onClick={() => { if (artistData) navigate(`/artist/${artistData.id}`); }}
+      onClick={() => { if (artistId) navigate(`/artist/${artistId}`); }}
       className="flex w-20 shrink-0 flex-col items-center gap-1.5 text-center"
     >
-      {artistData?.coverArt ? (
-        <CoverArt coverArt={artistData.coverArt} size={64} className="!rounded-full" />
+      {coverArt ? (
+        <CoverArt coverArt={coverArt} size={64} className="!rounded-full" />
+      ) : imageUrl ? (
+        <img src={imageUrl} alt="" className="h-16 w-16 rounded-full object-cover" />
       ) : (
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-bg-tertiary text-text-muted">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="h-6 w-6">

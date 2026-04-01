@@ -3,7 +3,8 @@ import { usePlayerStore } from '../../stores/playerStore';
 import { useArtistInfo } from '../../hooks/useArtistInfo';
 import { getSubsonicClient } from '../../api/SubsonicClient';
 import { useUIStore } from '../../stores/uiStore';
-import { useState } from 'react';
+import CoverArt from '../common/CoverArt';
+import { useState, useEffect } from 'react';
 
 export default function NowPlayingArtist() {
   const navigate = useNavigate();
@@ -112,31 +113,43 @@ export default function NowPlayingArtist() {
           <h4 className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-white/30">Similar Artists</h4>
           <div className="space-y-1">
             {info.similar.map((s) => (
-              <button
-                key={s.name}
-                onClick={() => {
-                  getSubsonicClient().search3(s.name, 1, 0, 0).then((result) => {
-                    const match = result.artist?.[0];
-                    if (match) navigate(`/artist/${match.id}`);
-                  });
-                }}
-                className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-white/5"
-              >
-                {s.image ? (
-                  <img src={s.image} alt="" className="h-8 w-8 rounded-full object-cover bg-white/5" />
-                ) : (
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-white/30">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="h-4 w-4">
-                      <path strokeLinecap="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                  </div>
-                )}
-                <span className="truncate text-xs font-medium text-white/60">{s.name}</span>
-              </button>
+              <SimilarArtistRow key={s.name} name={s.name} navigate={navigate} />
             ))}
           </div>
         </div>
       )}
     </div>
+  );
+}
+
+function SimilarArtistRow({ name, navigate }: { name: string; navigate: (path: string) => void }) {
+  const [artistData, setArtistData] = useState<{ id: string; coverArt?: string } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getSubsonicClient().search3(name, 1, 0, 0).then((result) => {
+      if (cancelled) return;
+      const match = result.artist?.[0];
+      if (match) setArtistData({ id: match.id, coverArt: match.coverArt });
+    });
+    return () => { cancelled = true; };
+  }, [name]);
+
+  return (
+    <button
+      onClick={() => { if (artistData) navigate(`/artist/${artistData.id}`); }}
+      className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-white/5"
+    >
+      {artistData?.coverArt ? (
+        <CoverArt coverArt={artistData.coverArt} size={32} className="!rounded-full shrink-0" />
+      ) : (
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/5 text-white/30">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="h-4 w-4">
+            <path strokeLinecap="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+        </div>
+      )}
+      <span className="truncate text-xs font-medium text-white/60">{name}</span>
+    </button>
   );
 }

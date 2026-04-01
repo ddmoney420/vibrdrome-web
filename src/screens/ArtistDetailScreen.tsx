@@ -5,7 +5,7 @@ import { usePlayerStore } from '../stores/playerStore';
 import { shareUrl } from '../utils/share';
 import { useArtistInfo } from '../hooks/useArtistInfo';
 import type { Artist, Song } from '../types/subsonic';
-import { Header, AlbumCard, LoadingSpinner } from '../components/common';
+import { Header, AlbumCard, CoverArt, LoadingSpinner } from '../components/common';
 
 export default function ArtistDetailScreen() {
   const { artistId } = useParams<{ artistId: string }>();
@@ -137,7 +137,6 @@ export default function ArtistDetailScreen() {
 }
 
 function ArtistBio({ artistName }: { artistName: string }) {
-  const navigate = useNavigate();
   const { info, loading, hasApiKey } = useArtistInfo(artistName);
   const [expanded, setExpanded] = useState(false);
 
@@ -199,34 +198,44 @@ function ArtistBio({ artistName }: { artistName: string }) {
           <h3 className="mb-2 text-sm font-semibold uppercase tracking-wider text-text-muted">Similar Artists</h3>
           <div className="flex gap-3 overflow-x-auto pb-2">
             {info.similar.map((s) => (
-              <button
-                key={s.name}
-                onClick={() => {
-                  // Search for the artist and navigate to first match
-                  import('../api/SubsonicClient').then(({ getSubsonicClient }) => {
-                    getSubsonicClient().search3(s.name, 1, 0, 0).then((result) => {
-                      const match = result.artist?.[0];
-                      if (match) navigate(`/artist/${match.id}`);
-                    });
-                  });
-                }}
-                className="flex w-20 shrink-0 flex-col items-center gap-1.5 text-center"
-              >
-                {s.image ? (
-                  <img src={s.image} alt="" className="h-16 w-16 rounded-full object-cover bg-bg-tertiary" />
-                ) : (
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-bg-tertiary text-text-muted">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="h-6 w-6">
-                      <path strokeLinecap="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                  </div>
-                )}
-                <span className="truncate text-[10px] font-medium text-text-secondary w-full">{s.name}</span>
-              </button>
+              <SimilarArtistCard key={s.name} name={s.name} />
             ))}
           </div>
         </div>
       )}
     </div>
+  );
+}
+
+function SimilarArtistCard({ name }: { name: string }) {
+  const navigate = useNavigate();
+  const [artistData, setArtistData] = useState<{ id: string; coverArt?: string } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getSubsonicClient().search3(name, 1, 0, 0).then((result) => {
+      if (cancelled) return;
+      const match = result.artist?.[0];
+      if (match) setArtistData({ id: match.id, coverArt: match.coverArt });
+    });
+    return () => { cancelled = true; };
+  }, [name]);
+
+  return (
+    <button
+      onClick={() => { if (artistData) navigate(`/artist/${artistData.id}`); }}
+      className="flex w-20 shrink-0 flex-col items-center gap-1.5 text-center"
+    >
+      {artistData?.coverArt ? (
+        <CoverArt coverArt={artistData.coverArt} size={64} className="!rounded-full" />
+      ) : (
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-bg-tertiary text-text-muted">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="h-6 w-6">
+            <path strokeLinecap="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+        </div>
+      )}
+      <span className="truncate text-[10px] font-medium text-text-secondary w-full">{name}</span>
+    </button>
   );
 }

@@ -97,12 +97,12 @@ export default function DesktopNowPlaying() {
         <div className="flex flex-1 flex-col items-center justify-center">
           <button
             onClick={() => setActiveTab('artist')}
-            className="cursor-pointer transition-transform hover:scale-[1.02]"
+            className="cursor-pointer transition-transform hover:scale-[1.02] w-[min(45vh,350px)] h-[min(45vh,350px)]"
             aria-label="View artist info"
           >
             <SpinningAlbumArt
               coverArt={currentSong?.coverArt}
-              className="w-full max-w-[min(50vh,400px)] aspect-square"
+              className="h-full w-full"
             />
           </button>
           {/* Artist info below art */}

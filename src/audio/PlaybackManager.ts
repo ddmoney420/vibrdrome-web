@@ -30,6 +30,7 @@ class PlaybackManager {
   private sleepRemainingMs = 0;
   private currentVolume = 1;
   private previousVolume = 1;
+  private playId = 0;
   private unsubscribeEQ: (() => void) | null = null;
 
   constructor() {
@@ -92,14 +93,15 @@ class PlaybackManager {
   }
 
   async play(song: Song): Promise<void> {
+    // Guard against rapid-fire calls (e.g. clicking next repeatedly)
+    const thisPlayId = ++this.playId;
+
     // Cancel any active crossfade
     this.cancelCrossfade();
 
     const audio = this.getActiveAudio();
     const url = getSubsonicClient().stream(song.id);
 
-    // If audio chain already connected, crossOrigin is already set.
-    // Otherwise play without CORS first — chain connects after.
     audio.src = url;
     audio.load();
 
@@ -110,10 +112,12 @@ class PlaybackManager {
       await audio.play();
     } catch (err) {
       console.error('[PlaybackManager] Play error:', err);
-      // Try to skip to next on failure
-      usePlayerStore.getState().next();
+      usePlayerStore.getState().setPlaying(false);
       return;
     }
+
+    // Bail if another play() was called while we were awaiting
+    if (thisPlayId !== this.playId) return;
 
     // Send "now playing" notification so the server shows this session
     getSubsonicClient().scrobble(song.id, false).catch(() => {});

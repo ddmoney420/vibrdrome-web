@@ -11,7 +11,7 @@ export default function ProgressRing({ progress, size, strokeWidth = 2.5, childr
   const offset = circumference * (1 - Math.max(0, Math.min(1, progress)));
 
   return (
-    <div className="relative" style={{ width: size, height: size }}>
+    <div className="relative shrink-0" style={{ width: size, height: size, minWidth: size }}>
       <svg
         width={size}
         height={size}

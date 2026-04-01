@@ -19,10 +19,10 @@ export default function MiniPlayer() {
   };
 
   return (
-    <div className="shrink-0 border-t border-border bg-bg-secondary">
+    <div className="shrink-0 overflow-hidden border-t border-border bg-bg-secondary">
       {/* Content */}
       <div
-        className="flex h-16 cursor-pointer items-center gap-3 px-3"
+        className="flex h-16 cursor-pointer items-center gap-3 overflow-hidden px-3"
         onClick={handleBarClick}
       >
         {/* Cover art with progress ring + spin */}

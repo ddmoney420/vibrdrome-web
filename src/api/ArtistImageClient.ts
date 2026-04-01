@@ -45,12 +45,23 @@ async function setCache(key: string, url: string | null): Promise<void> {
  * Look up an artist's MusicBrainz ID by name.
  * MusicBrainz requires a User-Agent header — we use the app name.
  */
+// Simple rate limiter for MusicBrainz (1 req/sec)
+let lastMbRequest = 0;
+async function mbRateLimit() {
+  const now = Date.now();
+  const wait = Math.max(0, 1100 - (now - lastMbRequest));
+  if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+  lastMbRequest = Date.now();
+}
+
 async function getMusicBrainzId(artistName: string): Promise<string | null> {
   const cacheKey = `mbid:${artistName.toLowerCase()}`;
   const cached = await getCached(cacheKey);
   if (cached !== undefined) return cached;
 
   try {
+    await mbRateLimit();
+
     const params = new URLSearchParams({
       query: `artist:${artistName}`,
       fmt: 'json',
@@ -62,6 +73,7 @@ async function getMusicBrainzId(artistName: string): Promise<string | null> {
     });
 
     if (!response.ok) {
+      if (response.status === 503) return null; // Rate limited — don't cache, retry later
       await setCache(cacheKey, null);
       return null;
     }

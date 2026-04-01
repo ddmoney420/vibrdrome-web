@@ -9,15 +9,11 @@ interface ArtistImageResult {
   coverArt: string | null;
 }
 
-/**
- * Resolves an artist image URL with fallback chain:
- * 1. Subsonic server (search for artist, use their coverArt)
- * 2. fanart.tv (via MusicBrainz MBID lookup)
- * 3. null (caller shows placeholder)
- */
+const EMPTY: ArtistImageResult = { imageUrl: null, artistId: null, coverArt: null };
+
 export function useArtistImage(artistName: string | undefined): ArtistImageResult {
   const fanartApiKey = useUIStore((s) => s.fanartApiKey);
-  const [result, setResult] = useState<ArtistImageResult>({ imageUrl: null, artistId: null, coverArt: null });
+  const [result, setResult] = useState<ArtistImageResult>(EMPTY);
 
   useEffect(() => {
     if (!artistName) return;
@@ -25,30 +21,39 @@ export function useArtistImage(artistName: string | undefined): ArtistImageResul
     let cancelled = false;
 
     const resolve = async () => {
+      let foundArtistId: string | null = null;
+
       // Step 1: Try Subsonic server
       try {
         const searchResult = await getSubsonicClient().search3(artistName, 1, 0, 0);
         if (cancelled) return;
         const match = searchResult.artist?.[0];
         if (match) {
+          foundArtistId = match.id;
           const coverArt = match.coverArt ?? null;
           if (coverArt) {
             const url = getSubsonicClient().getCoverArt(coverArt, 150);
             setResult({ imageUrl: url, artistId: match.id, coverArt });
             return;
           }
-          // Artist found but no cover art — save ID, try fanart
-          setResult((prev) => ({ ...prev, artistId: match.id }));
         }
-      } catch { /* continue */ }
+      } catch { /* continue to fanart */ }
 
       // Step 2: Try fanart.tv
       if (fanartApiKey && !cancelled) {
-        const fanartUrl = await getArtistImageUrl(artistName, fanartApiKey);
-        if (fanartUrl && !cancelled) {
-          setResult((prev) => ({ ...prev, imageUrl: fanartUrl }));
-          return;
-        }
+        try {
+          const fanartUrl = await getArtistImageUrl(artistName, fanartApiKey);
+          if (cancelled) return;
+          if (fanartUrl) {
+            setResult({ imageUrl: fanartUrl, artistId: foundArtistId, coverArt: null });
+            return;
+          }
+        } catch { /* continue */ }
+      }
+
+      // No image found
+      if (!cancelled) {
+        setResult({ imageUrl: null, artistId: foundArtistId, coverArt: null });
       }
     };
 

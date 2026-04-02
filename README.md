@@ -22,25 +22,38 @@
 
 **Library & Browsing**
 - Stream your full music library from any Navidrome/Subsonic server
-- Album, artist, genre, and folder browsing
+- Album, artist, genre, and folder browsing with responsive grid layouts
 - Customizable library — reorder & show/hide shortcuts and carousels
+- Custom carousels — filter by year range, genre (multi-select), decade, playlist, or top rated
 - Music folder picker — switch between libraries on multi-folder servers
-- Playlist management and smart playlists
+- Playlist management with artwork (Navidrome 0.61+)
 - Search across your entire collection
 - Command palette (Ctrl+K / Cmd+K) — search anything, navigate anywhere
+- Filters on Artists (name, genre), Albums (name, artist, genre, year), and Songs (artist, genre, year)
+- Artist radio — one-click play similar songs/top songs for any artist
+- Multi-select with batch actions (Play, Play Next, Add to Queue)
 
 **Playback** ♪┏(・o･)┛♪
-- Queue with drag-to-reorder
+- Drag-and-drop queue reorder with up/down arrows for touch
 - Shuffle, repeat (all/one), and crossfade
 - 10-band equalizer powered by Web Audio API
+- Waveform seekbar — canvas-rendered audio waveform with click/drag to seek
 - Playback speed control
 - Sleep timer with fade-out
 - Scrobbling and now playing reporting
-- Keyboard shortcuts (Space, arrows, M, S, R)
+- Keyboard shortcuts (Space, arrows, M, S, R) — toggle in Settings
+- Play history tracking for future smart playlists
+
+**Split-Pane Desktop View**
+- Persistent right panel with Playing, Queue, and Lyrics tabs
+- Browse your library while controlling playback
+- Waveform seekbar and transport controls in the side panel
+- Synced lyrics with click-to-seek
 
 **Desktop Now Playing** (ﾉ◕ヮ◕)ﾉ
 - Spinning vinyl album art with blurred background
 - Three-column layout: album art | controls | queue/lyrics/artist
+- Waveform seekbar replacing flat progress bar
 - Artist spotlight — bio, tags, stats, similar artists (via Last.fm)
 - Browse similar artist bios inline without leaving the player
 - Artist images from your library or Wikimedia Commons
@@ -55,13 +68,18 @@
 - Milkdrop mode via Butterchurn
 - Photosensitivity warning with accessibility controls
 
+**Radio**
+- Internet radio with PLS/M3U playlist support
+- Station artwork from Navidrome 0.61+
+
 **Themes** (⌐■_■)
 - 8 built-in themes: Dark, Light, zApple Light, zApple Dark, Retro, Terminal, Midnight, Sunset
 - Custom accent color picker with 12 presets + hex input
 - Per-theme fonts (pixel font for Retro, monospace for Terminal)
 
 **Design**
-- Responsive — desktop, tablet, and mobile
+- Responsive grid layouts — Artists, Albums, Genres, Playlists, Radio, Folders
+- Sidebar with library counts (artists, genres, playlists, radio)
 - Offline-capable PWA
 - Share buttons on albums, artists, and playlists
 - Docker support for self-hosting

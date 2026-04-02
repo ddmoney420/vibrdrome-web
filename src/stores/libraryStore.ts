@@ -12,26 +12,32 @@ export interface LibraryItem {
 export interface CustomCarousel {
   id: string;
   label: string;
-  type: 'byYear' | 'byGenre' | 'highest' | 'decade';
+  type: 'byYear' | 'byGenre' | 'highest' | 'decade' | 'playlist';
   visible: boolean;
-  // byYear / decade params
   fromYear?: number;
   toYear?: number;
-  // byGenre param
-  genre?: string;
+  genre?: string;       // single genre (legacy)
+  genres?: string[];     // multi-genre support
+  playlistId?: string;   // for playlist type
+  playlistName?: string; // display name for playlist
 }
+
+export type PillsPosition = 'above' | 'below';
 
 interface LibraryConfig {
   pills: LibraryItem[];
   carousels: LibraryItem[];
   customCarousels: CustomCarousel[];
+  pillsPosition: PillsPosition;
   setPills: (pills: LibraryItem[]) => void;
   setCarousels: (carousels: LibraryItem[]) => void;
+  setPillsPosition: (pos: PillsPosition) => void;
   togglePill: (id: string) => void;
   toggleCarousel: (id: string) => void;
   movePill: (from: number, to: number) => void;
   moveCarousel: (from: number, to: number) => void;
   addCustomCarousel: (carousel: Omit<CustomCarousel, 'id'>) => void;
+  updateCustomCarousel: (id: string, updates: Partial<Omit<CustomCarousel, 'id'>>) => void;
   removeCustomCarousel: (id: string) => void;
   toggleCustomCarousel: (id: string) => void;
   moveCustomCarousel: (from: number, to: number) => void;
@@ -63,17 +69,18 @@ const DEFAULT_CAROUSELS: LibraryItem[] = [
   { id: 'recent', label: 'Recently Played', visible: true },
 ];
 
-function loadConfig(): { pills: LibraryItem[]; carousels: LibraryItem[] } {
+function loadConfig(): { pills: LibraryItem[]; carousels: LibraryItem[]; pillsPosition: PillsPosition } {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       const pills = mergeItems(DEFAULT_PILLS, parsed.pills ?? []);
       const carousels = mergeItems(DEFAULT_CAROUSELS, parsed.carousels ?? []);
-      return { pills, carousels };
+      const pillsPosition = (parsed.pillsPosition === 'below' ? 'below' : 'above') as PillsPosition;
+      return { pills, carousels, pillsPosition };
     }
   } catch { /* ignore */ }
-  return { pills: DEFAULT_PILLS, carousels: DEFAULT_CAROUSELS };
+  return { pills: DEFAULT_PILLS, carousels: DEFAULT_CAROUSELS, pillsPosition: 'above' };
 }
 
 function loadCustomCarousels(): CustomCarousel[] {
@@ -104,11 +111,12 @@ function mergeItems(defaults: LibraryItem[], saved: LibraryItem[]): LibraryItem[
   return merged;
 }
 
-function persist(state: { pills: LibraryItem[]; carousels: LibraryItem[] }) {
+function persist(state: { pills: LibraryItem[]; carousels: LibraryItem[]; pillsPosition: PillsPosition }) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       pills: state.pills.map(({ id, visible }) => ({ id, visible })),
       carousels: state.carousels.map(({ id, visible }) => ({ id, visible })),
+      pillsPosition: state.pillsPosition,
     }));
   } catch { /* ignore */ }
 }
@@ -132,15 +140,21 @@ export const useLibraryStore = create<LibraryConfig>((set, get) => ({
   pills: initial.pills,
   carousels: initial.carousels,
   customCarousels: loadCustomCarousels(),
+  pillsPosition: initial.pillsPosition,
 
   setPills: (pills) => {
     set({ pills });
-    persist(get());
+    persist({ ...get(), pills });
   },
 
   setCarousels: (carousels) => {
     set({ carousels });
-    persist(get());
+    persist({ ...get(), carousels });
+  },
+
+  setPillsPosition: (pillsPosition) => {
+    set({ pillsPosition });
+    persist({ ...get(), pillsPosition });
   },
 
   togglePill: (id) => {
@@ -148,7 +162,7 @@ export const useLibraryStore = create<LibraryConfig>((set, get) => ({
       p.id === id ? { ...p, visible: !p.visible } : p
     );
     set({ pills });
-    persist({ pills, carousels: get().carousels });
+    persist({ ...get(), pills });
   },
 
   toggleCarousel: (id) => {
@@ -156,24 +170,32 @@ export const useLibraryStore = create<LibraryConfig>((set, get) => ({
       c.id === id ? { ...c, visible: !c.visible } : c
     );
     set({ carousels });
-    persist({ pills: get().pills, carousels });
+    persist({ ...get(), carousels });
   },
 
   movePill: (from, to) => {
     const pills = moveItem(get().pills, from, to);
     set({ pills });
-    persist({ pills, carousels: get().carousels });
+    persist({ ...get(), pills });
   },
 
   moveCarousel: (from, to) => {
     const carousels = moveItem(get().carousels, from, to);
     set({ carousels });
-    persist({ pills: get().pills, carousels });
+    persist({ ...get(), carousels });
   },
 
   addCustomCarousel: (carousel) => {
     const id = `custom_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
     const custom = [...get().customCarousels, { ...carousel, id, visible: true }];
+    set({ customCarousels: custom });
+    persistCustom(custom);
+  },
+
+  updateCustomCarousel: (id, updates) => {
+    const custom = get().customCarousels.map((c) =>
+      c.id === id ? { ...c, ...updates } : c
+    );
     set({ customCarousels: custom });
     persistCustom(custom);
   },

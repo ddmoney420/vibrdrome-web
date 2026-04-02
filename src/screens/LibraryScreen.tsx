@@ -169,8 +169,7 @@ const SettingsIcon = (
 );
 const CustomizeIcon = (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
-    <path d="M3.505 2.365A41.369 41.369 0 019 2c1.863 0 3.697.124 5.495.365 1.247.167 2.18 1.108 2.435 2.268a4.45 4.45 0 00-.577-.069 43.141 43.141 0 00-4.706 0C9.229 4.696 7.5 6.727 7.5 8.998v2.24c0 1.413.67 2.735 1.76 3.562l-2.98 2.98A.75.75 0 015 17.25v-3.443c-.501-.048-1-.106-1.495-.172C2.033 13.438 1 12.162 1 10.72V5.28c0-1.441 1.033-2.717 2.505-2.914z" />
-    <path d="M14 6c-.762 0-1.52.02-2.271.062C10.157 6.148 9 7.472 9 8.998v2.24c0 1.519 1.147 2.839 2.71 2.935.214.013.428.024.642.034.2.009.385.09.518.224l2.35 2.35a.75.75 0 001.28-.531v-2.07c1.453-.195 2.5-1.463 2.5-2.942V8.998c0-1.526-1.157-2.85-2.729-2.936A41.645 41.645 0 0014 6z" />
+    <path d="M10 3.75a2 2 0 10-4 0 2 2 0 004 0zM17.25 4.5a.75.75 0 000-1.5h-5.5a.75.75 0 000 1.5h5.5zM5 3.75a.75.75 0 01-.75.75h-1.5a.75.75 0 010-1.5h1.5a.75.75 0 01.75.75zM4.25 17a.75.75 0 000-1.5h-1.5a.75.75 0 000 1.5h1.5zM17.25 17a.75.75 0 000-1.5h-5.5a.75.75 0 000 1.5h5.5zM9 10a.75.75 0 01-.75.75h-5.5a.75.75 0 010-1.5h5.5A.75.75 0 019 10zM17.25 10.75a.75.75 0 000-1.5h-1.5a.75.75 0 000 1.5h1.5zM14 10a2 2 0 10-4 0 2 2 0 004 0zM10 16.25a2 2 0 10-4 0 2 2 0 004 0z" />
   </svg>
 );
 
@@ -195,7 +194,7 @@ const CAROUSEL_SEE_ALL: Record<string, string> = {
 export default function LibraryScreen() {
   const navigate = useNavigate();
   const playSongs = usePlayerStore((s) => s.playSongs);
-  const { pills, carousels, customCarousels } = useLibraryStore();
+  const { pills, carousels, customCarousels, pillsPosition } = useLibraryStore();
   const activeFolderId = useMusicFolderStore((s) => s.activeFolderId);
   const [showCustomize, setShowCustomize] = useState(false);
 
@@ -267,21 +266,8 @@ export default function LibraryScreen() {
     <div className="pb-20 md:pb-4">
       <Header title="Library" rightActions={rightActions} />
 
-      {/* Quick access pills */}
-      {visiblePills.length > 0 && (
-        <div className="grid grid-cols-2 gap-1.5 px-3 pb-4 md:gap-2 md:px-4 md:pb-6">
-          {visiblePills.map((pill) => (
-            <button
-              key={pill.id}
-              onClick={PILL_ACTIONS[pill.id]}
-              className="flex items-center gap-2 rounded-full bg-bg-secondary px-3 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-bg-tertiary md:gap-2.5 md:px-4 md:py-2.5"
-            >
-              <span className="text-text-secondary">{PILL_ICONS[pill.id]}</span>
-              <span className="truncate">{pill.label}</span>
-            </button>
-          ))}
-        </div>
-      )}
+      {/* Pills (above position) */}
+      {pillsPosition === 'above' && <PillsGrid pills={visiblePills} actions={PILL_ACTIONS} icons={PILL_ICONS} />}
 
       {/* Default Carousels */}
       {visibleCarousels.map((carousel) => (
@@ -304,7 +290,9 @@ export default function LibraryScreen() {
             if (cc.type === 'byYear' || cc.type === 'decade') {
               navigate(`/albums?type=byYear&fromYear=${cc.fromYear}&toYear=${cc.toYear}`);
             } else if (cc.type === 'byGenre') {
-              navigate(`/albums?type=byGenre&genre=${encodeURIComponent(cc.genre ?? '')}`);
+              navigate(`/albums?type=byGenre&genre=${encodeURIComponent(cc.genres?.[0] ?? cc.genre ?? '')}`);
+            } else if (cc.type === 'playlist' && cc.playlistId) {
+              navigate(`/playlist/${cc.playlistId}`);
             } else {
               navigate(`/albums?type=${cc.type}`);
             }
@@ -312,9 +300,30 @@ export default function LibraryScreen() {
         />
       ))}
 
+      {/* Pills (below position) */}
+      {pillsPosition === 'below' && <PillsGrid pills={visiblePills} actions={PILL_ACTIONS} icons={PILL_ICONS} />}
+
       {showCustomize && (
         <CustomizeModal onClose={() => setShowCustomize(false)} />
       )}
+    </div>
+  );
+}
+
+function PillsGrid({ pills, actions, icons }: { pills: LibraryItem[]; actions: Record<string, () => void>; icons: Record<string, React.ReactNode> }) {
+  if (pills.length === 0) return null;
+  return (
+    <div className="grid grid-cols-2 gap-1.5 px-3 pb-4 md:gap-2 md:px-4 md:pb-6">
+      {pills.map((pill) => (
+        <button
+          key={pill.id}
+          onClick={actions[pill.id]}
+          className="flex items-center gap-2 rounded-full bg-bg-secondary px-3 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-bg-tertiary md:gap-2.5 md:px-4 md:py-2.5"
+        >
+          <span className="text-text-secondary">{icons[pill.id]}</span>
+          <span className="truncate">{pill.label}</span>
+        </button>
+      ))}
     </div>
   );
 }
@@ -384,7 +393,33 @@ function CustomAlbumCarousel({
     if (config.type === 'byYear' || config.type === 'decade') {
       promise = client.getAlbumList2('byYear' as 'newest', CAROUSEL_SIZE, undefined, undefined, config.fromYear, config.toYear, folderId ?? undefined);
     } else if (config.type === 'byGenre') {
-      promise = client.getAlbumList2('byGenre' as 'newest', CAROUSEL_SIZE, undefined, config.genre, undefined, undefined, folderId ?? undefined);
+      const genreList = config.genres ?? (config.genre ? [config.genre] : []);
+      if (genreList.length > 1) {
+        // Multi-genre: fetch each and merge/dedupe
+        promise = Promise.all(
+          genreList.map((g) => client.getAlbumList2('byGenre' as 'newest', CAROUSEL_SIZE, undefined, g, undefined, undefined, folderId ?? undefined))
+        ).then((results) => {
+          const seen = new Set<string>();
+          const merged: Album[] = [];
+          for (const albums of results) {
+            for (const a of albums) {
+              if (!seen.has(a.id)) { seen.add(a.id); merged.push(a); }
+            }
+          }
+          return merged.slice(0, CAROUSEL_SIZE);
+        });
+      } else {
+        promise = client.getAlbumList2('byGenre' as 'newest', CAROUSEL_SIZE, undefined, genreList[0], undefined, undefined, folderId ?? undefined);
+      }
+    } else if (config.type === 'playlist' && config.playlistId) {
+      promise = client.getPlaylist(config.playlistId).then((pl) =>
+        (pl.entry ?? []).slice(0, CAROUSEL_SIZE).map((song) => ({
+          id: song.albumId ?? song.id,
+          name: song.album ?? song.title,
+          artist: song.artist,
+          coverArt: song.coverArt,
+        } as Album))
+      );
     } else {
       promise = client.getAlbumList2('highest' as 'newest', CAROUSEL_SIZE, undefined, undefined, undefined, undefined, folderId ?? undefined);
     }
@@ -427,7 +462,7 @@ function CustomAlbumCarousel({
 // --- Customize Modal ---
 
 function CustomizeModal({ onClose }: { onClose: () => void }) {
-  const { pills, carousels, customCarousels, togglePill, toggleCarousel, movePill, moveCarousel, addCustomCarousel, removeCustomCarousel, toggleCustomCarousel, moveCustomCarousel } = useLibraryStore();
+  const { pills, carousels, customCarousels, pillsPosition, togglePill, toggleCarousel, movePill, moveCarousel, setPillsPosition, addCustomCarousel, updateCustomCarousel, removeCustomCarousel, toggleCustomCarousel, moveCustomCarousel } = useLibraryStore();
   const [tab, setTab] = useState<'pills' | 'carousels' | 'custom'>('pills');
 
   return (
@@ -483,7 +518,26 @@ function CustomizeModal({ onClose }: { onClose: () => void }) {
             Toggle visibility and drag to reorder.
           </p>
           {tab === 'pills' && (
-            <ReorderList items={pills} onToggle={togglePill} onMove={movePill} />
+            <>
+              <div className="mb-3 flex items-center justify-between rounded-lg bg-bg-tertiary/50 px-3 py-2">
+                <span className="text-xs text-text-secondary">Position</span>
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => setPillsPosition('above')}
+                    className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${pillsPosition === 'above' ? 'bg-accent text-white' : 'text-text-muted hover:text-text-primary'}`}
+                  >
+                    Above Carousels
+                  </button>
+                  <button
+                    onClick={() => setPillsPosition('below')}
+                    className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${pillsPosition === 'below' ? 'bg-accent text-white' : 'text-text-muted hover:text-text-primary'}`}
+                  >
+                    Below Carousels
+                  </button>
+                </div>
+              </div>
+              <ReorderList items={pills} onToggle={togglePill} onMove={movePill} />
+            </>
           )}
           {tab === 'carousels' && (
             <ReorderList items={carousels} onToggle={toggleCarousel} onMove={moveCarousel} />
@@ -492,6 +546,7 @@ function CustomizeModal({ onClose }: { onClose: () => void }) {
             <CustomCarouselManager
               carousels={customCarousels}
               onAdd={addCustomCarousel}
+              onUpdate={updateCustomCarousel}
               onRemove={removeCustomCarousel}
               onToggle={toggleCustomCarousel}
               onMove={moveCustomCarousel}
@@ -609,35 +664,45 @@ const DECADE_PRESETS = [
 function CustomCarouselManager({
   carousels,
   onAdd,
+  onUpdate,
   onRemove,
   onToggle,
   onMove,
 }: {
   carousels: CustomCarousel[];
   onAdd: (c: Omit<CustomCarousel, 'id'>) => void;
+  onUpdate: (id: string, updates: Partial<Omit<CustomCarousel, 'id'>>) => void;
   onRemove: (id: string) => void;
   onToggle: (id: string) => void;
   onMove: (from: number, to: number) => void;
 }) {
   const [showCreator, setShowCreator] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [creatorType, setCreatorType] = useState<CustomCarousel['type']>('byYear');
   const [label, setLabel] = useState('');
   const [fromYear, setFromYear] = useState(2020);
   const [toYear, setToYear] = useState(new Date().getFullYear());
-  const [genre, setGenre] = useState('');
+  const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [genres, setGenres] = useState<string[]>([]);
+  const [playlists, setPlaylists] = useState<{ id: string; name: string }[]>([]);
+  const [selectedPlaylistId, setSelectedPlaylistId] = useState('');
 
-  // Load genres for the genre picker
+  // Load genres and playlists for pickers
   useEffect(() => {
     if (creatorType === 'byGenre' && genres.length === 0) {
       getSubsonicClient().getGenres().then((g) => {
         setGenres(g.map((x) => x.value).filter(Boolean).sort());
       }).catch(() => { /* silently fail */ });
     }
-  }, [creatorType, genres.length]);
+    if (creatorType === 'playlist' && playlists.length === 0) {
+      getSubsonicClient().getPlaylists().then((p) => {
+        setPlaylists(p.map((pl) => ({ id: pl.id, name: pl.name })));
+      }).catch(() => { /* silently fail */ });
+    }
+  }, [creatorType, genres.length, playlists.length]);
 
-  const handleCreate = () => {
-    if (!label.trim()) return;
+  const buildCarouselData = (): Omit<CustomCarousel, 'id'> | null => {
+    if (!label.trim()) return null;
 
     const carousel: Omit<CustomCarousel, 'id'> = {
       label: label.trim(),
@@ -645,19 +710,53 @@ function CustomCarouselManager({
       visible: true,
     };
 
-    if (creatorType === 'byYear') {
-      carousel.fromYear = fromYear;
-      carousel.toYear = toYear;
-    } else if (creatorType === 'decade') {
+    if (creatorType === 'byYear' || creatorType === 'decade') {
       carousel.fromYear = fromYear;
       carousel.toYear = toYear;
     } else if (creatorType === 'byGenre') {
-      carousel.genre = genre;
+      carousel.genres = selectedGenres.length > 0 ? selectedGenres : [];
+      if (carousel.genres.length === 0) return null;
+    } else if (creatorType === 'playlist') {
+      if (!selectedPlaylistId) return null;
+      carousel.playlistId = selectedPlaylistId;
+      carousel.playlistName = playlists.find((p) => p.id === selectedPlaylistId)?.name;
     }
 
-    onAdd(carousel);
+    return carousel;
+  };
+
+  const handleCreate = () => {
+    const data = buildCarouselData();
+    if (!data) return;
+    onAdd(data);
+    resetForm();
+  };
+
+  const handleEdit = () => {
+    if (!editingId) return;
+    const data = buildCarouselData();
+    if (!data) return;
+    onUpdate(editingId, data);
+    resetForm();
+  };
+
+  const startEdit = (c: CustomCarousel) => {
+    setEditingId(c.id);
+    setShowCreator(true);
+    setCreatorType(c.type);
+    setLabel(c.label);
+    setFromYear(c.fromYear ?? 2020);
+    setToYear(c.toYear ?? new Date().getFullYear());
+    setSelectedGenres(c.genres ?? (c.genre ? [c.genre] : []));
+    setSelectedPlaylistId(c.playlistId ?? '');
+  };
+
+  const resetForm = () => {
     setLabel('');
     setShowCreator(false);
+    setEditingId(null);
+    setSelectedGenres([]);
+    setSelectedPlaylistId('');
   };
 
   return (
@@ -703,6 +802,16 @@ function CustomCarouselManager({
                 className={`relative h-5 w-9 rounded-full transition-colors ${c.visible ? 'bg-accent' : 'bg-bg-tertiary'}`}
               >
                 <span className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white transition-transform ${c.visible ? 'translate-x-4' : ''}`} />
+              </button>
+
+              {/* Edit */}
+              <button
+                onClick={() => startEdit(c)}
+                className="flex h-6 w-6 items-center justify-center rounded text-text-muted hover:text-accent"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
+                  <path d="M2.695 14.763l-1.262 3.154a.5.5 0 00.65.65l3.155-1.262a4 4 0 001.343-.885L17.5 5.5a2.121 2.121 0 00-3-3L3.58 13.42a4 4 0 00-.885 1.343z" />
+                </svg>
               </button>
 
               {/* Delete */}
@@ -752,14 +861,15 @@ function CustomCarouselManager({
         </button>
       ) : (
         <div className="space-y-3 rounded-lg border border-border bg-bg-tertiary/30 p-3">
-          <h4 className="text-sm font-semibold text-text-primary">New Custom Carousel</h4>
+          <h4 className="text-sm font-semibold text-text-primary">{editingId ? 'Edit Carousel' : 'New Custom Carousel'}</h4>
 
           {/* Type picker */}
-          <div className="flex gap-1.5">
+          <div className="flex flex-wrap gap-1.5">
             {([
               { value: 'byYear', label: 'Year Range' },
               { value: 'byGenre', label: 'Genre' },
               { value: 'highest', label: 'Top Rated' },
+              { value: 'playlist', label: 'Playlist' },
             ] as const).map((t) => (
               <button
                 key={t.value}
@@ -803,35 +913,68 @@ function CustomCarouselManager({
             </div>
           )}
 
-          {/* Genre picker */}
+          {/* Multi-genre picker */}
           {creatorType === 'byGenre' && (
+            <div className="space-y-2">
+              <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto rounded-lg border border-border bg-bg-secondary p-2">
+                {genres.map((g) => {
+                  const selected = selectedGenres.includes(g);
+                  return (
+                    <button
+                      key={g}
+                      onClick={() => {
+                        const updated = selected
+                          ? selectedGenres.filter((x) => x !== g)
+                          : [...selectedGenres, g];
+                        setSelectedGenres(updated);
+                        if (!label && updated.length === 1) setLabel(updated[0]);
+                        if (!label && updated.length > 1) setLabel(updated.join(' + '));
+                      }}
+                      className={`rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors ${
+                        selected ? 'bg-accent text-white' : 'bg-bg-tertiary text-text-muted hover:text-text-primary'
+                      }`}
+                    >
+                      {g}
+                    </button>
+                  );
+                })}
+                {genres.length === 0 && <span className="text-xs text-text-muted">Loading genres...</span>}
+              </div>
+              {selectedGenres.length > 0 && (
+                <p className="text-[10px] text-text-muted">{selectedGenres.length} genre{selectedGenres.length > 1 ? 's' : ''} selected</p>
+              )}
+            </div>
+          )}
+
+          {/* Playlist picker */}
+          {creatorType === 'playlist' && (
             <select
-              value={genre}
+              value={selectedPlaylistId}
               onChange={(e) => {
-                setGenre(e.target.value);
-                if (!label) setLabel(e.target.value);
+                setSelectedPlaylistId(e.target.value);
+                const pl = playlists.find((p) => p.id === e.target.value);
+                if (pl && !label) setLabel(pl.name);
               }}
               className="w-full rounded-lg border border-border bg-bg-secondary px-3 py-2 text-sm text-text-primary outline-none focus:border-accent"
             >
-              <option value="">Select genre...</option>
-              {genres.map((g) => (
-                <option key={g} value={g}>{g}</option>
+              <option value="">Select playlist...</option>
+              {playlists.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
               ))}
             </select>
           )}
 
-
           {/* Actions */}
           <div className="flex gap-2">
             <button
-              onClick={handleCreate}
-              disabled={!label.trim() || (creatorType === 'byGenre' && !genre)}
+              onClick={editingId ? handleEdit : handleCreate}
+              disabled={!label.trim() || (creatorType === 'byGenre' && selectedGenres.length === 0) || (creatorType === 'playlist' && !selectedPlaylistId)}
               className="flex-1 rounded-lg bg-accent py-2 text-sm font-semibold text-white hover:bg-accent-hover disabled:opacity-40"
             >
-              Create
+              {editingId ? 'Save' : 'Create'}
             </button>
             <button
-              onClick={() => setShowCreator(false)}
+              onClick={resetForm}
               className="rounded-lg border border-border px-4 py-2 text-sm text-text-secondary hover:bg-bg-tertiary"
             >
               Cancel

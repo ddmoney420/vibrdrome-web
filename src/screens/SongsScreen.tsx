@@ -2,8 +2,10 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { getSubsonicClient } from '../api/SubsonicClient';
 import { usePlayerStore } from '../stores/playerStore';
 import { useMusicFolderStore } from '../stores/musicFolderStore';
+import { useMultiSelect } from '../hooks/useMultiSelect';
 import type { Song, Genre } from '../types/subsonic';
 import { Header, SongRow, LoadingSpinner } from '../components/common';
+import BatchActionBar from '../components/common/BatchActionBar';
 
 const PAGE_SIZE = 100;
 
@@ -100,6 +102,8 @@ export default function SongsScreen() {
     return () => observer.disconnect();
   }, [hasMore, loading, loadingMore, loadSongs]);
 
+  const { selectionMode, selectedIds, selectedCount, toggle, clearAll, enterSelectionMode, selectAll, isSelected } = useMultiSelect<string>();
+
   const handleShuffleAll = () => {
     if (songs.length === 0) return;
     const shuffled = [...songs].sort(() => Math.random() - 0.5);
@@ -148,6 +152,27 @@ export default function SongsScreen() {
           </svg>
           Filters
         </button>
+
+        <button
+          onClick={() => {
+            if (selectionMode) clearAll();
+            else enterSelectionMode();
+          }}
+          className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
+            selectionMode ? 'border-accent text-accent' : 'border-border text-text-primary hover:bg-bg-tertiary'
+          }`}
+        >
+          {selectionMode ? 'Cancel' : 'Select'}
+        </button>
+
+        {selectionMode && songs.length > 0 && (
+          <button
+            onClick={() => selectAll(songs.map((s) => s.id))}
+            className="text-xs text-accent hover:underline"
+          >
+            Select All
+          </button>
+        )}
       </div>
 
       {/* Filter bar */}
@@ -196,13 +221,30 @@ export default function SongsScreen() {
         <div className="flex-1 overflow-y-auto pb-24">
           <div className="mx-auto max-w-5xl px-1">
             {songs.map((song, i) => (
+              <div key={`${song.id}-${i}`} className="flex items-center gap-0">
+                {selectionMode && (
+                  <button
+                    onClick={() => toggle(song.id)}
+                    className="flex h-10 w-8 shrink-0 items-center justify-center"
+                  >
+                    <div className={`h-4 w-4 rounded border-2 transition-colors ${
+                      isSelected(song.id) ? 'border-accent bg-accent' : 'border-text-muted'
+                    }`}>
+                      {isSelected(song.id) && (
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="white" className="h-3 w-3">
+                          <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </div>
+                  </button>
+                )}
               <SongRow
-                key={`${song.id}-${i}`}
                 song={song}
                 index={i}
                 showAlbum
-                onPlay={() => handlePlayFrom(i)}
+                onPlay={() => selectionMode ? toggle(song.id) : handlePlayFrom(i)}
               />
+              </div>
             ))}
 
             {/* Infinite scroll sentinel */}
@@ -219,6 +261,15 @@ export default function SongsScreen() {
             )}
           </div>
         </div>
+      )}
+
+      {selectionMode && (
+        <BatchActionBar
+          selectedCount={selectedCount}
+          songs={songs}
+          selectedIds={selectedIds}
+          onClear={clearAll}
+        />
       )}
     </div>
   );

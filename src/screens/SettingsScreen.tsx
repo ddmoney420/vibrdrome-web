@@ -11,7 +11,7 @@ import ThemePicker from '../components/settings/ThemePicker';
 export default function SettingsScreen() {
   const navigate = useNavigate();
   const { servers, activeServerId, logout } = useAuthStore();
-  const { accentColor, setAccentColor, lastfmApiKey, setLastfmApiKey, reduceMotion, setReduceMotion } = useUIStore();
+  const { accentColor, setAccentColor, lastfmApiKey, setLastfmApiKey, reduceMotion, setReduceMotion, keyboardShortcutsEnabled, setKeyboardShortcutsEnabled } = useUIStore();
   const { crossfadeEnabled, crossfadeDuration, setCrossfade, setCrossfadeDuration } = usePlayerStore();
   const eqEnabled = useEQStore((s) => s.enabled);
 
@@ -161,6 +161,27 @@ export default function SettingsScreen() {
                     }`}
                   />
                 </button>
+              </div>
+
+              <div className="border-t border-border pt-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm text-text-primary">Keyboard Shortcuts</span>
+                    <p className="text-xs text-text-muted">Space, arrows, M, S, R for playback control</p>
+                  </div>
+                  <button
+                    onClick={() => setKeyboardShortcutsEnabled(!keyboardShortcutsEnabled)}
+                    className={`relative h-6 w-11 rounded-full transition-colors ${
+                      keyboardShortcutsEnabled ? 'bg-accent' : 'bg-bg-tertiary'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                        keyboardShortcutsEnabled ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
               </div>
             </div>
           </section>

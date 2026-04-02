@@ -133,11 +133,11 @@ export default function RadioScreen() {
         )}
 
         {!loading && stations.length > 0 && (
-          <div className="space-y-1">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {stations.map((station) => (
               <div
                 key={station.id}
-                className="flex items-center gap-3 rounded-lg px-3 py-3 transition-colors hover:bg-bg-secondary"
+                className="flex items-center gap-3 rounded-lg bg-bg-secondary px-3 py-3 transition-colors hover:bg-bg-tertiary"
               >
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-text-primary">

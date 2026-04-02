@@ -70,16 +70,18 @@ export default function SongsScreen() {
       {loading ? (
         <LoadingSpinner />
       ) : (
-        <div className="flex-1 overflow-y-auto px-1 pb-24">
-          {songs.map((song, i) => (
-            <SongRow
-              key={song.id}
-              song={song}
-              index={i}
-              showAlbum
-              onPlay={() => handlePlayFrom(i)}
-            />
-          ))}
+        <div className="flex-1 overflow-y-auto pb-24">
+          <div className="mx-auto max-w-5xl px-1">
+            {songs.map((song, i) => (
+              <SongRow
+                key={song.id}
+                song={song}
+                index={i}
+                showAlbum
+                onPlay={() => handlePlayFrom(i)}
+              />
+            ))}
+          </div>
         </div>
       )}
     </div>

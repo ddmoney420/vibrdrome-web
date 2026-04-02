@@ -48,21 +48,23 @@ export default function GenresScreen() {
     <div className="flex h-full flex-col bg-bg-primary">
       <Header title="Genres" showBack />
 
-      <div className="flex-1 overflow-y-auto">
-        {genres.map((genre) => (
-          <button
-            key={genre.value}
-            onClick={() => handleGenreClick(genre)}
-            className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-bg-tertiary"
-          >
-            <span className="truncate text-sm font-medium text-text-primary">
-              {genre.value}
-            </span>
-            <span className="ml-3 shrink-0 text-xs text-text-muted">
-              {genre.albumCount ?? 0} albums &middot; {genre.songCount ?? 0} songs
-            </span>
-          </button>
-        ))}
+      <div className="flex-1 overflow-y-auto px-4 pb-20">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+          {genres.map((genre) => (
+            <button
+              key={genre.value}
+              onClick={() => handleGenreClick(genre)}
+              className="flex flex-col items-start rounded-xl bg-bg-secondary p-4 text-left transition-colors hover:bg-bg-tertiary"
+            >
+              <span className="text-sm font-semibold text-text-primary">
+                {genre.value}
+              </span>
+              <span className="mt-1 text-xs text-text-muted">
+                {genre.albumCount ?? 0} albums
+              </span>
+            </button>
+          ))}
+        </div>
 
         {genres.length === 0 && (
           <p className="py-8 text-center text-text-muted">No genres found.</p>

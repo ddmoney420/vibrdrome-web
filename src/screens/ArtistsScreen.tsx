@@ -40,38 +40,39 @@ export default function ArtistsScreen() {
     <div className="flex h-full flex-col bg-bg-primary">
       <Header title="Artists" showBack />
 
-      <div className="flex-1 overflow-y-auto pb-20">
+      <div className="flex-1 overflow-y-auto px-4 pb-20">
         {indexes.map((index) => (
           <div key={index.name}>
-            <div className="sticky top-0 z-10 bg-bg-primary/95 backdrop-blur-sm px-4 py-1.5">
+            <div className="sticky top-0 z-10 bg-bg-primary/95 backdrop-blur-sm py-1.5">
               <span className="text-xs font-semibold uppercase text-accent">
                 {index.name}
               </span>
             </div>
 
-            {index.artist?.map((artist) => (
-              <button
-                key={artist.id}
-                onClick={() => navigate(`/artist/${artist.id}`)}
-                className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-bg-tertiary min-h-[48px]"
-              >
-                <CoverArt
-                  coverArt={artist.coverArt}
-                  size={44}
-                  className="rounded-full"
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-text-primary">
-                    {artist.name}
-                  </p>
-                  {artist.albumCount !== undefined && (
-                    <p className="text-xs text-text-muted">
-                      {artist.albumCount} {artist.albumCount === 1 ? 'album' : 'albums'}
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 mb-4">
+              {index.artist?.map((artist) => (
+                <button
+                  key={artist.id}
+                  onClick={() => navigate(`/artist/${artist.id}`)}
+                  className="group flex flex-col items-center gap-2 text-center"
+                >
+                  <CoverArt
+                    coverArt={artist.coverArt}
+                    className="w-full !rounded-full transition-transform duration-200 group-hover:scale-[1.03]"
+                  />
+                  <div className="min-w-0 w-full px-1">
+                    <p className="truncate text-sm font-medium text-text-primary">
+                      {artist.name}
                     </p>
-                  )}
-                </div>
-              </button>
-            ))}
+                    {artist.albumCount !== undefined && (
+                      <p className="text-xs text-text-muted">
+                        {artist.albumCount} {artist.albumCount === 1 ? 'album' : 'albums'}
+                      </p>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
         ))}
       </div>

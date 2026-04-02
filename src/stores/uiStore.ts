@@ -2,6 +2,7 @@ import { create } from 'zustand';
 
 const THEME_KEY = 'vibrdrome_theme';
 const REDUCE_MOTION_KEY = 'vibrdrome_reduce_motion';
+const KEYBOARD_SHORTCUTS_KEY = 'vibrdrome_keyboard_shortcuts';
 const EPILEPSY_DISMISSED_KEY = 'vibrdrome_epilepsy_dismissed';
 const ACCENT_COLOR_KEY = 'vibrdrome_accent_color';
 const LASTFM_KEY = 'vibrdrome_lastfm_key';
@@ -18,6 +19,9 @@ interface UIState {
 
   reduceMotion: boolean;
   setReduceMotion: (value: boolean) => void;
+
+  keyboardShortcutsEnabled: boolean;
+  setKeyboardShortcutsEnabled: (value: boolean) => void;
 
   epilepsyWarningDismissed: boolean;
   setEpilepsyWarningDismissed: (value: boolean) => void;
@@ -75,6 +79,13 @@ export const useUIStore = create<UIState>((set) => ({
   setReduceMotion: (value) => {
     try { localStorage.setItem(REDUCE_MOTION_KEY, String(value)); } catch { /* ignore */ }
     set({ reduceMotion: value });
+  },
+
+  keyboardShortcutsEnabled: loadBool(KEYBOARD_SHORTCUTS_KEY, true),
+
+  setKeyboardShortcutsEnabled: (value) => {
+    try { localStorage.setItem(KEYBOARD_SHORTCUTS_KEY, String(value)); } catch { /* ignore */ }
+    set({ keyboardShortcutsEnabled: value });
   },
 
   epilepsyWarningDismissed: loadBool(EPILEPSY_DISMISSED_KEY, false),

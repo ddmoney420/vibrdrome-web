@@ -66,30 +66,31 @@ export default function FavoritesScreen() {
         <div className="flex-1 overflow-y-auto pb-24">
           {/* Artists tab */}
           {activeTab === 'artists' && (
-            <div>
-              {artists.map((artist) => (
-                <button
-                  key={artist.id}
-                  onClick={() => navigate(`/artist/${artist.id}`)}
-                  className="flex w-full items-center gap-3 px-4 py-2 text-left transition-colors hover:bg-bg-tertiary"
-                >
-                  <CoverArt
-                    coverArt={artist.coverArt}
-                    size={44}
-                    className="rounded-full"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-text-primary">
-                      {artist.name}
-                    </p>
-                    {artist.albumCount !== undefined && (
-                      <p className="text-xs text-text-muted">
-                        {artist.albumCount} {artist.albumCount === 1 ? 'album' : 'albums'}
+            <div className="px-4 pt-2">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                {artists.map((artist) => (
+                  <button
+                    key={artist.id}
+                    onClick={() => navigate(`/artist/${artist.id}`)}
+                    className="group flex flex-col items-center gap-2 text-center"
+                  >
+                    <CoverArt
+                      coverArt={artist.coverArt}
+                      className="w-full !rounded-full transition-transform duration-200 group-hover:scale-[1.03]"
+                    />
+                    <div className="min-w-0 w-full px-1">
+                      <p className="truncate text-sm font-medium text-text-primary">
+                        {artist.name}
                       </p>
-                    )}
-                  </div>
-                </button>
-              ))}
+                      {artist.albumCount !== undefined && (
+                        <p className="text-xs text-text-muted">
+                          {artist.albumCount} {artist.albumCount === 1 ? 'album' : 'albums'}
+                        </p>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
               {artists.length === 0 && (
                 <div className="flex flex-col items-center py-16">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="mb-3 h-10 w-10 text-text-muted/40">

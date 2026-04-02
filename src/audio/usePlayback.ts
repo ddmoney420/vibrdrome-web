@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { getPlaybackManager } from './PlaybackManager';
 import { usePlayerStore } from '../stores/playerStore';
+import { useUIStore } from '../stores/uiStore';
 import { useEQStore } from '../stores/eqStore';
 
 // The PlaybackManager is a singleton — grab it once at module level
@@ -32,6 +33,9 @@ export function usePlayback() {
       // Don't intercept when typing in inputs
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+      // Check if keyboard shortcuts are enabled
+      if (!useUIStore.getState().keyboardShortcutsEnabled) return;
 
       const store = usePlayerStore.getState();
 

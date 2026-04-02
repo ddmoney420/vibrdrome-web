@@ -10,7 +10,11 @@
 
 **[Try it live at web.vibrdrome.io](https://web.vibrdrome.io)**
 
-![Vibrdrome Web](screenshot.png)
+![Library](screenshot.png)
+
+![Now Playing](screenshot-player.png)
+
+![Playlists](screenshot-playlists.png)
 
 ---
 

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { getSubsonicClient } from '../api/SubsonicClient';
 import { useMusicFolderStore } from '../stores/musicFolderStore';
-import type { Album, AlbumListType } from '../types/subsonic';
+import type { Album, AlbumListType, Genre } from '../types/subsonic';
 import { Header, AlbumCard, LoadingSpinner } from '../components/common';
 
 const PAGE_SIZE = 40;
@@ -68,7 +68,19 @@ export default function AlbumsListScreen() {
   }, [hasMore, loadingMore, loading, fetchPage]);
 
   const [filterText, setFilterText] = useState('');
+  const [filterGenre, setFilterGenre] = useState('');
+  const [filterYear, setFilterYear] = useState('');
   const [showFilter, setShowFilter] = useState(false);
+  const [genres, setGenres] = useState<Genre[]>([]);
+
+  // Load genres for filter
+  useEffect(() => {
+    if (showFilter && genres.length === 0) {
+      getSubsonicClient().getGenres().then((g) => {
+        setGenres(g.sort((a, b) => a.value.localeCompare(b.value)));
+      }).catch(() => { /* silently fail */ });
+    }
+  }, [showFilter, genres.length]);
 
   if (loading) {
     return (
@@ -79,10 +91,17 @@ export default function AlbumsListScreen() {
     );
   }
 
-  const filteredAlbums = filterText
+  const hasFilters = !!(filterText || filterGenre || filterYear);
+
+  const filteredAlbums = hasFilters
     ? albums.filter((a) => {
-        const q = filterText.toLowerCase();
-        return a.name.toLowerCase().includes(q) || a.artist?.toLowerCase().includes(q);
+        if (filterText) {
+          const q = filterText.toLowerCase();
+          if (!a.name.toLowerCase().includes(q) && !a.artist?.toLowerCase().includes(q)) return false;
+        }
+        if (filterGenre && a.genre?.toLowerCase() !== filterGenre.toLowerCase()) return false;
+        if (filterYear && a.year !== Number(filterYear)) return false;
+        return true;
       })
     : albums;
 
@@ -91,11 +110,11 @@ export default function AlbumsListScreen() {
       <Header title={`${title}${filteredAlbums.length > 0 ? ` (${filteredAlbums.length})` : ''}`} showBack />
 
       {/* Filter bar */}
-      <div className="flex items-center gap-2 px-4 pb-3">
+      <div className="flex flex-wrap items-center gap-2 px-4 pb-3">
         <button
           onClick={() => setShowFilter(!showFilter)}
           className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
-            showFilter || filterText ? 'border-accent text-accent' : 'border-border text-text-primary hover:bg-bg-tertiary'
+            showFilter || hasFilters ? 'border-accent text-accent' : 'border-border text-text-primary hover:bg-bg-tertiary'
           }`}
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
@@ -110,11 +129,29 @@ export default function AlbumsListScreen() {
               value={filterText}
               onChange={(e) => setFilterText(e.target.value)}
               placeholder="Search albums or artists..."
-              className="flex-1 rounded-lg border border-border bg-bg-secondary px-3 py-1.5 text-xs text-text-primary placeholder-text-muted outline-none focus:border-accent"
-              autoFocus
+              className="rounded-lg border border-border bg-bg-secondary px-3 py-1.5 text-xs text-text-primary placeholder-text-muted outline-none focus:border-accent"
             />
-            {filterText && (
-              <button onClick={() => setFilterText('')} className="text-xs text-accent hover:underline">Clear</button>
+            <select
+              value={filterGenre}
+              onChange={(e) => setFilterGenre(e.target.value)}
+              className="rounded-lg border border-border bg-bg-secondary px-3 py-1.5 text-xs text-text-primary outline-none focus:border-accent"
+            >
+              <option value="">All Genres</option>
+              {genres.map((g) => (
+                <option key={g.value} value={g.value}>{g.value}</option>
+              ))}
+            </select>
+            <input
+              type="number"
+              value={filterYear}
+              onChange={(e) => setFilterYear(e.target.value)}
+              placeholder="Year"
+              min={1900}
+              max={2099}
+              className="w-20 rounded-lg border border-border bg-bg-secondary px-3 py-1.5 text-xs text-text-primary placeholder-text-muted outline-none focus:border-accent"
+            />
+            {hasFilters && (
+              <button onClick={() => { setFilterText(''); setFilterGenre(''); setFilterYear(''); }} className="text-xs text-accent hover:underline">Clear</button>
             )}
           </>
         )}

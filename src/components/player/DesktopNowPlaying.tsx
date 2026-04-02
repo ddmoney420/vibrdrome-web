@@ -7,6 +7,7 @@ import SpinningAlbumArt from './SpinningAlbumArt';
 import NowPlayingQueue from './NowPlayingQueue';
 import NowPlayingLyrics from './NowPlayingLyrics';
 import NowPlayingArtist from './NowPlayingArtist';
+import WaveformSeekbar from './WaveformSeekbar';
 
 function formatTime(ms: number): string {
   const totalSeconds = Math.max(0, Math.floor(ms / 1000));
@@ -35,27 +36,6 @@ export default function DesktopNowPlaying() {
   const seekValueRef = useRef(0);
   const seekingRef = useRef(false);
 
-  const handleSeekStart = useCallback(() => {
-    seekingRef.current = true;
-    setIsSeeking(true);
-    seekValueRef.current = positionMs;
-    setSeekValue(positionMs);
-  }, [positionMs]);
-
-  const handleSeekInput = useCallback((e: React.FormEvent<HTMLInputElement>) => {
-    const v = Number((e.target as HTMLInputElement).value);
-    seekValueRef.current = v;
-    setSeekValue(v);
-  }, []);
-
-  const handleSeekCommit = useCallback(() => {
-    if (!seekingRef.current) return;
-    seekingRef.current = false;
-    const v = seekValueRef.current;
-    pm.current.seek(v);
-    usePlayerStore.getState().setPosition(v);
-    setTimeout(() => setIsSeeking(false), 50);
-  }, []);
 
   const handleVolumeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const v = Number(e.target.value);
@@ -135,15 +115,26 @@ export default function DesktopNowPlaying() {
             )}
           </div>
 
-          {/* Seek */}
+          {/* Waveform Seek */}
           <div className="w-full">
-            <input
-              type="range" min={0} max={durationMs || 1} value={displayPosition}
-              onChange={() => {}}
-              onMouseDown={handleSeekStart} onTouchStart={handleSeekStart}
-              onInput={handleSeekInput}
-              onMouseUp={handleSeekCommit} onTouchEnd={handleSeekCommit}
-              className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-white/10 accent-accent [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-accent"
+            <WaveformSeekbar
+              songId={currentSong?.id}
+              progress={durationMs > 0 ? displayPosition / durationMs : 0}
+              onSeek={(p) => {
+                const ms = Math.round(p * durationMs);
+                seekValueRef.current = ms;
+                setSeekValue(ms);
+              }}
+              onSeekStart={() => {
+                seekingRef.current = true;
+                setIsSeeking(true);
+              }}
+              onSeekEnd={() => {
+                seekingRef.current = false;
+                pm.current.seek(seekValueRef.current);
+                usePlayerStore.getState().setPosition(seekValueRef.current);
+                setTimeout(() => setIsSeeking(false), 50);
+              }}
             />
             <div className="mt-1 flex justify-between text-xs text-white/40">
               <span>{formatTime(displayPosition)}</span>

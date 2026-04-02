@@ -6,6 +6,15 @@ import { usePlayerStore } from '../stores/playerStore';
 import type { InternetRadioStation } from '../types/subsonic';
 import { Header, CoverArt, LoadingSpinner } from '../components/common';
 
+/** Navidrome returns wrong coverArt format for radio — fix by using ra- prefix with station ID */
+function fixRadioCoverArt(station: InternetRadioStation): string | undefined {
+  if (!station.coverArt) return undefined;
+  // If already prefixed correctly, use as-is
+  if (station.coverArt.startsWith('ra-')) return station.coverArt;
+  // Use ra-{stationId} format that Navidrome's artwork reader expects
+  return `ra-${station.id}`;
+}
+
 export default function RadioScreen() {
   const navigate = useNavigate();
   const [stations, setStations] = useState<InternetRadioStation[]>([]);
@@ -61,7 +70,7 @@ export default function RadioScreen() {
       stationId: station.id,
       stationName: station.name,
       streamUrl: station.streamUrl,
-      coverArt: station.coverArt,
+      coverArt: fixRadioCoverArt(station),
     });
 
     getPlaybackManager().playRadio(station.streamUrl);
@@ -125,8 +134,8 @@ export default function RadioScreen() {
                 key={station.id}
                 className="flex items-center gap-3 rounded-lg bg-bg-secondary px-3 py-3 transition-colors hover:bg-bg-tertiary"
               >
-                {station.coverArt ? (
-                  <CoverArt coverArt={station.coverArt} size={40} className="shrink-0 rounded-lg" />
+                {fixRadioCoverArt(station) ? (
+                  <CoverArt coverArt={fixRadioCoverArt(station)} size={40} className="shrink-0 rounded-lg" />
                 ) : (
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent/10">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5 text-accent">

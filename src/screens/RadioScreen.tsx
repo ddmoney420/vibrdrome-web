@@ -1,55 +1,20 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getSubsonicClient } from '../api/SubsonicClient';
+import { getPlaybackManager } from '../audio/PlaybackManager';
+import { usePlayerStore } from '../stores/playerStore';
 import type { InternetRadioStation } from '../types/subsonic';
 import { Header, CoverArt, LoadingSpinner } from '../components/common';
-
-/** Resolve PLS/M3U playlist files to direct stream URLs */
-async function resolveStreamUrl(url: string): Promise<string> {
-  const lower = url.toLowerCase();
-
-  // If it's already a direct stream URL, return as-is
-  if (!lower.endsWith('.pls') && !lower.endsWith('.m3u') && !lower.endsWith('.m3u8')) {
-    return url;
-  }
-
-  try {
-    const response = await fetch(url);
-    const text = await response.text();
-
-    if (lower.endsWith('.pls')) {
-      // PLS format: File1=http://stream.example.com:8000/stream
-      const match = text.match(/File\d+=(.+)/i);
-      if (match) return match[1].trim();
-    }
-
-    if (lower.endsWith('.m3u') || lower.endsWith('.m3u8')) {
-      // M3U format: lines starting with http
-      const lines = text.split('\n');
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (trimmed && !trimmed.startsWith('#') && (trimmed.startsWith('http://') || trimmed.startsWith('https://'))) {
-          return trimmed;
-        }
-      }
-    }
-  } catch (err) {
-    console.error('Failed to resolve playlist URL:', err);
-  }
-
-  // Fallback: try the URL as-is
-  return url;
-}
 
 export default function RadioScreen() {
   const navigate = useNavigate();
   const [stations, setStations] = useState<InternetRadioStation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [playingId, setPlayingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const radioMode = usePlayerStore((s) => s.radioMode);
+  const playingId = radioMode?.stationId ?? null;
 
   const fetchStations = async () => {
     setLoading(true);
@@ -85,43 +50,23 @@ export default function RadioScreen() {
 
   const handlePlay = async (station: InternetRadioStation) => {
     // If already playing this station, stop it
-    if (playingId === station.id && audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.src = '';
-      audioRef.current = null;
-      setPlayingId(null);
+    if (playingId === station.id) {
+      getPlaybackManager().stopRadio();
+      usePlayerStore.getState().stopRadio();
       return;
     }
 
-    // Stop any currently playing stream
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.src = '';
-    }
+    // Play via PlaybackManager + store
+    usePlayerStore.getState().playRadio({
+      stationId: station.id,
+      stationName: station.name,
+      streamUrl: station.streamUrl,
+      coverArt: station.coverArt,
+    });
 
-    setPlayingId(station.id);
-
-    try {
-      const streamUrl = await resolveStreamUrl(station.streamUrl);
-      const audio = new Audio(streamUrl);
-      audio.addEventListener('error', () => setPlayingId(null));
-      await audio.play();
-      audioRef.current = audio;
-    } catch (err) {
-      console.error('Failed to play radio stream:', err);
-      setPlayingId(null);
-    }
+    getPlaybackManager().playRadio(station.streamUrl);
   };
 
-  // Cleanup audio on unmount
-  useEffect(() => {
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.src = '';
-      }
-    };
-  }, []);
 
   return (
     <div className="flex h-full flex-col bg-bg-primary">

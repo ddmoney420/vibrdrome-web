@@ -21,6 +21,13 @@ function shuffleArray(length: number, currentIndex: number): number[] {
   return indices;
 }
 
+export interface RadioState {
+  stationId: string;
+  stationName: string;
+  streamUrl: string;
+  coverArt?: string;
+}
+
 interface PlaybackState {
   queue: Song[];
   currentIndex: number;
@@ -28,6 +35,7 @@ interface PlaybackState {
   isPlaying: boolean;
   positionMs: number;
   durationMs: number;
+  radioMode: RadioState | null;
   repeatMode: 'off' | 'all' | 'one';
   shuffleEnabled: boolean;
   shuffleOrder: number[];
@@ -56,6 +64,8 @@ interface PlaybackState {
   setCrossfadeDuration: (seconds: number) => void;
   toggleStarCurrent: () => Promise<void>;
   reorderQueue: (from: number, to: number) => void;
+  playRadio: (station: RadioState) => void;
+  stopRadio: () => void;
 }
 
 function persistQueue(state: PlaybackState) {
@@ -114,6 +124,7 @@ export const usePlayerStore = create<PlaybackState>((set, get) => ({
   isPlaying: false,
   positionMs: 0,
   durationMs: 0,
+  radioMode: null,
   repeatMode: persisted.repeatMode ?? 'off',
   shuffleEnabled: persisted.shuffleEnabled ?? false,
   shuffleOrder: [],
@@ -122,11 +133,18 @@ export const usePlayerStore = create<PlaybackState>((set, get) => ({
   crossfadeDuration: persisted.crossfadeDuration ?? 5,
 
   playSongs: (songs, startIndex = 0) => {
+    // Stop radio if playing
+    if (get().radioMode) {
+      import('../audio/PlaybackManager').then(({ getPlaybackManager }) => {
+        getPlaybackManager().stopRadio();
+      });
+    }
     const state: Partial<PlaybackState> = {
       queue: songs,
       currentIndex: startIndex,
       currentSong: songs[startIndex] ?? null,
       isPlaying: true,
+      radioMode: null,
       positionMs: 0,
     };
     if (get().shuffleEnabled) {
@@ -406,5 +424,20 @@ export const usePlayerStore = create<PlaybackState>((set, get) => ({
       shuffleOrder: newShuffleOrder,
     });
     persistQueue(get());
+  },
+
+  playRadio: (station) => {
+    // Stop current song playback
+    set({
+      radioMode: station,
+      isPlaying: true,
+      currentSong: null,
+      positionMs: 0,
+      durationMs: 0,
+    });
+  },
+
+  stopRadio: () => {
+    set({ radioMode: null, isPlaying: false });
   },
 }));

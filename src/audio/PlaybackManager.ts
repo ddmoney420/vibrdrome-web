@@ -32,6 +32,7 @@ class PlaybackManager {
   private currentVolume = 1;
   private previousVolume = 1;
   private playId = 0;
+  private radioAudio: HTMLAudioElement | null = null;
   private unsubscribeEQ: (() => void) | null = null;
 
   constructor() {
@@ -168,6 +169,82 @@ class PlaybackManager {
 
   hasSource(): boolean {
     return !!this.getActiveAudio().src && this.getActiveAudio().src !== window.location.href;
+  }
+
+  async playRadio(streamUrl: string): Promise<void> {
+    // Stop current song playback
+    this.pause();
+    this.cancelCrossfade();
+
+    // Stop previous radio
+    this.stopRadio();
+
+    // Resolve PLS/M3U
+    const resolvedUrl = await this.resolveRadioUrl(streamUrl);
+
+    const audio = new Audio(resolvedUrl);
+    audio.volume = this.currentVolume;
+    audio.addEventListener('error', () => {
+      console.error('[PlaybackManager] Radio stream error');
+      usePlayerStore.getState().stopRadio();
+    });
+
+    try {
+      await audio.play();
+      this.radioAudio = audio;
+    } catch (err) {
+      console.error('[PlaybackManager] Radio play error:', err);
+      usePlayerStore.getState().stopRadio();
+    }
+  }
+
+  stopRadio(): void {
+    if (this.radioAudio) {
+      this.radioAudio.pause();
+      this.radioAudio.src = '';
+      this.radioAudio = null;
+    }
+  }
+
+  pauseRadio(): void {
+    if (this.radioAudio) {
+      this.radioAudio.pause();
+    }
+  }
+
+  resumeRadio(): void {
+    if (this.radioAudio) {
+      this.radioAudio.play().catch(() => { /* ignore */ });
+    }
+  }
+
+  private async resolveRadioUrl(url: string): Promise<string> {
+    const lower = url.toLowerCase();
+    if (!lower.endsWith('.pls') && !lower.endsWith('.m3u') && !lower.endsWith('.m3u8')) {
+      return url;
+    }
+
+    try {
+      const response = await fetch(url);
+      const text = await response.text();
+
+      if (lower.endsWith('.pls')) {
+        const match = text.match(/File\d+=(.+)/i);
+        if (match) return match[1].trim();
+      }
+
+      if (lower.endsWith('.m3u') || lower.endsWith('.m3u8')) {
+        const lines = text.split('\n');
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (trimmed && !trimmed.startsWith('#') && (trimmed.startsWith('http://') || trimmed.startsWith('https://'))) {
+            return trimmed;
+          }
+        }
+      }
+    } catch { /* fallback */ }
+
+    return url;
   }
 
   seek(timeMs: number): void {

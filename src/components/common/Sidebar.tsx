@@ -2,6 +2,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { getSubsonicClient } from '../../api/SubsonicClient';
 import FolderPicker from './FolderPicker';
+import FirstRunTooltip from './FirstRunTooltip';
 
 const NAV_ITEMS = [
   { path: '/', label: 'Library', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1' },
@@ -106,6 +107,14 @@ export default function Sidebar() {
             </button>
           );
         })}
+
+        {/* Command palette hint */}
+        <FirstRunTooltip id="command-palette" message="Press Ctrl+K to search anything or navigate anywhere" position="right" delay={3000}>
+          <div className="mt-2 flex items-center justify-center rounded-lg bg-bg-tertiary/50 px-3 py-1.5 text-[10px] text-text-muted">
+            <kbd className="rounded bg-bg-tertiary px-1.5 py-0.5 font-mono text-[10px] font-medium">Ctrl+K</kbd>
+            <span className="ml-1.5">Quick search</span>
+          </div>
+        </FirstRunTooltip>
       </div>
     </aside>
   );

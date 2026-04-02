@@ -1,0 +1,136 @@
+# Changelog
+
+All notable changes to Vibrdrome Web are documented here.
+
+## [Unreleased]
+- Radio playback through mini-player
+- Smart playlists with configurable thresholds (data collecting)
+- Server-managed transcoding / quality picker
+
+---
+
+## [1.5.0] - 2026-04-02
+
+### Added
+- Split-pane desktop view with Playing, Queue, and Lyrics tabs
+- Waveform seekbar on desktop Now Playing and split-pane
+- Drag-and-drop queue reorder (desktop and Now Playing panel)
+- Multi-select with batch actions (Play, Play Next, Add to Queue)
+- Play history tracking in IndexedDB
+- Album filters: search by name/artist, genre dropdown, year input
+- Artist filters: search by name, genre dropdown
+- Artist radio: one-click play similar/top songs
+- In-app first-run tooltips
+- CHANGELOG.md
+
+---
+
+## [1.4.0] - 2026-04-01
+
+### Added
+- Radio station artwork from Navidrome 0.61
+- PLS/M3U playlist file parsing for radio streams
+- Songs screen: infinite scroll, artist/genre/year filters
+- Sidebar counts: artists, genres, playlists, radio
+- Playlists carousel on Library screen
+- Playlist artwork grid layout
+
+### Removed
+- Downloads screen (offline is native app only)
+
+### Fixed
+- Radio not playing (PLS/M3U support)
+- Inaccurate song/album counts removed
+
+---
+
+## [1.3.0] - 2026-04-01
+
+### Added
+- 8 theme skins: Dark, Light, zApple Light, zApple Dark, Retro, Terminal, Midnight, Sunset
+- Theme picker with mini preview cards
+- Custom carousel creator: year range, genre (multi-select), decade, playlist, top rated
+- Edit/rename custom carousels
+- Pills position toggle (above/below carousels)
+- Grid layouts: Artists, Genres, Radio, Playlists, Favorites, Folders
+- Keyboard shortcuts toggle in Settings > Accessibility
+
+### Changed
+- Customize icon changed from chat to sliders
+
+---
+
+## [1.2.0] - 2026-04-01
+
+### Added
+- Last.fm integration: artist bios, tags, stats, similar artists
+- Artist images via MusicBrainz + Wikidata + Wikimedia Commons
+- Artist spotlight tab in desktop Now Playing (click vinyl to open)
+- Browse similar artist bios inline
+- New carousels: Starred Albums, Released This Year, Recently Played
+- fanart.tv integration (later replaced by Wikimedia Commons)
+
+### Fixed
+- API key masking: dots after saving, password input, remove button
+
+---
+
+## [1.1.0] - 2026-03-31
+
+### Added
+- Desktop full-screen Now Playing: spinning vinyl, three-column layout
+- Blurred album art background (Plex-style)
+- Command palette (Ctrl+K / Cmd+K)
+- Mini player: progress ring, spinning art, waveform bars, quick actions
+- Accent color picker: 12 presets + custom hex
+- Dominant color extraction for Now Playing background
+- useMediaQuery hook
+- Fuzzy search utility
+
+### Fixed
+- Volume desync between mobile and desktop
+- Lyrics sync scrolling in desktop panel
+
+---
+
+## [1.0.1] - 2026-03-31
+
+### Added
+- Cloudflare Pages deployment
+- Docker support with auto-publish to Docker Hub
+- GitHub Actions CI/CD
+- GitHub Issues templates (bug report, feature request)
+- Share buttons on albums, artists, playlists
+- Keyboard shortcuts (Space, arrows, M, S, R)
+- Swipe to dismiss Now Playing on mobile
+- Epilepsy warning for visualizer
+- Music folder picker for multi-library servers
+- Now playing session reporting to server
+
+### Fixed
+- Audio autoplay after async fetch (Random Mix)
+- Browser lockup on rapid next track clicks
+- Stale chunk crashes after deploy
+- SubsonicClient not configured on page reload
+- Next/previous works in repeat-one mode
+- Folder browsing route parameter
+
+---
+
+## [1.0.0] - 2026-03-29
+
+### Added
+- Initial release
+- Navidrome/Subsonic streaming
+- Album, artist, genre, folder browsing
+- Customizable library with reorderable shortcuts and carousels
+- Queue management
+- Shuffle, repeat, crossfade
+- 10-band equalizer (Web Audio API)
+- Visualizer: 6 WebGL shaders + Milkdrop (Butterchurn)
+- Synced lyrics display
+- Sleep timer, playback speed
+- Dark and light themes
+- PWA support with service worker
+- Scrobbling
+- Multi-server support

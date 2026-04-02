@@ -7,6 +7,7 @@ import { useMusicFolderStore } from '../stores/musicFolderStore';
 import type { LibraryItem, CustomCarousel } from '../stores/libraryStore';
 import AlbumCard from '../components/common/AlbumCard';
 import Header from '../components/common/Header';
+import FirstRunTooltip from '../components/common/FirstRunTooltip';
 import type { Album, Playlist } from '../types/subsonic';
 import CoverArt from '../components/common/CoverArt';
 
@@ -241,13 +242,15 @@ export default function LibraryScreen() {
 
   const rightActions = (
     <>
-      <button
-        onClick={() => setShowCustomize(true)}
-        className="flex h-8 w-8 items-center justify-center rounded-full text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-text-primary"
-        aria-label="Customize"
-      >
-        {CustomizeIcon}
-      </button>
+      <FirstRunTooltip id="customize-library" message="Customize your library layout, create custom carousels, and reorder shortcuts" position="bottom">
+        <button
+          onClick={() => setShowCustomize(true)}
+          className="flex h-8 w-8 items-center justify-center rounded-full text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-text-primary"
+          aria-label="Customize"
+        >
+          {CustomizeIcon}
+        </button>
+      </FirstRunTooltip>
       <button
         onClick={() => navigate('/search')}
         className="flex h-8 w-8 items-center justify-center rounded-full text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-text-primary"

@@ -126,7 +126,13 @@ function SimilarArtistRow({ name, navigate }: { name: string; navigate: (path: s
 
   return (
     <button
-      onClick={() => { if (artistId) navigate(`/artist/${artistId}`); }}
+      onClick={() => {
+        if (artistId) {
+          navigate(`/artist/${artistId}`);
+        } else {
+          navigate(`/search?q=${encodeURIComponent(name)}`);
+        }
+      }}
       className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-white/5"
     >
       {coverArt ? (

@@ -214,7 +214,13 @@ function SimilarArtistCard({ name }: { name: string }) {
 
   return (
     <button
-      onClick={() => { if (artistId) navigate(`/artist/${artistId}`); }}
+      onClick={() => {
+        if (artistId) {
+          navigate(`/artist/${artistId}`);
+        } else {
+          navigate(`/search?q=${encodeURIComponent(name)}`);
+        }
+      }}
       className="flex w-20 shrink-0 flex-col items-center gap-1.5 text-center"
     >
       {coverArt ? (

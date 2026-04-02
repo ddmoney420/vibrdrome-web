@@ -716,6 +716,8 @@ class PlaybackManager {
   private handleTrackEnded(player: 'A' | 'B'): void {
     // Only handle if this is the active player and not crossfading
     if (player !== this.activePlayer || this.crossfading) return;
+    // Don't advance queue if radio is active (src was cleared for radio)
+    if (this.radioAudio) return;
 
     this.stopPositionTracking();
 
@@ -736,6 +738,7 @@ class PlaybackManager {
 
   private handleError(player: 'A' | 'B'): void {
     if (player !== this.activePlayer) return;
+    if (this.radioAudio) return; // Ignore errors from cleared sources during radio
     console.error(`[PlaybackManager] Audio error on player ${player}`);
     // Try to skip to next track
     usePlayerStore.getState().next();

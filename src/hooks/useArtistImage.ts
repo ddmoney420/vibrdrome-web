@@ -11,6 +11,7 @@ interface ArtistImageResult {
 const EMPTY: ArtistImageResult = { imageUrl: null, artistId: null, coverArt: null };
 
 // Module-level cache to avoid re-fetching across component re-mounts
+const RESOLVED_CACHE_MAX = 200;
 const resolvedCache = new Map<string, ArtistImageResult>();
 const pendingResolves = new Map<string, Promise<ArtistImageResult>>();
 
@@ -39,6 +40,7 @@ async function resolveArtistImage(artistName: string): Promise<ArtistImageResult
         if (coverArt) {
           const url = getSubsonicClient().getCoverArt(coverArt, 150);
           const result = { imageUrl: url, artistId: match.id, coverArt };
+          if (resolvedCache.size >= RESOLVED_CACHE_MAX) { const k = resolvedCache.keys().next().value; if (k !== undefined) resolvedCache.delete(k); }
           resolvedCache.set(cacheKey, result);
           return result;
         }
@@ -51,6 +53,7 @@ async function resolveArtistImage(artistName: string): Promise<ArtistImageResult
         const wikiImageUrl = await getArtistImageUrl(artistName);
         if (wikiImageUrl) {
           const result = { imageUrl: wikiImageUrl, artistId: foundArtistId, coverArt: null };
+          if (resolvedCache.size >= RESOLVED_CACHE_MAX) { const k = resolvedCache.keys().next().value; if (k !== undefined) resolvedCache.delete(k); }
           resolvedCache.set(cacheKey, result);
           return result;
         }

@@ -7,7 +7,8 @@ interface CoverArtProps {
   className?: string;
 }
 
-// Stable URL cache: coverArt id+size → URL (avoids regenerating random salt)
+// Stable URL cache with LRU eviction (max 500 entries)
+const URL_CACHE_MAX = 500;
 const urlCache = new Map<string, string>();
 
 function stableCoverArtUrl(coverArt: string, fetchSize: number): string {
@@ -15,12 +16,18 @@ function stableCoverArtUrl(coverArt: string, fetchSize: number): string {
   let url = urlCache.get(key);
   if (!url) {
     url = getSubsonicClient().getCoverArt(coverArt, fetchSize);
+    if (urlCache.size >= URL_CACHE_MAX) {
+      // Delete oldest entry
+      const first = urlCache.keys().next().value;
+      if (first !== undefined) urlCache.delete(first);
+    }
     urlCache.set(key, url);
   }
   return url;
 }
 
-// Track which URLs have successfully loaded
+// Track which URLs have successfully loaded (max 1000)
+const LOADED_MAX = 1000;
 const loadedUrls = new Set<string>();
 
 // Shared IntersectionObserver with large rootMargin to pre-load ahead
@@ -117,6 +124,10 @@ export default function CoverArt({ coverArt, size, className = '' }: CoverArtPro
   }, [url, active, coverArt]);
 
   const handleLoad = () => {
+    if (loadedUrls.size >= LOADED_MAX) {
+      const first = loadedUrls.values().next().value;
+      if (first !== undefined) loadedUrls.delete(first);
+    }
     loadedUrls.add(url);
     setLoaded(true);
   };

@@ -7,7 +7,7 @@ import MiniWaveform from './MiniWaveform';
 
 export default function MiniPlayer() {
   const navigate = useNavigate();
-  const { currentSong, isPlaying, positionMs, durationMs, togglePlay, next, toggleStarCurrent, radioMode, radioPlaying, stopRadio } = usePlayerStore();
+  const { currentSong, isPlaying, positionMs, durationMs, togglePlay, next, previous, repeatMode, cycleRepeat, toggleStarCurrent, radioMode, radioPlaying, stopRadio } = usePlayerStore();
 
   if (!currentSong && !radioMode) return null;
 
@@ -99,6 +99,19 @@ export default function MiniPlayer() {
         </button>
         </FirstRunTooltip>
 
+        {/* Previous — hide for radio */}
+        {!isRadio && (
+          <button
+            onClick={(e) => { e.stopPropagation(); previous(); }}
+            className="hidden sm:flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-text-primary"
+            aria-label="Previous track"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+              <path d="M6 6h2v12H6V6zm3.5 6l8.5 6V6l-8.5 6z" />
+            </svg>
+          </button>
+        )}
+
         {/* Play/Pause */}
         <button
           onClick={(e) => {
@@ -154,6 +167,27 @@ export default function MiniPlayer() {
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
               <path d="M6 18l8.5-6L6 6v12zm8.5-6v6h2V6h-2v6z" />
             </svg>
+          </button>
+        )}
+
+        {/* Repeat — hide for radio */}
+        {!isRadio && (
+          <button
+            onClick={(e) => { e.stopPropagation(); cycleRepeat(); }}
+            className={`relative hidden sm:flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full transition-colors ${
+              repeatMode !== 'off' ? 'text-accent' : 'text-text-muted hover:text-text-secondary'
+            }`}
+            aria-label="Repeat"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17 1l4 4-4 4" />
+              <path strokeLinecap="round" d="M3 11V9a4 4 0 014-4h14" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M7 23l-4-4 4-4" />
+              <path strokeLinecap="round" d="M21 13v2a4 4 0 01-4 4H3" />
+            </svg>
+            {repeatMode === 'one' && (
+              <span className="absolute -right-0.5 -top-0.5 flex h-3 w-3 items-center justify-center rounded-full bg-accent text-[7px] font-bold text-bg-primary">1</span>
+            )}
           </button>
         )}
       </div>

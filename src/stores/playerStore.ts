@@ -438,6 +438,7 @@ export const usePlayerStore = create<PlaybackState>((set, get) => ({
   },
 
   stopRadio: () => {
-    set({ radioMode: null, radioPlaying: false });
+    // Stop radio and return to paused state showing last song
+    set({ radioMode: null, radioPlaying: false, isPlaying: false });
   },
 }));

@@ -172,17 +172,16 @@ class PlaybackManager {
   }
 
   async playRadio(streamUrl: string): Promise<void> {
-    // Stop current song playback completely
-    this.pause();
+    // Stop EVERYTHING first
+    this.stopRadio();
     this.cancelCrossfade();
     this.stopPositionTracking();
-    // Clear the audio source so usePlayback's resume() doesn't restart the song
-    const active = this.getActiveAudio();
-    active.pause();
-    active.src = '';
 
-    // Stop previous radio
-    this.stopRadio();
+    // Stop both song audio elements completely
+    this.playerA.pause();
+    this.playerA.src = '';
+    this.playerB.pause();
+    this.playerB.src = '';
 
     // Resolve PLS/M3U
     const resolvedUrl = await this.resolveRadioUrl(streamUrl);

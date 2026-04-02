@@ -6,7 +6,7 @@ import MiniWaveform from './MiniWaveform';
 
 export default function MiniPlayer() {
   const navigate = useNavigate();
-  const { currentSong, isPlaying, positionMs, durationMs, togglePlay, next, toggleStarCurrent, radioMode, stopRadio } = usePlayerStore();
+  const { currentSong, isPlaying, positionMs, durationMs, togglePlay, next, toggleStarCurrent, radioMode, radioPlaying, stopRadio } = usePlayerStore();
 
   if (!currentSong && !radioMode) return null;
 
@@ -34,7 +34,7 @@ export default function MiniPlayer() {
           <div
             className="h-full w-full overflow-hidden rounded-full"
             style={{
-              animation: isPlaying ? 'spin-album 8s linear infinite' : 'none',
+              animation: (isPlaying || radioPlaying) ? 'spin-album 8s linear infinite' : 'none',
             }}
           >
             <CoverArt coverArt={coverArt} size={38} className="!rounded-full" />
@@ -103,18 +103,18 @@ export default function MiniPlayer() {
             if (isRadio) {
               import('../../audio/PlaybackManager').then(({ getPlaybackManager }) => {
                 const pm = getPlaybackManager();
-                if (isPlaying) pm.pauseRadio();
+                if (radioPlaying) pm.pauseRadio();
                 else pm.resumeRadio();
               });
-              togglePlay();
+              usePlayerStore.setState({ radioPlaying: !radioPlaying });
             } else {
               togglePlay();
             }
           }}
           className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-text-primary transition-colors hover:bg-bg-tertiary"
-          aria-label={isPlaying ? 'Pause' : 'Play'}
+          aria-label={(isPlaying || radioPlaying) ? 'Pause' : 'Play'}
         >
-          {isPlaying ? (
+          {(isPlaying || radioPlaying) ? (
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
               <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
             </svg>

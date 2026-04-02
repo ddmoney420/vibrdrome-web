@@ -14,6 +14,7 @@ export function usePlayback() {
 
   const currentSong = usePlayerStore((s) => s.currentSong);
   const isPlaying = usePlayerStore((s) => s.isPlaying);
+  const radioMode = usePlayerStore((s) => s.radioMode);
   const playbackSpeed = usePlayerStore((s) => s.playbackSpeed);
   const eqBands = useEQStore((s) => s.bands);
   const eqEnabled = useEQStore((s) => s.enabled);
@@ -109,9 +110,12 @@ export function usePlayback() {
     // Don't auto-play on page load — wait for a user gesture first
     if (!initializedRef.current) return;
 
+    // Don't start song playback when radio is active
+    if (radioMode) return;
+
     playTriggeredRef.current = true;
     manager.play(currentSong);
-  }, [currentSong]);
+  }, [currentSong, radioMode]);
 
   // Track previous isPlaying to detect actual toggles
   const prevIsPlayingRef = useRef(isPlaying);
@@ -120,7 +124,7 @@ export function usePlayback() {
   useEffect(() => {
     if (!currentSong) return;
     // Don't control song audio when in radio mode
-    if (usePlayerStore.getState().radioMode) return;
+    if (radioMode) return;
     if (playTriggeredRef.current) {
       playTriggeredRef.current = false;
       prevIsPlayingRef.current = isPlaying;
@@ -140,7 +144,7 @@ export function usePlayback() {
     } else {
       manager.pause();
     }
-  }, [isPlaying, currentSong]);
+  }, [isPlaying, currentSong, radioMode]);
 
   // Watch for playback speed changes
   useEffect(() => {

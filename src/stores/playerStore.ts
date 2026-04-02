@@ -36,6 +36,7 @@ interface PlaybackState {
   positionMs: number;
   durationMs: number;
   radioMode: RadioState | null;
+  radioPlaying: boolean;
   repeatMode: 'off' | 'all' | 'one';
   shuffleEnabled: boolean;
   shuffleOrder: number[];
@@ -125,6 +126,7 @@ export const usePlayerStore = create<PlaybackState>((set, get) => ({
   positionMs: 0,
   durationMs: 0,
   radioMode: null,
+  radioPlaying: false,
   repeatMode: persisted.repeatMode ?? 'off',
   shuffleEnabled: persisted.shuffleEnabled ?? false,
   shuffleOrder: [],
@@ -145,6 +147,7 @@ export const usePlayerStore = create<PlaybackState>((set, get) => ({
       currentSong: songs[startIndex] ?? null,
       isPlaying: true,
       radioMode: null,
+      radioPlaying: false,
       positionMs: 0,
     };
     if (get().shuffleEnabled) {
@@ -429,11 +432,12 @@ export const usePlayerStore = create<PlaybackState>((set, get) => ({
   playRadio: (station) => {
     set({
       radioMode: station,
-      isPlaying: true,
+      radioPlaying: true,
+      isPlaying: false,
     });
   },
 
   stopRadio: () => {
-    set({ radioMode: null, isPlaying: false });
+    set({ radioMode: null, radioPlaying: false });
   },
 }));

@@ -1,32 +1,104 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { getSubsonicClient } from '../api/SubsonicClient';
 import { usePlayerStore } from '../stores/playerStore';
 import { useMusicFolderStore } from '../stores/musicFolderStore';
-import type { Song } from '../types/subsonic';
+import type { Song, Genre } from '../types/subsonic';
 import { Header, SongRow, LoadingSpinner } from '../components/common';
+
+const PAGE_SIZE = 100;
 
 export default function SongsScreen() {
   const playSongs = usePlayerStore((s) => s.playSongs);
-  const [songs, setSongs] = useState<Song[]>([]);
-  const [loading, setLoading] = useState(true);
   const activeFolderId = useMusicFolderStore((s) => s.activeFolderId);
 
-  const loadSongs = useCallback(async () => {
-    setLoading(true);
+  const [songs, setSongs] = useState<Song[]>([]);
+  const [allSongs, setAllSongs] = useState<Song[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+
+  // Filters
+  const [genres, setGenres] = useState<Genre[]>([]);
+  const [filterGenre, setFilterGenre] = useState('');
+  const [filterYear, setFilterYear] = useState('');
+  const [filterArtist, setFilterArtist] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  // Load genres for filter
+  useEffect(() => {
+    getSubsonicClient().getGenres().then((g) => {
+      setGenres(g.sort((a, b) => a.value.localeCompare(b.value)));
+    }).catch(() => { /* silently fail */ });
+  }, []);
+
+  // Load songs
+  const loadSongs = useCallback(async (append = false) => {
+    if (append) setLoadingMore(true);
+    else setLoading(true);
+
     try {
       const client = getSubsonicClient();
-      const data = await client.getRandomSongs(100, undefined, activeFolderId ?? undefined);
-      setSongs(data);
+      const data = await client.getRandomSongs(PAGE_SIZE, filterGenre || undefined, activeFolderId ?? undefined);
+
+      if (append) {
+        setAllSongs((prev) => {
+          const ids = new Set(prev.map((s) => s.id));
+          const newSongs = data.filter((s) => !ids.has(s.id));
+          return [...prev, ...newSongs];
+        });
+      } else {
+        setAllSongs(data);
+      }
+
+      if (data.length < PAGE_SIZE) setHasMore(false);
     } catch (err) {
       console.error('Failed to load songs:', err);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
-  }, [activeFolderId]);
+  }, [activeFolderId, filterGenre]);
 
   useEffect(() => {
-    loadSongs();
+    setHasMore(true);
+    loadSongs(false);
   }, [loadSongs]);
+
+  // Apply client-side filters
+  useEffect(() => {
+    let filtered = allSongs;
+
+    if (filterArtist) {
+      const q = filterArtist.toLowerCase();
+      filtered = filtered.filter((s) => s.artist?.toLowerCase().includes(q));
+    }
+
+    if (filterYear) {
+      const y = Number(filterYear);
+      if (!isNaN(y)) filtered = filtered.filter((s) => s.year === y);
+    }
+
+    setSongs(filtered);
+  }, [allSongs, filterArtist, filterYear]);
+
+  // Infinite scroll
+  useEffect(() => {
+    if (!sentinelRef.current || !hasMore || loading || loadingMore) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loadingMore) {
+          loadSongs(true);
+        }
+      },
+      { rootMargin: '200px' },
+    );
+
+    observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, [hasMore, loading, loadingMore, loadSongs]);
 
   const handleShuffleAll = () => {
     if (songs.length === 0) return;
@@ -40,9 +112,9 @@ export default function SongsScreen() {
 
   return (
     <div className="flex h-full flex-col bg-bg-primary">
-      <Header title="Songs" showBack />
+      <Header title={`Songs${songs.length > 0 ? ` (${songs.length.toLocaleString()})` : ''}`} showBack />
 
-      {/* Action buttons */}
+      {/* Action buttons + filter toggle */}
       <div className="flex items-center gap-3 px-4 pb-3">
         <button
           onClick={handleShuffleAll}
@@ -56,16 +128,67 @@ export default function SongsScreen() {
         </button>
 
         <button
-          onClick={loadSongs}
-          disabled={loading}
+          onClick={() => loadSongs(true)}
+          disabled={loading || loadingMore}
           className="flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-bg-tertiary disabled:opacity-50"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" />
+          Load More
+        </button>
+
+        <button
+          onClick={() => setShowFilters(!showFilters)}
+          className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
+            showFilters || filterGenre || filterArtist || filterYear
+              ? 'border-accent text-accent'
+              : 'border-border text-text-primary hover:bg-bg-tertiary'
+          }`}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+            <path fillRule="evenodd" d="M2.628 1.601C5.028 1.206 7.49 1 10 1s4.973.206 7.372.601a.75.75 0 01.628.74v2.288a2.25 2.25 0 01-.659 1.59l-4.682 4.683a2.25 2.25 0 00-.659 1.59v3.037c0 .684-.31 1.33-.844 1.757l-1.937 1.55A.75.75 0 018 18.25v-5.757a2.25 2.25 0 00-.659-1.591L2.659 6.22A2.25 2.25 0 012 4.629V2.34a.75.75 0 01.628-.74z" clipRule="evenodd" />
           </svg>
-          Refresh
+          Filters
         </button>
       </div>
+
+      {/* Filter bar */}
+      {showFilters && (
+        <div className="flex flex-wrap items-center gap-2 px-4 pb-3">
+          <input
+            type="text"
+            value={filterArtist}
+            onChange={(e) => setFilterArtist(e.target.value)}
+            placeholder="Filter by artist..."
+            className="rounded-lg border border-border bg-bg-secondary px-3 py-1.5 text-xs text-text-primary placeholder-text-muted outline-none focus:border-accent"
+          />
+          <select
+            value={filterGenre}
+            onChange={(e) => setFilterGenre(e.target.value)}
+            className="rounded-lg border border-border bg-bg-secondary px-3 py-1.5 text-xs text-text-primary outline-none focus:border-accent"
+          >
+            <option value="">All Genres</option>
+            {genres.map((g) => (
+              <option key={g.value} value={g.value}>{g.value}</option>
+            ))}
+          </select>
+          <input
+            type="number"
+            value={filterYear}
+            onChange={(e) => setFilterYear(e.target.value)}
+            placeholder="Year"
+            min={1900}
+            max={2099}
+            className="w-20 rounded-lg border border-border bg-bg-secondary px-3 py-1.5 text-xs text-text-primary placeholder-text-muted outline-none focus:border-accent"
+          />
+          {(filterGenre || filterArtist || filterYear) && (
+            <button
+              onClick={() => { setFilterGenre(''); setFilterArtist(''); setFilterYear(''); }}
+              className="text-xs text-accent hover:underline"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      )}
 
       {loading ? (
         <LoadingSpinner />
@@ -74,13 +197,26 @@ export default function SongsScreen() {
           <div className="mx-auto max-w-5xl px-1">
             {songs.map((song, i) => (
               <SongRow
-                key={song.id}
+                key={`${song.id}-${i}`}
                 song={song}
                 index={i}
                 showAlbum
                 onPlay={() => handlePlayFrom(i)}
               />
             ))}
+
+            {/* Infinite scroll sentinel */}
+            {hasMore && (
+              <div ref={sentinelRef} className="flex justify-center py-4">
+                {loadingMore && (
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-bg-tertiary border-t-accent" />
+                )}
+              </div>
+            )}
+
+            {songs.length === 0 && !loading && (
+              <p className="py-8 text-center text-text-muted">No songs found</p>
+            )}
           </div>
         </div>
       )}

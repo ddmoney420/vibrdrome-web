@@ -86,6 +86,7 @@ export interface InternetRadioStation {
   name: string;
   streamUrl: string;
   homePageUrl?: string;
+  coverArt?: string;
 }
 
 export interface StructuredLyrics {

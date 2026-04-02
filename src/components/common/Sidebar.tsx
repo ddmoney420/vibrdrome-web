@@ -1,4 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { getSubsonicClient } from '../../api/SubsonicClient';
 import FolderPicker from './FolderPicker';
 
 const NAV_ITEMS = [
@@ -11,7 +13,6 @@ const NAV_ITEMS = [
   { path: '/favorites', label: 'Favorites', icon: 'M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z' },
   { path: '/radio', label: 'Radio', icon: 'M5.636 18.364a9 9 0 010-12.728m12.728 0a9 9 0 010 12.728m-9.9-2.829a5 5 0 010-7.07m7.072 0a5 5 0 010 7.07M13 12a1 1 0 11-2 0 1 1 0 012 0z' },
   { path: '/folders', label: 'Folders', icon: 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z' },
-  { path: '/downloads', label: 'Downloads', icon: 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4' },
 ];
 
 const BOTTOM_ITEMS = [
@@ -22,6 +23,27 @@ const BOTTOM_ITEMS = [
 export default function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [counts, setCounts] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    const client = getSubsonicClient();
+    if (!client.isConfigured()) return;
+
+    // Fetch counts in parallel
+    Promise.all([
+      client.getArtists().then((indexes) => {
+        let total = 0;
+        for (const idx of indexes) total += idx.artist?.length ?? 0;
+        return { Artists: total };
+      }).catch(() => ({})),
+      client.getAlbumList2('newest', 0).catch(() => []).then(() => ({})), // albums count not easily available
+      client.getGenres().then((g) => ({ Genres: g.length })).catch(() => ({})),
+    ]).then((results) => {
+      const merged: Record<string, number> = {};
+      for (const r of results) Object.assign(merged, r);
+      setCounts(merged);
+    });
+  }, []);
 
   return (
     <aside className="hidden md:flex md:w-56 lg:w-64 flex-col border-r border-border bg-bg-secondary">
@@ -38,6 +60,7 @@ export default function Sidebar() {
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-2">
         {NAV_ITEMS.map((item) => {
           const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path.split('?')[0]));
+          const count = counts[item.label];
           return (
             <button
               key={item.path}
@@ -51,7 +74,10 @@ export default function Sidebar() {
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="h-5 w-5 shrink-0">
                 <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
               </svg>
-              {item.label}
+              <span className="flex-1">{item.label}</span>
+              {count !== undefined && count > 0 && (
+                <span className="text-[10px] text-text-muted">{count.toLocaleString()}</span>
+              )}
             </button>
           );
         })}

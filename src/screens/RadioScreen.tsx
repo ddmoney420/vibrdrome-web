@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getSubsonicClient } from '../api/SubsonicClient';
 import type { InternetRadioStation } from '../types/subsonic';
-import { Header, LoadingSpinner } from '../components/common';
+import { Header, CoverArt, LoadingSpinner } from '../components/common';
 
 export default function RadioScreen() {
   const navigate = useNavigate();
@@ -139,6 +139,15 @@ export default function RadioScreen() {
                 key={station.id}
                 className="flex items-center gap-3 rounded-lg bg-bg-secondary px-3 py-3 transition-colors hover:bg-bg-tertiary"
               >
+                {station.coverArt ? (
+                  <CoverArt coverArt={station.coverArt} size={40} className="shrink-0 rounded-lg" />
+                ) : (
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent/10">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5 text-accent">
+                      <path d="M5.636 18.364a9 9 0 010-12.728m12.728 0a9 9 0 010 12.728M12 12h.01" />
+                    </svg>
+                  </div>
+                )}
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-text-primary">
                     {station.name}

@@ -4,6 +4,43 @@ import { getSubsonicClient } from '../api/SubsonicClient';
 import type { InternetRadioStation } from '../types/subsonic';
 import { Header, CoverArt, LoadingSpinner } from '../components/common';
 
+/** Resolve PLS/M3U playlist files to direct stream URLs */
+async function resolveStreamUrl(url: string): Promise<string> {
+  const lower = url.toLowerCase();
+
+  // If it's already a direct stream URL, return as-is
+  if (!lower.endsWith('.pls') && !lower.endsWith('.m3u') && !lower.endsWith('.m3u8')) {
+    return url;
+  }
+
+  try {
+    const response = await fetch(url);
+    const text = await response.text();
+
+    if (lower.endsWith('.pls')) {
+      // PLS format: File1=http://stream.example.com:8000/stream
+      const match = text.match(/File\d+=(.+)/i);
+      if (match) return match[1].trim();
+    }
+
+    if (lower.endsWith('.m3u') || lower.endsWith('.m3u8')) {
+      // M3U format: lines starting with http
+      const lines = text.split('\n');
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed && !trimmed.startsWith('#') && (trimmed.startsWith('http://') || trimmed.startsWith('https://'))) {
+          return trimmed;
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Failed to resolve playlist URL:', err);
+  }
+
+  // Fallback: try the URL as-is
+  return url;
+}
+
 export default function RadioScreen() {
   const navigate = useNavigate();
   const [stations, setStations] = useState<InternetRadioStation[]>([]);
@@ -46,7 +83,7 @@ export default function RadioScreen() {
     }
   };
 
-  const handlePlay = (station: InternetRadioStation) => {
+  const handlePlay = async (station: InternetRadioStation) => {
     // If already playing this station, stop it
     if (playingId === station.id && audioRef.current) {
       audioRef.current.pause();
@@ -62,14 +99,18 @@ export default function RadioScreen() {
       audioRef.current.src = '';
     }
 
-    const audio = new Audio(station.streamUrl);
-    audio.play().catch((err) => {
+    setPlayingId(station.id);
+
+    try {
+      const streamUrl = await resolveStreamUrl(station.streamUrl);
+      const audio = new Audio(streamUrl);
+      audio.addEventListener('error', () => setPlayingId(null));
+      await audio.play();
+      audioRef.current = audio;
+    } catch (err) {
       console.error('Failed to play radio stream:', err);
       setPlayingId(null);
-    });
-    audio.addEventListener('error', () => setPlayingId(null));
-    audioRef.current = audio;
-    setPlayingId(station.id);
+    }
   };
 
   // Cleanup audio on unmount

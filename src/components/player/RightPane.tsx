@@ -4,6 +4,8 @@ import { usePlayerStore } from '../../stores/playerStore';
 import { CoverArt } from '../common';
 import NowPlayingQueue from './NowPlayingQueue';
 import NowPlayingLyrics from './NowPlayingLyrics';
+import WaveformSeekbar from './WaveformSeekbar';
+import { getPlaybackManager } from '../../audio/PlaybackManager';
 
 function formatTime(ms: number): string {
   const totalSeconds = Math.max(0, Math.floor(ms / 1000));
@@ -20,8 +22,6 @@ export default function RightPane() {
   const [tab, setTab] = useState<PaneTab>('playing');
 
   if (!currentSong) return null;
-
-  const progress = durationMs > 0 ? (positionMs / durationMs) * 100 : 0;
 
   return (
     <div className="hidden lg:flex lg:w-80 xl:w-96 flex-col border-l border-border bg-bg-secondary">
@@ -64,14 +64,17 @@ export default function RightPane() {
             )}
           </div>
 
-          {/* Progress */}
+          {/* Waveform Seek */}
           <div className="mt-3 w-full">
-            <div className="h-1 w-full overflow-hidden rounded-full bg-bg-tertiary">
-              <div
-                className="h-full bg-accent transition-[width] duration-300 ease-linear rounded-full"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
+            <WaveformSeekbar
+              songId={currentSong.id}
+              progress={durationMs > 0 ? positionMs / durationMs : 0}
+              onSeek={(p) => {
+                const ms = Math.round(p * durationMs);
+                getPlaybackManager().seek(ms);
+                usePlayerStore.getState().setPosition(ms);
+              }}
+            />
             <div className="mt-1 flex justify-between text-[10px] text-text-muted">
               <span>{formatTime(positionMs)}</span>
               <span>{formatTime(durationMs)}</span>

@@ -172,9 +172,14 @@ class PlaybackManager {
   }
 
   async playRadio(streamUrl: string): Promise<void> {
-    // Stop current song playback
+    // Stop current song playback completely
     this.pause();
     this.cancelCrossfade();
+    this.stopPositionTracking();
+    // Clear the audio source so usePlayback's resume() doesn't restart the song
+    const active = this.getActiveAudio();
+    active.pause();
+    active.src = '';
 
     // Stop previous radio
     this.stopRadio();

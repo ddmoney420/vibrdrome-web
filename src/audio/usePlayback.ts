@@ -119,6 +119,8 @@ export function usePlayback() {
   // Watch for isPlaying changes -> pause/resume
   useEffect(() => {
     if (!currentSong) return;
+    // Don't control song audio when in radio mode
+    if (usePlayerStore.getState().radioMode) return;
     if (playTriggeredRef.current) {
       playTriggeredRef.current = false;
       prevIsPlayingRef.current = isPlaying;

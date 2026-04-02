@@ -5,7 +5,6 @@ const REDUCE_MOTION_KEY = 'vibrdrome_reduce_motion';
 const EPILEPSY_DISMISSED_KEY = 'vibrdrome_epilepsy_dismissed';
 const ACCENT_COLOR_KEY = 'vibrdrome_accent_color';
 const LASTFM_KEY = 'vibrdrome_lastfm_key';
-const FANART_KEY = 'vibrdrome_fanart_key';
 const DEFAULT_ACCENT = '#8b5cf6';
 
 type Theme = 'system' | 'dark' | 'light' | 'apple' | 'apple-dark' | 'retro' | 'terminal' | 'midnight' | 'sunset';
@@ -25,9 +24,6 @@ interface UIState {
 
   lastfmApiKey: string;
   setLastfmApiKey: (key: string) => void;
-
-  fanartApiKey: string;
-  setFanartApiKey: (key: string) => void;
 
   commandPaletteOpen: boolean;
   openCommandPalette: () => void;
@@ -96,17 +92,6 @@ export const useUIStore = create<UIState>((set) => ({
   setLastfmApiKey: (key) => {
     try { localStorage.setItem(LASTFM_KEY, key); } catch { /* ignore */ }
     set({ lastfmApiKey: key });
-  },
-
-  fanartApiKey: (() => {
-    try { return (localStorage.getItem(FANART_KEY) || '').replace(/['"]/g, '').trim(); }
-    catch { return ''; }
-  })(),
-
-  setFanartApiKey: (key) => {
-    const clean = key.replace(/['"]/g, '').trim();
-    try { localStorage.setItem(FANART_KEY, clean); } catch { /* ignore */ }
-    set({ fanartApiKey: clean });
   },
 
   commandPaletteOpen: false,

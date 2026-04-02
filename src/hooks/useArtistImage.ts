@@ -48,9 +48,9 @@ async function resolveArtistImage(artistName: string): Promise<ArtistImageResult
     // Step 2: Try MusicBrainz → Wikidata → Wikimedia Commons
     {
       try {
-        const fanartUrl = await getArtistImageUrl(artistName);
-        if (fanartUrl) {
-          const result = { imageUrl: fanartUrl, artistId: foundArtistId, coverArt: null };
+        const wikiImageUrl = await getArtistImageUrl(artistName);
+        if (wikiImageUrl) {
+          const result = { imageUrl: wikiImageUrl, artistId: foundArtistId, coverArt: null };
           resolvedCache.set(cacheKey, result);
           return result;
         }

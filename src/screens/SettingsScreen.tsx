@@ -11,7 +11,7 @@ import ThemePicker from '../components/settings/ThemePicker';
 export default function SettingsScreen() {
   const navigate = useNavigate();
   const { servers, activeServerId, logout } = useAuthStore();
-  const { accentColor, setAccentColor, lastfmApiKey, setLastfmApiKey, fanartApiKey, setFanartApiKey, reduceMotion, setReduceMotion } = useUIStore();
+  const { accentColor, setAccentColor, lastfmApiKey, setLastfmApiKey, reduceMotion, setReduceMotion } = useUIStore();
   const { crossfadeEnabled, crossfadeDuration, setCrossfade, setCrossfadeDuration } = usePlayerStore();
   const eqEnabled = useEQStore((s) => s.enabled);
 
@@ -195,29 +195,6 @@ export default function SettingsScreen() {
                 </p>
               </div>
 
-              <div className="border-t border-border pt-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-sm text-text-primary">fanart.tv</span>
-                    <p className="text-xs text-text-muted">Artist photos for similar artists</p>
-                  </div>
-                  {fanartApiKey && (
-                    <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[10px] font-medium text-accent">Connected</span>
-                  )}
-                </div>
-                <div className="mt-2 flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={fanartApiKey}
-                    onChange={(e) => setFanartApiKey(e.target.value)}
-                    placeholder="Enter fanart.tv API key"
-                    className="flex-1 rounded-lg border border-border bg-bg-tertiary px-3 py-1.5 text-xs text-text-primary placeholder-text-muted outline-none focus:border-accent"
-                  />
-                </div>
-                <p className="mt-1.5 text-[10px] text-text-muted">
-                  Get a free API key at fanart.tv/get-an-api-key
-                </p>
-              </div>
             </div>
           </section>
 

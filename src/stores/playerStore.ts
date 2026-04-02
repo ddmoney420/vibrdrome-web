@@ -55,6 +55,7 @@ interface PlaybackState {
   setCrossfade: (enabled: boolean) => void;
   setCrossfadeDuration: (seconds: number) => void;
   toggleStarCurrent: () => Promise<void>;
+  reorderQueue: (from: number, to: number) => void;
 }
 
 function persistQueue(state: PlaybackState) {
@@ -366,5 +367,44 @@ export const usePlayerStore = create<PlaybackState>((set, get) => ({
       // Revert on failure
       set({ currentSong, queue });
     }
+  },
+
+  reorderQueue: (from, to) => {
+    const { queue, currentIndex, shuffleOrder, shuffleEnabled } = get();
+    if (from < 0 || from >= queue.length || to < 0 || to >= queue.length || from === to) return;
+
+    const newQueue = [...queue];
+    const [moved] = newQueue.splice(from, 1);
+    newQueue.splice(to, 0, moved);
+
+    // Track where the currently playing song ends up
+    let newCurrentIndex = currentIndex;
+    if (from === currentIndex) {
+      newCurrentIndex = to;
+    } else {
+      if (from < currentIndex && to >= currentIndex) newCurrentIndex--;
+      else if (from > currentIndex && to <= currentIndex) newCurrentIndex++;
+    }
+
+    // Update shuffle order indices
+    const newShuffleOrder = shuffleEnabled
+      ? shuffleOrder.map((i) => {
+          if (i === from) return to;
+          if (from < to) {
+            if (i > from && i <= to) return i - 1;
+          } else {
+            if (i >= to && i < from) return i + 1;
+          }
+          return i;
+        })
+      : [];
+
+    set({
+      queue: newQueue,
+      currentIndex: newCurrentIndex,
+      currentSong: newQueue[newCurrentIndex] ?? null,
+      shuffleOrder: newShuffleOrder,
+    });
+    persistQueue(get());
   },
 }));

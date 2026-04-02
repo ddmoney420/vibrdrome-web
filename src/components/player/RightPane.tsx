@@ -18,7 +18,7 @@ type PaneTab = 'playing' | 'queue' | 'lyrics';
 
 export default function RightPane() {
   const navigate = useNavigate();
-  const { currentSong, isPlaying, positionMs, durationMs, togglePlay, next, previous } = usePlayerStore();
+  const { currentSong, isPlaying, positionMs, durationMs, togglePlay, next, previous, radioPlaying } = usePlayerStore();
   const [tab, setTab] = useState<PaneTab>('playing');
 
   const radioMode = usePlayerStore((s) => s.radioMode);
@@ -88,16 +88,25 @@ export default function RightPane() {
 
           {/* Transport controls */}
           <div className="mt-2 flex items-center gap-3">
-            <button onClick={previous} className="flex h-8 w-8 items-center justify-center rounded-full text-text-secondary hover:bg-bg-tertiary hover:text-text-primary">
+            {!radioMode && <button onClick={previous} className="flex h-8 w-8 items-center justify-center rounded-full text-text-secondary hover:bg-bg-tertiary hover:text-text-primary">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
                 <path d="M6 6h2v12H6V6zm3.5 6l8.5 6V6l-8.5 6z" />
               </svg>
-            </button>
+            </button>}
             <button
-              onClick={togglePlay}
+              onClick={() => {
+                if (radioMode) {
+                  const pm = getPlaybackManager();
+                  if (radioPlaying) pm.pauseRadio();
+                  else pm.resumeRadio();
+                  usePlayerStore.setState({ radioPlaying: !radioPlaying });
+                } else {
+                  togglePlay();
+                }
+              }}
               className="flex h-10 w-10 items-center justify-center rounded-full bg-accent text-bg-primary hover:opacity-90"
             >
-              {isPlaying ? (
+              {(radioMode ? radioPlaying : isPlaying) ? (
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
                   <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
                 </svg>
@@ -107,11 +116,23 @@ export default function RightPane() {
                 </svg>
               )}
             </button>
-            <button onClick={next} className="flex h-8 w-8 items-center justify-center rounded-full text-text-secondary hover:bg-bg-tertiary hover:text-text-primary">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
-                <path d="M16 6h2v12h-2V6zM4 18l8.5-6L4 6v12z" />
-              </svg>
-            </button>
+            {radioMode ? (
+              <button
+                onClick={() => { getPlaybackManager().stopRadio(); usePlayerStore.getState().stopRadio(); }}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-text-secondary hover:bg-bg-tertiary hover:text-red-400"
+                aria-label="Stop radio"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+                  <rect x="6" y="6" width="12" height="12" rx="1" />
+                </svg>
+              </button>
+            ) : (
+              <button onClick={next} className="flex h-8 w-8 items-center justify-center rounded-full text-text-secondary hover:bg-bg-tertiary hover:text-text-primary">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+                  <path d="M16 6h2v12h-2V6zM4 18l8.5-6L4 6v12z" />
+                </svg>
+              </button>
+            )}
           </div>
 
           {/* Open full player link */}

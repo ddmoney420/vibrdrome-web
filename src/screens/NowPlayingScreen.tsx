@@ -5,10 +5,14 @@ import { getPlaybackManager } from '../audio/PlaybackManager';
 import { CoverArt } from '../components/common';
 import DynamicBackground from '../components/player/DynamicBackground';
 import DesktopNowPlaying from '../components/player/DesktopNowPlaying';
+import RadioNowPlaying from '../components/player/RadioNowPlaying';
 import { useIsDesktop } from '../hooks/useMediaQuery';
 
 export default function NowPlayingScreen() {
   const isDesktop = useIsDesktop();
+  const radioMode = usePlayerStore((s) => s.radioMode);
+
+  if (radioMode) return <RadioNowPlaying />;
   if (isDesktop) return <DesktopNowPlaying />;
   return <MobileNowPlaying />;
 }

@@ -19,8 +19,7 @@ export default function MiniPlayer() {
   const handleBarClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
     if (target.closest('button')) return;
-    // Don't open Now Playing for radio — it doesn't have a dedicated view yet
-    if (!isRadio) navigate('/now-playing');
+    navigate('/now-playing');
   };
 
   return (

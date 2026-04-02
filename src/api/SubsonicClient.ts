@@ -69,9 +69,9 @@ class SubsonicClient {
     return `${common}&t=${token}&s=${salt}`;
   }
 
-  private buildUrl(endpoint: string, params: Record<string, string | number | boolean | undefined> = {}, binary = false): string {
+  private buildUrl(endpoint: string, params: Record<string, string | number | boolean | undefined> = {}): string {
     const base = `${this.getBaseUrl()}/rest/${endpoint}`;
-    const authParams = binary ? this.buildAuthParams().replace('&f=json', '') : this.buildAuthParams();
+    const authParams = this.buildAuthParams();
 
     const extraParams = Object.entries(params)
       .filter(([, v]) => v !== undefined && v !== null)
@@ -341,15 +341,15 @@ class SubsonicClient {
   // --- Media Retrieval (URL builders) ---
 
   streamUrl(id: string, maxBitRate?: number, format?: string): string {
-    return this.buildUrl('stream', { id, maxBitRate, format }, true);
+    return this.buildUrl('stream', { id, maxBitRate, format });
   }
 
   downloadUrl(id: string): string {
-    return this.buildUrl('download', { id }, true);
+    return this.buildUrl('download', { id });
   }
 
   coverArtUrl(id: string, size?: number): string {
-    return this.buildUrl('getCoverArt', { id, size }, true);
+    return this.buildUrl('getCoverArt', { id, size });
   }
 
   // Aliases matching the spec

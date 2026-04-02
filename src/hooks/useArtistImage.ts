@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { getSubsonicClient } from '../api/SubsonicClient';
 import { getArtistImageUrl } from '../api/ArtistImageClient';
-import { useUIStore } from '../stores/uiStore';
 
 interface ArtistImageResult {
   imageUrl: string | null;
@@ -15,8 +14,8 @@ const EMPTY: ArtistImageResult = { imageUrl: null, artistId: null, coverArt: nul
 const resolvedCache = new Map<string, ArtistImageResult>();
 const pendingResolves = new Map<string, Promise<ArtistImageResult>>();
 
-async function resolveArtistImage(artistName: string, fanartApiKey: string): Promise<ArtistImageResult> {
-  const cacheKey = `${artistName.toLowerCase()}:${fanartApiKey ? 'fk' : 'nk'}`;
+async function resolveArtistImage(artistName: string): Promise<ArtistImageResult> {
+  const cacheKey = `img:${artistName.toLowerCase()}`;
 
   const cached = resolvedCache.get(cacheKey);
   // Only use cache if we found an image, or if we searched with the same key config
@@ -46,10 +45,10 @@ async function resolveArtistImage(artistName: string, fanartApiKey: string): Pro
       }
     } catch { /* continue */ }
 
-    // Step 2: Try fanart.tv
-    if (fanartApiKey) {
+    // Step 2: Try MusicBrainz → Wikidata → Wikimedia Commons
+    {
       try {
-        const fanartUrl = await getArtistImageUrl(artistName, fanartApiKey);
+        const fanartUrl = await getArtistImageUrl(artistName);
         if (fanartUrl) {
           const result = { imageUrl: fanartUrl, artistId: foundArtistId, coverArt: null };
           resolvedCache.set(cacheKey, result);
@@ -70,7 +69,6 @@ async function resolveArtistImage(artistName: string, fanartApiKey: string): Pro
 }
 
 export function useArtistImage(artistName: string | undefined): ArtistImageResult {
-  const fanartApiKey = useUIStore((s) => s.fanartApiKey);
   const [result, setResult] = useState<ArtistImageResult>(EMPTY);
   const nameRef = useRef(artistName);
 
@@ -78,12 +76,12 @@ export function useArtistImage(artistName: string | undefined): ArtistImageResul
     nameRef.current = artistName;
     if (!artistName) return;
 
-    resolveArtistImage(artistName, fanartApiKey).then((res) => {
+    resolveArtistImage(artistName).then((res) => {
       if (nameRef.current === artistName) {
         setResult(res);
       }
     });
-  }, [artistName, fanartApiKey]);
+  }, [artistName]);
 
   return result;
 }

@@ -28,24 +28,20 @@ async function getCached(key: string): Promise<string | null | undefined> {
       return entry.url;
     }
     if (entry) await db.delete(STORE_NAME, key);
-    return undefined; // cache miss
+    return undefined;
   } catch {
     return undefined;
   }
 }
 
-async function setCache(key: string, url: string | null): Promise<void> {
+async function setCache(key: string, url: string): Promise<void> {
   try {
     const db = await getDB();
     await db.put(STORE_NAME, { url, timestamp: Date.now() } as CachedImage, key);
   } catch { /* silently fail */ }
 }
 
-/**
- * Look up an artist's MusicBrainz ID by name.
- * MusicBrainz requires a User-Agent header — we use the app name.
- */
-// Simple rate limiter for MusicBrainz (1 req/sec)
+// Rate limiter for MusicBrainz (1 req/sec)
 let lastMbRequest = 0;
 async function mbRateLimit() {
   const now = Date.now();
@@ -54,93 +50,80 @@ async function mbRateLimit() {
   lastMbRequest = Date.now();
 }
 
-async function getMusicBrainzId(artistName: string): Promise<string | null> {
-  const cacheKey = `mbid:${artistName.toLowerCase()}`;
+/**
+ * Look up an artist image via MusicBrainz → Wikidata → Wikimedia Commons.
+ * No CORS issues — MusicBrainz, Wikidata, and Wikimedia all support CORS.
+ */
+export async function getArtistImageUrl(artistName: string): Promise<string | null> {
+  if (!artistName) return null;
+
+  const cacheKey = `artist-img-v2:${artistName.toLowerCase()}`;
   const cached = await getCached(cacheKey);
-  // Only use cached positive results
   if (cached !== undefined && cached !== null) return cached;
 
   try {
+    // Step 1: Search MusicBrainz for the artist MBID
     await mbRateLimit();
-
-    const params = new URLSearchParams({
-      query: `artist:${artistName}`,
-      fmt: 'json',
-      limit: '1',
-    });
-
-    const response = await fetch(`https://musicbrainz.org/ws/2/artist?${params}`, {
-      headers: { 'User-Agent': 'Vibrdrome/1.0 (https://vibrdrome.io)' },
-    });
-
-    if (!response.ok) {
-      return null; // Don't cache failures — allow retry
-    }
-
-    const data = await response.json();
-    const mbid = data?.artists?.[0]?.id ?? null;
-    await setCache(cacheKey, mbid);
-    return mbid;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Fetch artist image from fanart.tv using MusicBrainz ID.
- */
-async function getFanartImage(mbid: string, apiKey: string): Promise<string | null> {
-  const cacheKey = `fanart:${mbid}`;
-  const cached = await getCached(cacheKey);
-  if (cached !== undefined && cached !== null) return cached;
-
-  try {
-    const response = await fetch(
-      `https://webservice.fanart.tv/v3/music/${mbid}?api_key=${apiKey}`,
+    const mbResponse = await fetch(
+      `https://musicbrainz.org/ws/2/artist?query=artist:${encodeURIComponent(artistName)}&fmt=json&limit=1`,
+      { headers: { 'User-Agent': 'Vibrdrome/1.0 (https://vibrdrome.io)' } },
     );
+    if (!mbResponse.ok) return null;
 
-    if (!response.ok) {
-      return null; // Don't cache failures
+    const mbData = await mbResponse.json();
+    const mbid = mbData?.artists?.[0]?.id;
+    if (!mbid) return null;
+
+    // Step 2: Get Wikidata entity linked to this artist
+    await mbRateLimit();
+    const relResponse = await fetch(
+      `https://musicbrainz.org/ws/2/artist/${mbid}?inc=url-rels&fmt=json`,
+      { headers: { 'User-Agent': 'Vibrdrome/1.0 (https://vibrdrome.io)' } },
+    );
+    if (!relResponse.ok) return null;
+
+    const relData = await relResponse.json();
+    const relations = relData?.relations ?? [];
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const wikidataRel = relations.find((r: any) =>
+      r.type === 'wikidata' && r.url?.resource,
+    );
+    if (!wikidataRel) return null;
+
+    const entityId = (wikidataRel.url.resource as string).split('/').pop();
+    if (!entityId) return null;
+
+    // Step 3: Get image filename from Wikidata (P18 = image property)
+    const wdResponse = await fetch(
+      `https://www.wikidata.org/w/api.php?action=wbgetclaims&entity=${entityId}&property=P18&format=json&origin=*`,
+    );
+    if (!wdResponse.ok) return null;
+
+    const wdData = await wdResponse.json();
+    const imageName = wdData?.claims?.P18?.[0]?.mainsnak?.datavalue?.value;
+    if (!imageName) return null;
+
+    // Step 4: Get the actual image URL from Wikimedia Commons API
+    const filename = imageName.replace(/ /g, '_');
+    const commonsResponse = await fetch(
+      `https://commons.wikimedia.org/w/api.php?action=query&titles=File:${encodeURIComponent(filename)}&prop=imageinfo&iiprop=url&iiurlwidth=200&format=json&origin=*`,
+    );
+    if (!commonsResponse.ok) return null;
+
+    const commonsData = await commonsResponse.json();
+    const pages = commonsData?.query?.pages;
+    const page = pages ? Object.values(pages)[0] : null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const thumbUrl = (page as any)?.imageinfo?.[0]?.thumburl;
+
+    if (thumbUrl) {
+      await setCache(cacheKey, thumbUrl);
+      return thumbUrl;
     }
 
-    const data = await response.json();
-
-    // Try artistthumb first, then artistbackground
-    const thumb = data?.artistthumb?.[0]?.url
-      ?? data?.artistbackground?.[0]?.url
-      ?? null;
-
-    // Only cache positive results
-    if (thumb) await setCache(cacheKey, thumb);
-    return thumb;
+    return null;
   } catch {
     return null;
   }
-}
-
-/**
- * Get an artist image URL using the MusicBrainz → fanart.tv chain.
- * Returns null if no image found or API keys not configured.
- */
-export async function getArtistImageUrl(
-  artistName: string,
-  fanartApiKey: string,
-): Promise<string | null> {
-  if (!fanartApiKey || !artistName) return null;
-
-  // Full chain cache key — include a flag so changing API key invalidates cache
-  const cacheKey = `artist-img:${artistName.toLowerCase()}:${fanartApiKey.slice(0, 8)}`;
-  const cached = await getCached(cacheKey);
-  // Only use cached positive results — don't cache "not found" to allow retry with new config
-  if (cached !== undefined && cached !== null) return cached;
-
-  const mbid = await getMusicBrainzId(artistName);
-  if (!mbid) {
-    await setCache(cacheKey, null);
-    return null;
-  }
-
-  const imageUrl = await getFanartImage(mbid, fanartApiKey);
-  await setCache(cacheKey, imageUrl);
-  return imageUrl;
 }

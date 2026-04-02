@@ -11,7 +11,7 @@ import ThemePicker from '../components/settings/ThemePicker';
 export default function SettingsScreen() {
   const navigate = useNavigate();
   const { servers, activeServerId, logout } = useAuthStore();
-  const { accentColor, setAccentColor, lastfmApiKey, setLastfmApiKey, reduceMotion, setReduceMotion, keyboardShortcutsEnabled, setKeyboardShortcutsEnabled } = useUIStore();
+  const { accentColor, setAccentColor, lastfmApiKey, setLastfmApiKey, reduceMotion, setReduceMotion, keyboardShortcutsEnabled, setKeyboardShortcutsEnabled, streamQuality, setStreamQuality } = useUIStore();
   const { crossfadeEnabled, crossfadeDuration, setCrossfade, setCrossfadeDuration } = usePlayerStore();
   const eqEnabled = useEQStore((s) => s.enabled);
 
@@ -118,6 +118,27 @@ export default function SettingsScreen() {
                     </select>
                   </div>
                 )}
+              </div>
+
+              <div className="border-t border-border pt-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm text-text-primary">Stream Quality</span>
+                    <p className="text-xs text-text-muted">Lower quality saves bandwidth on mobile</p>
+                  </div>
+                  <select
+                    value={streamQuality}
+                    onChange={(e) => setStreamQuality(Number(e.target.value))}
+                    className="rounded border border-border bg-bg-tertiary px-2 py-1 text-xs text-text-primary outline-none"
+                  >
+                    <option value={0}>Original</option>
+                    <option value={320}>High (320 kbps)</option>
+                    <option value={256}>Medium (256 kbps)</option>
+                    <option value={192}>Standard (192 kbps)</option>
+                    <option value={128}>Low (128 kbps)</option>
+                    <option value={96}>Very Low (96 kbps)</option>
+                  </select>
+                </div>
               </div>
             </div>
           </section>

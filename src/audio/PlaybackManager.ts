@@ -102,7 +102,9 @@ class PlaybackManager {
     this.cancelCrossfade();
 
     const audio = this.getActiveAudio();
-    const url = getSubsonicClient().stream(song.id);
+    // Dynamic import to avoid circular dep
+    const quality = (await import('../stores/uiStore')).useUIStore.getState().streamQuality;
+    const url = getSubsonicClient().stream(song.id, quality || undefined);
 
     audio.src = url;
     audio.load();

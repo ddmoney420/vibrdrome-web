@@ -3,6 +3,7 @@ import { create } from 'zustand';
 const THEME_KEY = 'vibrdrome_theme';
 const REDUCE_MOTION_KEY = 'vibrdrome_reduce_motion';
 const KEYBOARD_SHORTCUTS_KEY = 'vibrdrome_keyboard_shortcuts';
+const STREAM_QUALITY_KEY = 'vibrdrome_stream_quality';
 const EPILEPSY_DISMISSED_KEY = 'vibrdrome_epilepsy_dismissed';
 const ACCENT_COLOR_KEY = 'vibrdrome_accent_color';
 const LASTFM_KEY = 'vibrdrome_lastfm_key';
@@ -22,6 +23,9 @@ interface UIState {
 
   keyboardShortcutsEnabled: boolean;
   setKeyboardShortcutsEnabled: (value: boolean) => void;
+
+  streamQuality: number; // 0 = original/lossless, otherwise maxBitRate in kbps
+  setStreamQuality: (quality: number) => void;
 
   epilepsyWarningDismissed: boolean;
   setEpilepsyWarningDismissed: (value: boolean) => void;
@@ -103,6 +107,16 @@ export const useUIStore = create<UIState>((set) => ({
   setLastfmApiKey: (key) => {
     try { localStorage.setItem(LASTFM_KEY, key); } catch { /* ignore */ }
     set({ lastfmApiKey: key });
+  },
+
+  streamQuality: (() => {
+    try { return Number(localStorage.getItem(STREAM_QUALITY_KEY)) || 0; }
+    catch { return 0; }
+  })(),
+
+  setStreamQuality: (quality) => {
+    try { localStorage.setItem(STREAM_QUALITY_KEY, String(quality)); } catch { /* ignore */ }
+    set({ streamQuality: quality });
   },
 
   commandPaletteOpen: false,

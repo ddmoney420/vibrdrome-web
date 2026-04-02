@@ -427,13 +427,9 @@ export const usePlayerStore = create<PlaybackState>((set, get) => ({
   },
 
   playRadio: (station) => {
-    // Stop current song playback
     set({
       radioMode: station,
       isPlaying: true,
-      currentSong: null,
-      positionMs: 0,
-      durationMs: 0,
     });
   },
 

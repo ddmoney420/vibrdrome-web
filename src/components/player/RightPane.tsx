@@ -21,7 +21,8 @@ export default function RightPane() {
   const { currentSong, isPlaying, positionMs, durationMs, togglePlay, next, previous } = usePlayerStore();
   const [tab, setTab] = useState<PaneTab>('playing');
 
-  if (!currentSong) return null;
+  const radioMode = usePlayerStore((s) => s.radioMode);
+  if (!currentSong && !radioMode) return null;
 
   return (
     <div className="hidden lg:flex lg:w-80 xl:w-96 flex-col border-l border-border bg-bg-secondary">
@@ -44,19 +45,23 @@ export default function RightPane() {
         <div className="flex flex-1 flex-col items-center overflow-y-auto p-4">
           {/* Album art */}
           <button
-            onClick={() => navigate('/now-playing')}
+            onClick={() => !radioMode && navigate('/now-playing')}
             className="w-full max-w-[240px] transition-transform hover:scale-[1.02]"
           >
-            <CoverArt coverArt={currentSong.coverArt} className="w-full rounded-xl shadow-lg" />
+            <CoverArt coverArt={radioMode?.coverArt ?? currentSong?.coverArt} className="w-full rounded-xl shadow-lg" />
           </button>
 
-          {/* Song info */}
+          {/* Song/Radio info */}
           <div className="mt-4 w-full text-center">
-            <h3 className="truncate text-sm font-bold text-text-primary">{currentSong.title}</h3>
-            <p className="truncate text-xs text-text-secondary">{currentSong.artist}</p>
-            {currentSong.album && (
+            <h3 className="truncate text-sm font-bold text-text-primary">
+              {radioMode ? radioMode.stationName : currentSong?.title}
+            </h3>
+            <p className="truncate text-xs text-text-secondary">
+              {radioMode ? 'Radio' : currentSong?.artist}
+            </p>
+            {!radioMode && currentSong?.album && (
               <button
-                onClick={() => currentSong.albumId && navigate(`/album/${currentSong.albumId}`)}
+                onClick={() => currentSong?.albumId && navigate(`/album/${currentSong.albumId}`)}
                 className="truncate text-[10px] text-text-muted hover:text-accent"
               >
                 {currentSong.album}
@@ -67,7 +72,7 @@ export default function RightPane() {
           {/* Waveform Seek */}
           <div className="mt-3 w-full">
             <WaveformSeekbar
-              songId={currentSong.id}
+              songId={currentSong?.id}
               progress={durationMs > 0 ? positionMs / durationMs : 0}
               onSeek={(p) => {
                 const ms = Math.round(p * durationMs);

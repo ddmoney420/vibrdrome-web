@@ -132,12 +132,14 @@ export default function App() {
     return () => document.removeEventListener('keydown', handler);
   }, []);
 
+  const radioMode = usePlayerStore((s) => s.radioMode);
+  const hasPlayback = currentSong !== null || radioMode !== null;
   const showMiniPlayer =
-    currentSong !== null && !HIDE_MINIPLAYER_ROUTES.includes(location.pathname);
+    hasPlayback && !HIDE_MINIPLAYER_ROUTES.includes(location.pathname);
   const showSidebar =
     isAuthenticated && !HIDE_SIDEBAR_ROUTES.includes(location.pathname);
   const showRightPane =
-    isAuthenticated && currentSong !== null && !HIDE_SIDEBAR_ROUTES.includes(location.pathname);
+    isAuthenticated && hasPlayback && !HIDE_SIDEBAR_ROUTES.includes(location.pathname);
 
   return (
     <div className="flex h-dvh flex-col bg-bg-primary text-text-primary">

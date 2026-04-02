@@ -97,10 +97,26 @@ export function usePlayback() {
     };
   }, []);
 
+  // Track if we were just in radio mode to prevent auto-play on radio stop
+  const wasRadioRef = useRef(false);
+
   // Watch for currentSong changes -> call play()
   useEffect(() => {
     if (!currentSong) {
       lastSongIdRef.current = null;
+      return;
+    }
+
+    // Don't start song playback when radio is active
+    if (radioMode) {
+      wasRadioRef.current = true;
+      return;
+    }
+
+    // Don't auto-play when radio just stopped — show last song but don't play
+    if (wasRadioRef.current) {
+      wasRadioRef.current = false;
+      lastSongIdRef.current = currentSong.id;
       return;
     }
 
@@ -109,9 +125,6 @@ export function usePlayback() {
 
     // Don't auto-play on page load — wait for a user gesture first
     if (!initializedRef.current) return;
-
-    // Don't start song playback when radio is active
-    if (radioMode) return;
 
     playTriggeredRef.current = true;
     manager.play(currentSong);

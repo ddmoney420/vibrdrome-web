@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { usePlayerStore } from '../../stores/playerStore';
 import { CoverArt } from '../common';
 import NowPlayingQueue from './NowPlayingQueue';
+import NowPlayingLyrics from './NowPlayingLyrics';
 
 function formatTime(ms: number): string {
   const totalSeconds = Math.max(0, Math.floor(ms / 1000));
@@ -11,7 +12,7 @@ function formatTime(ms: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-type PaneTab = 'playing' | 'queue';
+type PaneTab = 'playing' | 'queue' | 'lyrics';
 
 export default function RightPane() {
   const navigate = useNavigate();
@@ -26,7 +27,7 @@ export default function RightPane() {
     <div className="hidden lg:flex lg:w-80 xl:w-96 flex-col border-l border-border bg-bg-secondary">
       {/* Tabs */}
       <div className="flex border-b border-border">
-        {(['playing', 'queue'] as const).map((t) => (
+        {(['playing', 'queue', 'lyrics'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -34,7 +35,7 @@ export default function RightPane() {
               tab === t ? 'text-accent border-b-2 border-accent' : 'text-text-muted hover:text-text-secondary'
             }`}
           >
-            {t === 'playing' ? 'Now Playing' : 'Queue'}
+            {t === 'playing' ? 'Playing' : t === 'queue' ? 'Queue' : 'Lyrics'}
           </button>
         ))}
       </div>
@@ -113,9 +114,13 @@ export default function RightPane() {
             Open Full Player
           </button>
         </div>
-      ) : (
+      ) : tab === 'queue' ? (
         <div className="flex-1 overflow-hidden">
           <NowPlayingQueue />
+        </div>
+      ) : (
+        <div className="flex-1 overflow-hidden">
+          <NowPlayingLyrics />
         </div>
       )}
     </div>

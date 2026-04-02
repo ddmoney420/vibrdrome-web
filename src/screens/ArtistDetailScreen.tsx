@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { getSubsonicClient } from '../api/SubsonicClient';
 import { usePlayerStore } from '../stores/playerStore';
 import { shareUrl } from '../utils/share';
+import { useArtistInfo } from '../hooks/useArtistInfo';
 import type { Artist, Song } from '../types/subsonic';
-import { Header, AlbumCard, LoadingSpinner } from '../components/common';
+import { useArtistImage } from '../hooks/useArtistImage';
+import { Header, AlbumCard, CoverArt, LoadingSpinner } from '../components/common';
 
 export default function ArtistDetailScreen() {
   const { artistId } = useParams<{ artistId: string }>();
@@ -116,6 +118,11 @@ export default function ArtistDetailScreen() {
       />
 
       <div className="flex-1 overflow-y-auto px-4 pb-4">
+        {/* Artist bio from Last.fm */}
+        <ArtistBio artistName={artist.name} />
+
+        {/* Albums */}
+        <h3 className="mb-3 mt-2 text-sm font-semibold uppercase tracking-wider text-text-muted">Discography</h3>
         <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-4">
           {artist.album?.map((album) => (
             <AlbumCard key={album.id} album={album} />
@@ -127,5 +134,107 @@ export default function ArtistDetailScreen() {
         )}
       </div>
     </div>
+  );
+}
+
+function ArtistBio({ artistName }: { artistName: string }) {
+  const { info, loading, hasApiKey } = useArtistInfo(artistName);
+  const [expanded, setExpanded] = useState(false);
+
+  if (!hasApiKey) return null;
+  if (loading) {
+    return (
+      <div className="mb-4 flex items-center gap-2 text-xs text-text-muted">
+        <div className="h-3 w-3 animate-spin rounded-full border border-bg-tertiary border-t-accent" />
+        Loading artist info...
+      </div>
+    );
+  }
+  if (!info) return null;
+
+  const bio = expanded ? info.bio.content : info.bio.summary;
+  const showExpand = info.bio.content.length > info.bio.summary.length;
+
+  return (
+    <div className="mb-6 space-y-4">
+      {/* Bio */}
+      {bio && (
+        <div>
+          <p className="text-sm leading-relaxed text-text-secondary">
+            {bio}
+          </p>
+          {showExpand && (
+            <button
+              onClick={() => setExpanded(!expanded)}
+              className="mt-1 text-xs font-medium text-accent hover:underline"
+            >
+              {expanded ? 'Show less' : 'Read more'}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Tags */}
+      {info.tags.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {info.tags.slice(0, 6).map((tag) => (
+            <span key={tag} className="rounded-full bg-bg-tertiary px-2.5 py-1 text-[10px] font-medium text-text-secondary">
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Stats */}
+      {(info.listeners || info.playcount) && (
+        <div className="flex gap-4 text-xs text-text-muted">
+          {info.listeners && <span>{Number(info.listeners).toLocaleString()} listeners</span>}
+          {info.playcount && <span>{Number(info.playcount).toLocaleString()} plays</span>}
+        </div>
+      )}
+
+      {/* Similar artists */}
+      {info.similar.length > 0 && (
+        <div>
+          <h3 className="mb-2 text-sm font-semibold uppercase tracking-wider text-text-muted">Similar Artists</h3>
+          <div className="flex gap-3 overflow-x-auto pb-2">
+            {info.similar.map((s) => (
+              <SimilarArtistCard key={s.name} name={s.name} />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SimilarArtistCard({ name }: { name: string }) {
+  const navigate = useNavigate();
+  const { imageUrl, artistId, coverArt } = useArtistImage(name);
+
+  return (
+    <button
+      onClick={() => {
+        if (artistId) {
+          navigate(`/artist/${artistId}`);
+        } else {
+          navigate(`/search?q=${encodeURIComponent(name)}`);
+        }
+      }}
+      className="flex w-20 shrink-0 flex-col items-center gap-1.5 text-center"
+    >
+      {coverArt ? (
+        <CoverArt coverArt={coverArt} size={64} className="!rounded-full" />
+      ) : imageUrl ? (
+        <img src={imageUrl} alt="" className="h-16 w-16 rounded-full object-cover" />
+      ) : (
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-bg-tertiary text-text-muted">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="h-6 w-6">
+            <path strokeLinecap="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+        </div>
+      )}
+      <span className="truncate text-[10px] font-medium text-text-secondary w-full">{name}</span>
+    </button>
   );
 }

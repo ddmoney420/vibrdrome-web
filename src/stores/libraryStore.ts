@@ -40,6 +40,9 @@ const DEFAULT_CAROUSELS: LibraryItem[] = [
   { id: 'newest', label: 'Recently Added', visible: true },
   { id: 'frequent', label: 'Most Played', visible: true },
   { id: 'random', label: 'Random Picks', visible: true },
+  { id: 'starred', label: 'Starred Albums', visible: true },
+  { id: 'thisYear', label: 'Released This Year', visible: true },
+  { id: 'recent', label: 'Recently Played', visible: true },
 ];
 
 function loadConfig(): { pills: LibraryItem[]; carousels: LibraryItem[] } {

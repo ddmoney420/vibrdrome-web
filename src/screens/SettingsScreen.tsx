@@ -1,14 +1,17 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { useUIStore } from '../stores/uiStore';
 import { usePlayerStore } from '../stores/playerStore';
 import { useEQStore } from '../stores/eqStore';
+import { isValidHex } from '../utils/color';
 import { Header } from '../components/common';
+import ThemePicker from '../components/settings/ThemePicker';
 
 export default function SettingsScreen() {
   const navigate = useNavigate();
   const { servers, activeServerId, logout } = useAuthStore();
-  const { theme, setTheme, reduceMotion, setReduceMotion } = useUIStore();
+  const { accentColor, setAccentColor, lastfmApiKey, setLastfmApiKey, fanartApiKey, setFanartApiKey, reduceMotion, setReduceMotion } = useUIStore();
   const { crossfadeEnabled, crossfadeDuration, setCrossfade, setCrossfadeDuration } = usePlayerStore();
   const eqEnabled = useEQStore((s) => s.enabled);
 
@@ -125,20 +128,12 @@ export default function SettingsScreen() {
               Appearance
             </h2>
             <div className="rounded-lg bg-bg-secondary p-4">
-              <div className="flex gap-2">
-                {(['system', 'dark', 'light'] as const).map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setTheme(t)}
-                    className={`flex-1 rounded-lg py-2 text-center text-sm font-medium capitalize transition-colors ${
-                      theme === t
-                        ? 'bg-accent text-white'
-                        : 'bg-bg-tertiary text-text-secondary hover:text-text-primary'
-                    }`}
-                  >
-                    {t}
-                  </button>
-                ))}
+              <ThemePicker />
+
+              {/* Accent Color */}
+              <div className="mt-4 border-t border-border pt-4">
+                <span className="text-sm text-text-primary">Accent Color</span>
+                <AccentColorPicker color={accentColor} onChange={setAccentColor} />
               </div>
             </div>
           </section>
@@ -170,6 +165,62 @@ export default function SettingsScreen() {
             </div>
           </section>
 
+          {/* Integrations */}
+          <section>
+            <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-text-muted">
+              Integrations
+            </h2>
+            <div className="space-y-3 rounded-lg bg-bg-secondary p-4">
+              <div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm text-text-primary">Last.fm</span>
+                    <p className="text-xs text-text-muted">Artist bios, similar artists, and photos</p>
+                  </div>
+                  {lastfmApiKey && (
+                    <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[10px] font-medium text-accent">Connected</span>
+                  )}
+                </div>
+                <div className="mt-2 flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={lastfmApiKey}
+                    onChange={(e) => setLastfmApiKey(e.target.value)}
+                    placeholder="Enter Last.fm API key"
+                    className="flex-1 rounded-lg border border-border bg-bg-tertiary px-3 py-1.5 text-xs text-text-primary placeholder-text-muted outline-none focus:border-accent"
+                  />
+                </div>
+                <p className="mt-1.5 text-[10px] text-text-muted">
+                  Get a free API key at last.fm/api/account/create
+                </p>
+              </div>
+
+              <div className="border-t border-border pt-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm text-text-primary">fanart.tv</span>
+                    <p className="text-xs text-text-muted">Artist photos for similar artists</p>
+                  </div>
+                  {fanartApiKey && (
+                    <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[10px] font-medium text-accent">Connected</span>
+                  )}
+                </div>
+                <div className="mt-2 flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={fanartApiKey}
+                    onChange={(e) => setFanartApiKey(e.target.value)}
+                    placeholder="Enter fanart.tv API key"
+                    className="flex-1 rounded-lg border border-border bg-bg-tertiary px-3 py-1.5 text-xs text-text-primary placeholder-text-muted outline-none focus:border-accent"
+                  />
+                </div>
+                <p className="mt-1.5 text-[10px] text-text-muted">
+                  Get a free API key at fanart.tv/get-an-api-key
+                </p>
+              </div>
+            </div>
+          </section>
+
           {/* Storage */}
           <section>
             <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-text-muted">
@@ -197,6 +248,92 @@ export default function SettingsScreen() {
 
         </div>
       </div>
+    </div>
+  );
+}
+
+const ACCENT_PRESETS = [
+  { name: 'Purple', color: '#8b5cf6' },
+  { name: 'Blue', color: '#3b82f6' },
+  { name: 'Cyan', color: '#06b6d4' },
+  { name: 'Green', color: '#10b981' },
+  { name: 'Yellow', color: '#eab308' },
+  { name: 'Orange', color: '#f97316' },
+  { name: 'Red', color: '#ef4444' },
+  { name: 'Pink', color: '#ec4899' },
+  { name: 'Rose', color: '#f43f5e' },
+  { name: 'Indigo', color: '#6366f1' },
+  { name: 'Teal', color: '#14b8a6' },
+  { name: 'Lime', color: '#84cc16' },
+];
+
+function AccentColorPicker({ color, onChange }: { color: string; onChange: (c: string) => void }) {
+  const [customHex, setCustomHex] = useState(color);
+  const [showCustom, setShowCustom] = useState(false);
+
+  const handleCustomSubmit = () => {
+    const hex = customHex.startsWith('#') ? customHex : `#${customHex}`;
+    if (isValidHex(hex)) {
+      onChange(hex);
+    }
+  };
+
+  return (
+    <div className="mt-2 space-y-3">
+      {/* Preset swatches */}
+      <div className="flex flex-wrap gap-2">
+        {ACCENT_PRESETS.map((preset) => (
+          <button
+            key={preset.color}
+            onClick={() => { onChange(preset.color); setCustomHex(preset.color); }}
+            className={`group relative h-8 w-8 rounded-full transition-transform hover:scale-110 ${
+              color === preset.color ? 'ring-2 ring-white ring-offset-2 ring-offset-bg-secondary' : ''
+            }`}
+            style={{ backgroundColor: preset.color }}
+            aria-label={preset.name}
+            title={preset.name}
+          />
+        ))}
+
+        {/* Custom color toggle */}
+        <button
+          onClick={() => setShowCustom(!showCustom)}
+          className={`flex h-8 w-8 items-center justify-center rounded-full border-2 border-dashed transition-colors ${
+            showCustom ? 'border-accent text-accent' : 'border-border text-text-muted hover:border-text-muted'
+          }`}
+          aria-label="Custom color"
+          title="Custom color"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+            <path d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Custom hex input */}
+      {showCustom && (
+        <div className="flex items-center gap-2">
+          <div
+            className="h-8 w-8 shrink-0 rounded-full border border-border"
+            style={{ backgroundColor: isValidHex(customHex.startsWith('#') ? customHex : `#${customHex}`) ? (customHex.startsWith('#') ? customHex : `#${customHex}`) : color }}
+          />
+          <input
+            type="text"
+            value={customHex}
+            onChange={(e) => setCustomHex(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleCustomSubmit()}
+            placeholder="#8b5cf6"
+            maxLength={7}
+            className="w-24 rounded-lg border border-border bg-bg-tertiary px-3 py-1.5 text-xs text-text-primary outline-none focus:border-accent"
+          />
+          <button
+            onClick={handleCustomSubmit}
+            className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-hover"
+          >
+            Apply
+          </button>
+        </div>
+      )}
     </div>
   );
 }

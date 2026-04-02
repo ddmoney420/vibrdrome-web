@@ -28,25 +28,43 @@ function useCachedAlbums(type: string, folderId: string | null, size = CAROUSEL_
   const cacheKey = `${type}:${folderId ?? 'all'}`;
   const [albums, setAlbums] = useState<Album[]>(() => albumCache[cacheKey]?.data ?? []);
   const [loading, setLoading] = useState(() => !isCacheValid(cacheKey));
+  const [fetchKey, setFetchKey] = useState(cacheKey);
 
-  useEffect(() => {
+  // Reset loading state when cache key changes
+  if (fetchKey !== cacheKey) {
+    setFetchKey(cacheKey);
     if (isCacheValid(cacheKey)) {
       setAlbums(albumCache[cacheKey].data);
       setLoading(false);
-      return;
+    } else {
+      setLoading(true);
     }
+  }
+
+  useEffect(() => {
+    if (isCacheValid(cacheKey)) return;
 
     let cancelled = false;
-    setLoading(true);
 
-    getSubsonicClient()
-      .getAlbumList2(type as 'newest' | 'frequent' | 'random', size, undefined, undefined, undefined, undefined, folderId ?? undefined)
+    const client = getSubsonicClient();
+    let promise: Promise<Album[]>;
+
+    if (type === 'starred') {
+      promise = client.getStarred2().then((s) => s.album ?? []);
+    } else if (type === 'thisYear') {
+      const year = new Date().getFullYear();
+      promise = client.getAlbumList2('byYear' as 'newest', size, undefined, undefined, year, year, folderId ?? undefined);
+    } else {
+      promise = client.getAlbumList2(type as 'newest' | 'frequent' | 'random' | 'recent', size, undefined, undefined, undefined, undefined, folderId ?? undefined);
+    }
+
+    promise
       .then((data) => {
         if (cancelled) return;
         albumCache[cacheKey] = { data, fetchedAt: Date.now() };
         setAlbums(data);
       })
-      .catch(() => {})
+      .catch(() => { /* silently fail */ })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
@@ -160,12 +178,18 @@ const CAROUSEL_LABELS: Record<string, string> = {
   newest: 'Recently Added',
   frequent: 'Most Played',
   random: 'Random Picks',
+  starred: 'Starred Albums',
+  thisYear: `Released in ${new Date().getFullYear()}`,
+  recent: 'Recently Played',
 };
 
 const CAROUSEL_SEE_ALL: Record<string, string> = {
   newest: '/albums?type=newest',
   frequent: '/albums?type=frequent',
   random: '/albums?type=random',
+  starred: '/favorites',
+  thisYear: `/albums?type=byYear&fromYear=${new Date().getFullYear()}&toYear=${new Date().getFullYear()}`,
+  recent: '/albums?type=recent',
 };
 
 export default function LibraryScreen() {
@@ -181,7 +205,7 @@ export default function LibraryScreen() {
       if (songs.length > 0) {
         playSongs(songs, 0);
       }
-    } catch {}
+    } catch { /* silently fail */ }
   };
 
   const handleRandomAlbum = async () => {
@@ -190,7 +214,7 @@ export default function LibraryScreen() {
       if (albums.length > 0) {
         navigate(`/album/${albums[0].id}`);
       }
-    } catch {}
+    } catch { /* silently fail */ }
   };
 
   const PILL_ACTIONS: Record<string, () => void> = {

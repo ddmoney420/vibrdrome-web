@@ -54,6 +54,7 @@ interface PlaybackState {
   setSpeed: (speed: number) => void;
   setCrossfade: (enabled: boolean) => void;
   setCrossfadeDuration: (seconds: number) => void;
+  toggleStarCurrent: () => Promise<void>;
 }
 
 function persistQueue(state: PlaybackState) {
@@ -328,5 +329,33 @@ export const usePlayerStore = create<PlaybackState>((set, get) => ({
   setCrossfadeDuration: (seconds) => {
     set({ crossfadeDuration: seconds });
     persistSettings(get());
+  },
+
+  toggleStarCurrent: async () => {
+    const { currentSong, queue, currentIndex } = get();
+    if (!currentSong) return;
+
+    const starred = !currentSong.starred;
+
+    // Optimistic update
+    const updatedSong = { ...currentSong, starred: starred ? new Date().toISOString() : undefined };
+    const updatedQueue = [...queue];
+    if (currentIndex >= 0 && currentIndex < updatedQueue.length) {
+      updatedQueue[currentIndex] = { ...updatedQueue[currentIndex], starred: updatedSong.starred };
+    }
+    set({ currentSong: updatedSong, queue: updatedQueue });
+
+    try {
+      const { getSubsonicClient } = await import('../api/SubsonicClient');
+      const client = getSubsonicClient();
+      if (starred) {
+        await client.star(currentSong.id);
+      } else {
+        await client.unstar(currentSong.id);
+      }
+    } catch {
+      // Revert on failure
+      set({ currentSong, queue });
+    }
   },
 }));

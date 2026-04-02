@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { usePlayerStore } from '../../stores/playerStore';
 import CoverArt from '../common/CoverArt';
+import FirstRunTooltip from '../common/FirstRunTooltip';
 import ProgressRing from './ProgressRing';
 import MiniWaveform from './MiniWaveform';
 
@@ -86,6 +87,7 @@ export default function MiniPlayer() {
         </div>
 
         {/* Visualizer — always visible */}
+        <FirstRunTooltip id="mini-visualizer" message="Open the full-screen visualizer with WebGL effects" position="top" delay={5000}>
         <button
           onClick={(e) => { e.stopPropagation(); navigate('/visualizer'); }}
           className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-accent"
@@ -95,6 +97,7 @@ export default function MiniPlayer() {
             <path strokeLinecap="round" d="M3 12h2M7 8v8M11 5v14M15 9v6M19 7v10M21 12h2" />
           </svg>
         </button>
+        </FirstRunTooltip>
 
         {/* Play/Pause */}
         <button

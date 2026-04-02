@@ -93,7 +93,10 @@ export default function SongRow({
 
   return (
     <div
+      role="button"
+      tabIndex={0}
       onClick={onPlay}
+      onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && onPlay) { e.preventDefault(); onPlay(); } }}
       className="group flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-bg-tertiary"
     >
       {/* Track number / index */}

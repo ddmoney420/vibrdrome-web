@@ -92,6 +92,8 @@ export default function SettingsScreen() {
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-text-primary">Crossfade</span>
                   <button
+                    role="switch"
+                    aria-checked={crossfadeEnabled}
                     onClick={() => setCrossfade(!crossfadeEnabled)}
                     className={`relative h-6 w-11 rounded-full transition-colors ${
                       crossfadeEnabled ? 'bg-accent' : 'bg-bg-tertiary'
@@ -171,6 +173,8 @@ export default function SettingsScreen() {
                   <p className="text-xs text-text-muted">Disables visualizer animations and flashing effects</p>
                 </div>
                 <button
+                  role="switch"
+                  aria-checked={reduceMotion}
                   onClick={() => setReduceMotion(!reduceMotion)}
                   className={`relative h-6 w-11 rounded-full transition-colors ${
                     reduceMotion ? 'bg-accent' : 'bg-bg-tertiary'
@@ -191,6 +195,8 @@ export default function SettingsScreen() {
                     <p className="text-xs text-text-muted">Space, arrows, M, S, R for playback control</p>
                   </div>
                   <button
+                    role="switch"
+                    aria-checked={keyboardShortcutsEnabled}
                     onClick={() => setKeyboardShortcutsEnabled(!keyboardShortcutsEnabled)}
                     className={`relative h-6 w-11 rounded-full transition-colors ${
                       keyboardShortcutsEnabled ? 'bg-accent' : 'bg-bg-tertiary'

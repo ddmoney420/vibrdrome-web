@@ -21,6 +21,7 @@ class PlaybackManager {
   private gainB: GainNode | null = null;
   private eqFilters: BiquadFilterNode[] = [];
   private analyser: AnalyserNode | null = null;
+  private limiter: DynamicsCompressorNode | null = null;
   private positionInterval: number | null = null;
   private scrobbled = false;
   private crossfadeTimer: number | null = null;
@@ -350,8 +351,17 @@ class PlaybackManager {
       this.eqFilters[i].connect(this.eqFilters[i + 1]);
     }
 
-    // Last EQ → analyser → destination
-    this.eqFilters[this.eqFilters.length - 1].connect(this.analyser);
+    // Limiter to prevent clipping when EQ boosts signal above 0dB
+    this.limiter = ctx.createDynamicsCompressor();
+    this.limiter.threshold.value = -1;   // Start compressing at -1dB
+    this.limiter.knee.value = 0;         // Hard knee
+    this.limiter.ratio.value = 20;       // Heavy compression (acts as limiter)
+    this.limiter.attack.value = 0.001;   // Fast attack
+    this.limiter.release.value = 0.1;    // Quick release
+
+    // Last EQ → limiter → analyser → destination
+    this.eqFilters[this.eqFilters.length - 1].connect(this.limiter);
+    this.limiter.connect(this.analyser);
     this.analyser.connect(ctx.destination);
   }
 

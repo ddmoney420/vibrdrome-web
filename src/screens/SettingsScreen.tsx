@@ -182,13 +182,26 @@ export default function SettingsScreen() {
                   )}
                 </div>
                 <div className="mt-2 flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={lastfmApiKey}
-                    onChange={(e) => setLastfmApiKey(e.target.value)}
-                    placeholder="Enter Last.fm API key"
-                    className="flex-1 rounded-lg border border-border bg-bg-tertiary px-3 py-1.5 text-xs text-text-primary placeholder-text-muted outline-none focus:border-accent"
-                  />
+                  {lastfmApiKey ? (
+                    <>
+                      <div className="flex-1 rounded-lg border border-border bg-bg-tertiary px-3 py-1.5 text-xs text-text-muted tracking-widest">
+                        {'•'.repeat(Math.min(lastfmApiKey.length, 20))}
+                      </div>
+                      <button
+                        onClick={() => setLastfmApiKey('')}
+                        className="rounded-lg border border-red-500/30 px-3 py-1.5 text-xs font-medium text-red-400 hover:bg-red-500/10"
+                      >
+                        Remove
+                      </button>
+                    </>
+                  ) : (
+                    <input
+                      type="password"
+                      onChange={(e) => setLastfmApiKey(e.target.value)}
+                      placeholder="Enter Last.fm API key"
+                      className="flex-1 rounded-lg border border-border bg-bg-tertiary px-3 py-1.5 text-xs text-text-primary placeholder-text-muted outline-none focus:border-accent"
+                    />
+                  )}
                 </div>
                 <p className="mt-1.5 text-[10px] text-text-muted">
                   Get a free API key at last.fm/api/account/create

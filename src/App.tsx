@@ -9,6 +9,7 @@ import Sidebar from './components/common/Sidebar';
 import { usePlayback } from './audio/usePlayback';
 import { darkenHex } from './utils/color';
 import CommandPalette from './components/common/CommandPalette';
+import RightPane from './components/player/RightPane';
 
 // Error boundary for stale chunk errors after deploys
 class ChunkErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
@@ -135,6 +136,8 @@ export default function App() {
     currentSong !== null && !HIDE_MINIPLAYER_ROUTES.includes(location.pathname);
   const showSidebar =
     isAuthenticated && !HIDE_SIDEBAR_ROUTES.includes(location.pathname);
+  const showRightPane =
+    isAuthenticated && currentSong !== null && !HIDE_SIDEBAR_ROUTES.includes(location.pathname);
 
   return (
     <div className="flex h-dvh flex-col bg-bg-primary text-text-primary">
@@ -263,6 +266,7 @@ export default function App() {
         </Suspense>
         </ChunkErrorBoundary>
         </div>
+        {showRightPane && <RightPane />}
       </div>
 
       {showMiniPlayer && (

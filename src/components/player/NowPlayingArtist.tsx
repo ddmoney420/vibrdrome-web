@@ -4,15 +4,31 @@ import { useArtistInfo } from '../../hooks/useArtistInfo';
 import { useArtistImage } from '../../hooks/useArtistImage';
 import { useUIStore } from '../../stores/uiStore';
 import CoverArt from '../common/CoverArt';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function NowPlayingArtist() {
   const navigate = useNavigate();
   const currentSong = usePlayerStore((s) => s.currentSong);
   const hasApiKey = !!useUIStore((s) => s.lastfmApiKey);
-  const { info, loading } = useArtistInfo(currentSong?.artist);
-  const { imageUrl: artistImage, coverArt: artistCoverArt } = useArtistImage(currentSong?.artist);
+  const currentArtistName = currentSong?.artist;
+
+  // Allow browsing to similar artists within the panel
+  const [viewingArtist, setViewingArtist] = useState<string | undefined>(currentArtistName);
+  const isViewingDifferent = viewingArtist !== currentArtistName;
+
+  // Reset when song changes
+  useEffect(() => {
+    setViewingArtist(currentArtistName);
+  }, [currentArtistName]);
+
+  const { info, loading } = useArtistInfo(viewingArtist);
+  const { imageUrl: artistImage, coverArt: artistCoverArt, artistId } = useArtistImage(viewingArtist);
   const [expanded, setExpanded] = useState(false);
+
+  // Reset expanded when artist changes
+  useEffect(() => {
+    setExpanded(false);
+  }, [viewingArtist]);
 
   if (!hasApiKey) {
     return (
@@ -48,7 +64,20 @@ export default function NowPlayingArtist() {
   const showExpand = info.bio.content.length > info.bio.summary.length;
 
   return (
-    <div className="overflow-y-auto px-4 py-4 space-y-4">
+    <div className="h-full overflow-y-auto px-4 py-4 space-y-4">
+      {/* Back button when viewing a different artist */}
+      {isViewingDifferent && (
+        <button
+          onClick={() => setViewingArtist(currentArtistName)}
+          className="flex items-center gap-1.5 text-[10px] font-medium text-accent hover:underline"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3 w-3">
+            <path fillRule="evenodd" d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z" clipRule="evenodd" />
+          </svg>
+          Back to {currentArtistName}
+        </button>
+      )}
+
       {/* Artist header */}
       <div className="flex items-center gap-3">
         {artistCoverArt ? (
@@ -69,10 +98,9 @@ export default function NowPlayingArtist() {
             {info.playcount && <span>{Number(info.playcount).toLocaleString()} plays</span>}
           </div>
         </div>
-        {/* Navigate to full artist page */}
-        {currentSong?.artistId && (
+        {artistId && (
           <button
-            onClick={() => navigate(`/artist/${currentSong.artistId}`)}
+            onClick={() => navigate(`/artist/${artistId}`)}
             className="rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white/60 hover:bg-white/20"
           >
             View
@@ -112,7 +140,12 @@ export default function NowPlayingArtist() {
           <h4 className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-white/30">Similar Artists</h4>
           <div className="space-y-1">
             {info.similar.map((s) => (
-              <SimilarArtistRow key={s.name} name={s.name} navigate={navigate} />
+              <SimilarArtistRow
+                key={s.name}
+                name={s.name}
+                onSelect={(name) => setViewingArtist(name)}
+                navigate={navigate}
+              />
             ))}
           </div>
         </div>
@@ -121,7 +154,11 @@ export default function NowPlayingArtist() {
   );
 }
 
-function SimilarArtistRow({ name, navigate }: { name: string; navigate: (path: string) => void }) {
+function SimilarArtistRow({ name, onSelect, navigate }: {
+  name: string;
+  onSelect: (name: string) => void;
+  navigate: (path: string) => void;
+}) {
   const { imageUrl, artistId, coverArt } = useArtistImage(name);
 
   return (
@@ -130,7 +167,8 @@ function SimilarArtistRow({ name, navigate }: { name: string; navigate: (path: s
         if (artistId) {
           navigate(`/artist/${artistId}`);
         } else {
-          navigate(`/search?q=${encodeURIComponent(name)}`);
+          // Browse their bio in the panel
+          onSelect(name);
         }
       }}
       className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-white/5"

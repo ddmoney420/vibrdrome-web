@@ -4,7 +4,7 @@ import { getSubsonicClient } from '../api/SubsonicClient';
 import { usePlayerStore } from '../stores/playerStore';
 import { useLibraryStore } from '../stores/libraryStore';
 import { useMusicFolderStore } from '../stores/musicFolderStore';
-import type { LibraryItem } from '../stores/libraryStore';
+import type { LibraryItem, CustomCarousel } from '../stores/libraryStore';
 import AlbumCard from '../components/common/AlbumCard';
 import Header from '../components/common/Header';
 import type { Album } from '../types/subsonic';
@@ -195,7 +195,7 @@ const CAROUSEL_SEE_ALL: Record<string, string> = {
 export default function LibraryScreen() {
   const navigate = useNavigate();
   const playSongs = usePlayerStore((s) => s.playSongs);
-  const { pills, carousels } = useLibraryStore();
+  const { pills, carousels, customCarousels } = useLibraryStore();
   const activeFolderId = useMusicFolderStore((s) => s.activeFolderId);
   const [showCustomize, setShowCustomize] = useState(false);
 
@@ -283,7 +283,7 @@ export default function LibraryScreen() {
         </div>
       )}
 
-      {/* Carousels */}
+      {/* Default Carousels */}
       {visibleCarousels.map((carousel) => (
         <AlbumCarousel
           key={`${carousel.id}:${activeFolderId ?? 'all'}`}
@@ -291,6 +291,24 @@ export default function LibraryScreen() {
           folderId={activeFolderId}
           title={CAROUSEL_LABELS[carousel.id] ?? carousel.label}
           onSeeAll={() => navigate(CAROUSEL_SEE_ALL[carousel.id] ?? '/albums')}
+        />
+      ))}
+
+      {/* Custom Carousels */}
+      {customCarousels.filter((c) => c.visible).map((cc) => (
+        <CustomAlbumCarousel
+          key={`custom:${cc.id}:${activeFolderId ?? 'all'}`}
+          config={cc}
+          folderId={activeFolderId}
+          onSeeAll={() => {
+            if (cc.type === 'byYear' || cc.type === 'decade') {
+              navigate(`/albums?type=byYear&fromYear=${cc.fromYear}&toYear=${cc.toYear}`);
+            } else if (cc.type === 'byGenre') {
+              navigate(`/albums?type=byGenre&genre=${encodeURIComponent(cc.genre ?? '')}`);
+            } else {
+              navigate(`/albums?type=${cc.type}`);
+            }
+          }}
         />
       ))}
 
@@ -345,11 +363,72 @@ function AlbumCarousel({
   );
 }
 
+function CustomAlbumCarousel({
+  config,
+  folderId,
+  onSeeAll,
+}: {
+  config: CustomCarousel;
+  folderId: string | null;
+  onSeeAll: () => void;
+}) {
+  const [albums, setAlbums] = useState<Album[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const client = getSubsonicClient();
+    let promise: Promise<Album[]>;
+
+    if (config.type === 'byYear' || config.type === 'decade') {
+      promise = client.getAlbumList2('byYear' as 'newest', CAROUSEL_SIZE, undefined, undefined, config.fromYear, config.toYear, folderId ?? undefined);
+    } else if (config.type === 'byGenre') {
+      promise = client.getAlbumList2('byGenre' as 'newest', CAROUSEL_SIZE, undefined, config.genre, undefined, undefined, folderId ?? undefined);
+    } else {
+      promise = client.getAlbumList2('highest' as 'newest', CAROUSEL_SIZE, undefined, undefined, undefined, undefined, folderId ?? undefined);
+    }
+
+    promise
+      .then((data) => { if (!cancelled) setAlbums(data); })
+      .catch(() => { /* silently fail */ })
+      .finally(() => { if (!cancelled) setLoading(false); });
+
+    return () => { cancelled = true; };
+  }, [config, folderId]);
+
+  return (
+    <section className="mb-6">
+      <div className="flex items-center justify-between px-4 pb-3">
+        <h2 className="text-lg font-bold text-text-primary">{config.label}</h2>
+        <button onClick={onSeeAll} className="text-sm font-medium text-accent transition-colors hover:text-accent-hover">
+          See All
+        </button>
+      </div>
+      {loading ? (
+        <div className="flex items-center justify-center py-8">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-bg-tertiary border-t-accent" />
+        </div>
+      ) : albums.length === 0 ? (
+        <p className="px-4 text-sm text-text-muted">No albums found</p>
+      ) : (
+        <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory px-3 pb-2 scrollbar-hide md:px-4">
+          {albums.map((album) => (
+            <div key={album.id} className="snap-start shrink-0">
+              <AlbumCard album={album} size="small" />
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 // --- Customize Modal ---
 
 function CustomizeModal({ onClose }: { onClose: () => void }) {
-  const { pills, carousels, togglePill, toggleCarousel, movePill, moveCarousel } = useLibraryStore();
-  const [tab, setTab] = useState<'pills' | 'carousels'>('pills');
+  const { pills, carousels, customCarousels, togglePill, toggleCarousel, movePill, moveCarousel, addCustomCarousel, removeCustomCarousel, toggleCustomCarousel, moveCustomCarousel } = useLibraryStore();
+  const [tab, setTab] = useState<'pills' | 'carousels' | 'custom'>('pills');
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 px-0 sm:px-4" onClick={onClose}>
@@ -388,6 +467,14 @@ function CustomizeModal({ onClose }: { onClose: () => void }) {
           >
             Carousels
           </button>
+          <button
+            onClick={() => setTab('custom')}
+            className={`flex-1 py-3 text-center text-sm font-medium transition-colors ${
+              tab === 'custom' ? 'text-accent border-b-2 border-accent' : 'text-text-muted'
+            }`}
+          >
+            Custom
+          </button>
         </div>
 
         {/* Content */}
@@ -395,10 +482,20 @@ function CustomizeModal({ onClose }: { onClose: () => void }) {
           <p className="mb-3 text-xs text-text-muted">
             Toggle visibility and drag to reorder.
           </p>
-          {tab === 'pills' ? (
+          {tab === 'pills' && (
             <ReorderList items={pills} onToggle={togglePill} onMove={movePill} />
-          ) : (
+          )}
+          {tab === 'carousels' && (
             <ReorderList items={carousels} onToggle={toggleCarousel} onMove={moveCarousel} />
+          )}
+          {tab === 'custom' && (
+            <CustomCarouselManager
+              carousels={customCarousels}
+              onAdd={addCustomCarousel}
+              onRemove={removeCustomCarousel}
+              onToggle={toggleCustomCarousel}
+              onMove={moveCustomCarousel}
+            />
           )}
         </div>
       </div>
@@ -495,6 +592,253 @@ function ReorderList({
           </button>
         </div>
       ))}
+    </div>
+  );
+}
+
+const DECADE_PRESETS = [
+  { label: '60s', from: 1960, to: 1969 },
+  { label: '70s', from: 1970, to: 1979 },
+  { label: '80s', from: 1980, to: 1989 },
+  { label: '90s', from: 1990, to: 1999 },
+  { label: '00s', from: 2000, to: 2009 },
+  { label: '10s', from: 2010, to: 2019 },
+  { label: '20s', from: 2020, to: 2029 },
+];
+
+function CustomCarouselManager({
+  carousels,
+  onAdd,
+  onRemove,
+  onToggle,
+  onMove,
+}: {
+  carousels: CustomCarousel[];
+  onAdd: (c: Omit<CustomCarousel, 'id'>) => void;
+  onRemove: (id: string) => void;
+  onToggle: (id: string) => void;
+  onMove: (from: number, to: number) => void;
+}) {
+  const [showCreator, setShowCreator] = useState(false);
+  const [creatorType, setCreatorType] = useState<CustomCarousel['type']>('byYear');
+  const [label, setLabel] = useState('');
+  const [fromYear, setFromYear] = useState(2020);
+  const [toYear, setToYear] = useState(new Date().getFullYear());
+  const [genre, setGenre] = useState('');
+  const [genres, setGenres] = useState<string[]>([]);
+
+  // Load genres for the genre picker
+  useEffect(() => {
+    if (creatorType === 'byGenre' && genres.length === 0) {
+      getSubsonicClient().getGenres().then((g) => {
+        setGenres(g.map((x) => x.value).filter(Boolean).sort());
+      }).catch(() => { /* silently fail */ });
+    }
+  }, [creatorType, genres.length]);
+
+  const handleCreate = () => {
+    if (!label.trim()) return;
+
+    const carousel: Omit<CustomCarousel, 'id'> = {
+      label: label.trim(),
+      type: creatorType,
+      visible: true,
+    };
+
+    if (creatorType === 'byYear') {
+      carousel.fromYear = fromYear;
+      carousel.toYear = toYear;
+    } else if (creatorType === 'decade') {
+      carousel.fromYear = fromYear;
+      carousel.toYear = toYear;
+    } else if (creatorType === 'byGenre') {
+      carousel.genre = genre;
+    }
+
+    onAdd(carousel);
+    setLabel('');
+    setShowCreator(false);
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Existing custom carousels */}
+      {carousels.length > 0 && (
+        <div className="space-y-1">
+          {carousels.map((c, i) => (
+            <div
+              key={c.id}
+              className="flex items-center gap-2 rounded-lg bg-bg-tertiary/50 px-3 py-2.5"
+            >
+              <span className={`flex-1 text-sm ${c.visible ? 'text-text-primary' : 'text-text-muted'}`}>
+                {c.label}
+              </span>
+              <span className="text-[10px] text-text-muted">
+                {c.type === 'byYear' || c.type === 'decade' ? `${c.fromYear}–${c.toYear}` : c.type === 'byGenre' ? c.genre : 'Top Rated'}
+              </span>
+
+              {/* Move buttons */}
+              <button
+                onClick={() => i > 0 && onMove(i, i - 1)}
+                className="flex h-6 w-6 items-center justify-center rounded text-text-muted hover:text-text-primary disabled:opacity-30"
+                disabled={i === 0}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3 w-3">
+                  <path fillRule="evenodd" d="M14.77 12.79a.75.75 0 01-1.06-.02L10 8.832 6.29 12.77a.75.75 0 11-1.08-1.04l4.25-4.5a.75.75 0 011.08 0l4.25 4.5a.75.75 0 01-.02 1.06z" clipRule="evenodd" />
+                </svg>
+              </button>
+              <button
+                onClick={() => i < carousels.length - 1 && onMove(i, i + 1)}
+                className="flex h-6 w-6 items-center justify-center rounded text-text-muted hover:text-text-primary disabled:opacity-30"
+                disabled={i === carousels.length - 1}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3 w-3">
+                  <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+                </svg>
+              </button>
+
+              {/* Toggle */}
+              <button
+                onClick={() => onToggle(c.id)}
+                className={`relative h-5 w-9 rounded-full transition-colors ${c.visible ? 'bg-accent' : 'bg-bg-tertiary'}`}
+              >
+                <span className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white transition-transform ${c.visible ? 'translate-x-4' : ''}`} />
+              </button>
+
+              {/* Delete */}
+              <button
+                onClick={() => onRemove(c.id)}
+                className="flex h-6 w-6 items-center justify-center rounded text-text-muted hover:text-red-400"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
+                  <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+                </svg>
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Quick decade presets */}
+      {!showCreator && (
+        <>
+          <p className="text-xs text-text-muted">Quick add by decade:</p>
+          <div className="flex flex-wrap gap-1.5">
+            {DECADE_PRESETS.map((d) => (
+              <button
+                key={d.label}
+                onClick={() => {
+                  onAdd({ label: d.label, type: 'decade', visible: true, fromYear: d.from, toYear: d.to });
+                }}
+                className="rounded-full bg-bg-tertiary px-3 py-1.5 text-xs font-medium text-text-secondary hover:bg-accent hover:text-white transition-colors"
+              >
+                {d.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* Create custom button / form */}
+      {!showCreator ? (
+        <button
+          onClick={() => setShowCreator(true)}
+          className="flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border py-3 text-sm font-medium text-text-muted transition-colors hover:border-accent hover:text-accent"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+            <path d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" />
+          </svg>
+          Create Custom Carousel
+        </button>
+      ) : (
+        <div className="space-y-3 rounded-lg border border-border bg-bg-tertiary/30 p-3">
+          <h4 className="text-sm font-semibold text-text-primary">New Custom Carousel</h4>
+
+          {/* Type picker */}
+          <div className="flex gap-1.5">
+            {([
+              { value: 'byYear', label: 'Year Range' },
+              { value: 'byGenre', label: 'Genre' },
+              { value: 'highest', label: 'Top Rated' },
+            ] as const).map((t) => (
+              <button
+                key={t.value}
+                onClick={() => setCreatorType(t.value)}
+                className={`flex-1 rounded-lg py-1.5 text-center text-xs font-medium transition-colors ${
+                  creatorType === t.value ? 'bg-accent text-white' : 'bg-bg-tertiary text-text-secondary'
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Name */}
+          <input
+            type="text"
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            placeholder="Carousel name"
+            className="w-full rounded-lg border border-border bg-bg-secondary px-3 py-2 text-sm text-text-primary placeholder-text-muted outline-none focus:border-accent"
+          />
+
+          {/* Year range */}
+          {(creatorType === 'byYear' || creatorType === 'decade') && (
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                value={fromYear}
+                onChange={(e) => setFromYear(Number(e.target.value))}
+                min={1900} max={2099}
+                className="w-20 rounded-lg border border-border bg-bg-secondary px-2 py-1.5 text-center text-sm text-text-primary outline-none focus:border-accent"
+              />
+              <span className="text-text-muted">to</span>
+              <input
+                type="number"
+                value={toYear}
+                onChange={(e) => setToYear(Number(e.target.value))}
+                min={1900} max={2099}
+                className="w-20 rounded-lg border border-border bg-bg-secondary px-2 py-1.5 text-center text-sm text-text-primary outline-none focus:border-accent"
+              />
+            </div>
+          )}
+
+          {/* Genre picker */}
+          {creatorType === 'byGenre' && (
+            <select
+              value={genre}
+              onChange={(e) => {
+                setGenre(e.target.value);
+                if (!label) setLabel(e.target.value);
+              }}
+              className="w-full rounded-lg border border-border bg-bg-secondary px-3 py-2 text-sm text-text-primary outline-none focus:border-accent"
+            >
+              <option value="">Select genre...</option>
+              {genres.map((g) => (
+                <option key={g} value={g}>{g}</option>
+              ))}
+            </select>
+          )}
+
+
+          {/* Actions */}
+          <div className="flex gap-2">
+            <button
+              onClick={handleCreate}
+              disabled={!label.trim() || (creatorType === 'byGenre' && !genre)}
+              className="flex-1 rounded-lg bg-accent py-2 text-sm font-semibold text-white hover:bg-accent-hover disabled:opacity-40"
+            >
+              Create
+            </button>
+            <button
+              onClick={() => setShowCreator(false)}
+              className="rounded-lg border border-border px-4 py-2 text-sm text-text-secondary hover:bg-bg-tertiary"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

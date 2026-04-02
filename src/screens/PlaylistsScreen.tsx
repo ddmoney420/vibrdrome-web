@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getSubsonicClient } from '../api/SubsonicClient';
 import type { Playlist } from '../types/subsonic';
-import { Header, LoadingSpinner } from '../components/common';
+import { Header, CoverArt, LoadingSpinner } from '../components/common';
 
 function formatDuration(totalSeconds?: number): string {
   if (!totalSeconds) return '';
@@ -77,11 +77,7 @@ export default function PlaylistsScreen() {
               onClick={() => navigate(`/playlist/${playlist.id}`)}
               className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-bg-tertiary"
             >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-bg-tertiary">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="h-5 w-5 text-text-muted">
-                  <path strokeLinecap="round" d="M9 19V6l12-3v13M9 19c0 1.1-1.34 2-3 2s-3-.9-3-2 1.34-2 3-2 3 .9 3 2z" />
-                </svg>
-              </div>
+              <CoverArt coverArt={playlist.coverArt} size={40} className="shrink-0 rounded-lg" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-text-primary">{playlist.name}</p>
                 <p className="text-xs text-text-muted">

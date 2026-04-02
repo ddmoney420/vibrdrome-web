@@ -28,8 +28,8 @@ export default function DesktopNowPlaying() {
   const [activeTab, setActiveTab] = useState<RightTab>('queue');
   const [isSeeking, setIsSeeking] = useState(false);
   const [seekValue, setSeekValue] = useState(0);
-  const [volume, setVolume] = useState(100);
   const pm = useRef(getPlaybackManager());
+  const [volume, setVolume] = useState(() => Math.round(getPlaybackManager().getVolume() * 100));
 
   const displayPosition = isSeeking ? seekValue : positionMs;
   const seekValueRef = useRef(0);

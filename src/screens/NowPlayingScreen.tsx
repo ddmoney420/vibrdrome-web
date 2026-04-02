@@ -60,8 +60,8 @@ function MobileNowPlaying() {
   const displayPosition = isSeeking ? seekValue : positionMs;
 
   // Volume
-  const [volume, setVolume] = useState(100);
   const pm = useRef(getPlaybackManager());
+  const [volume, setVolume] = useState(() => Math.round(getPlaybackManager().getVolume() * 100));
 
   const [sleepTimerEnd, setSleepTimerEnd] = useState<number | null>(null);
   const [sleepRemaining, setSleepRemaining] = useState('');

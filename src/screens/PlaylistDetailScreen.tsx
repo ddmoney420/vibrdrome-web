@@ -65,9 +65,12 @@ export default function PlaylistDetailScreen() {
 
   const handleShuffle = () => {
     if (songs.length > 0) {
-      const startIndex = Math.floor(Math.random() * songs.length);
-      playSongs(songs, startIndex);
-      usePlayerStore.getState().toggleShuffle();
+      const shuffled = [...songs].sort(() => Math.random() - 0.5);
+      playSongs(shuffled, 0);
+      // Ensure shuffle is enabled (not toggled)
+      if (!usePlayerStore.getState().shuffleEnabled) {
+        usePlayerStore.getState().toggleShuffle();
+      }
     }
   };
 

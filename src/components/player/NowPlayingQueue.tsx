@@ -2,8 +2,9 @@ import { usePlayerStore } from '../../stores/playerStore';
 
 function formatDuration(seconds?: number): string {
   if (seconds === undefined || seconds === null) return '--:--';
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
+  const total = Math.floor(seconds);
+  const m = Math.floor(total / 60);
+  const s = total % 60;
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
@@ -28,7 +29,10 @@ export default function NowPlayingQueue() {
         return (
           <div
             key={`${song.id}-${index}`}
+            role="button"
+            tabIndex={0}
             onClick={() => skipToIndex(index)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); skipToIndex(index); } }}
             className={`group flex cursor-pointer items-center gap-3 px-3 py-2.5 transition-colors hover:bg-white/5 ${
               isCurrent ? 'border-l-2 border-accent bg-accent/5' : ''
             }`}

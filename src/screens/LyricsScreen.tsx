@@ -49,13 +49,15 @@ export default function LyricsScreen() {
     load();
   }, [currentSong?.id]);
 
-  // Auto-scroll to current line for synced lyrics
+  // Auto-scroll only when the current line index changes
+  const lastScrollIdx = useRef(-1);
   useEffect(() => {
     if (currentLineRef.current) {
-      currentLineRef.current.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
-      });
+      const idx = Number(currentLineRef.current.dataset.lineIdx ?? '-1');
+      if (idx !== lastScrollIdx.current) {
+        lastScrollIdx.current = idx;
+        currentLineRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
     }
   }, [positionMs]);
 
@@ -99,15 +101,17 @@ export default function LyricsScreen() {
           </div>
         )}
 
-        {!loading && lyrics && lyrics.synced && lyrics.line && (
+        {!loading && lyrics && lyrics.synced && lyrics.line && (() => {
+          const currentIdx = getCurrentLineIndex(lyrics.line!);
+          return (
           <div className="space-y-3 py-4">
-            {lyrics.line.map((line, index) => {
-              const currentIdx = getCurrentLineIndex(lyrics.line!);
+            {lyrics.line!.map((line, index) => {
               const isCurrent = index === currentIdx;
               return (
                 <button
                   key={index}
                   ref={isCurrent ? currentLineRef : null}
+                  data-line-idx={index}
                   onClick={() => {
                     if (line.start !== undefined) {
                       getPlaybackManager().seek(line.start);
@@ -127,7 +131,8 @@ export default function LyricsScreen() {
               );
             })}
           </div>
-        )}
+          );
+        })()}
 
         {!loading && lyrics && !lyrics.synced && lyrics.line && (
           <div className="space-y-2 py-4">

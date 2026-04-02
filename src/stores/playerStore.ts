@@ -136,21 +136,28 @@ export const usePlayerStore = create<PlaybackState>((set, get) => ({
   },
 
   playNext: (song) => {
-    const { queue, currentIndex } = get();
+    const { queue, currentIndex, shuffleEnabled, shuffleOrder } = get();
     const insertAt = currentIndex + 1;
     const newQueue = [...queue.slice(0, insertAt), song, ...queue.slice(insertAt)];
-    set({ queue: newQueue });
+    // Update shuffle order to include the new index
+    const newShuffleOrder = shuffleEnabled
+      ? [...shuffleOrder.map((i) => (i >= insertAt ? i + 1 : i)), insertAt]
+      : [];
+    set({ queue: newQueue, shuffleOrder: newShuffleOrder });
     persistQueue(get());
   },
 
   addToQueue: (song) => {
-    const queue = [...get().queue, song];
-    set({ queue });
+    const { queue, shuffleEnabled, shuffleOrder } = get();
+    const newQueue = [...queue, song];
+    const newIndex = newQueue.length - 1;
+    const newShuffleOrder = shuffleEnabled ? [...shuffleOrder, newIndex] : [];
+    set({ queue: newQueue, shuffleOrder: newShuffleOrder });
     persistQueue(get());
   },
 
   removeFromQueue: (index) => {
-    const { queue, currentIndex } = get();
+    const { queue, currentIndex, shuffleEnabled, shuffleOrder } = get();
     if (index < 0 || index >= queue.length) return;
 
     const newQueue = queue.filter((_, i) => i !== index);
@@ -161,11 +168,17 @@ export const usePlayerStore = create<PlaybackState>((set, get) => ({
       newIndex = Math.min(currentIndex, newQueue.length - 1);
     }
 
+    // Update shuffle order: remove the index and adjust remaining
+    const newShuffleOrder = shuffleEnabled
+      ? shuffleOrder.filter((i) => i !== index).map((i) => (i > index ? i - 1 : i))
+      : [];
+
     set({
       queue: newQueue,
       currentIndex: newIndex,
       currentSong: newIndex >= 0 && newIndex < newQueue.length ? newQueue[newIndex] : null,
       isPlaying: newQueue.length > 0 ? get().isPlaying : false,
+      shuffleOrder: newShuffleOrder,
     });
     persistQueue(get());
   },
@@ -286,10 +299,6 @@ export const usePlayerStore = create<PlaybackState>((set, get) => ({
   setDuration: (ms) => set({ durationMs: ms }),
   seek: (ms) => {
     set({ positionMs: ms });
-    // Dynamically import to avoid circular dependency
-    import('../audio/PlaybackManager').then(({ getPlaybackManager }) => {
-      getPlaybackManager().seek(ms);
-    });
   },
 
   toggleShuffle: () => {

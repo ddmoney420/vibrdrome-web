@@ -50,9 +50,16 @@ export default function NowPlayingLyrics() {
     return () => { cancelled = true; };
   }, [songId, status]);
 
+  const lastLineIdxRef = useRef(-1);
   useEffect(() => {
     if (currentLineRef.current) {
-      currentLineRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Only scroll when the highlighted line actually changes
+      const el = currentLineRef.current;
+      const idx = Number(el.dataset.lineIdx ?? '-1');
+      if (idx !== lastLineIdxRef.current) {
+        lastLineIdxRef.current = idx;
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
     }
   }, [positionMs]);
 
@@ -89,6 +96,7 @@ export default function NowPlayingLyrics() {
           <button
             key={i}
             ref={i === currentIdx ? currentLineRef : null}
+            data-line-idx={i}
             onClick={() => {
               if (line.start !== undefined) {
                 getPlaybackManager().seek(line.start);

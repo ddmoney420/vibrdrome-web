@@ -43,7 +43,10 @@ export default function QueueScreen() {
             return (
               <div
                 key={`${song.id}-${index}`}
+                role="button"
+                tabIndex={0}
                 onClick={() => skipToIndex(index)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); skipToIndex(index); } }}
                 className={`group flex cursor-pointer items-center gap-3 px-4 py-3 min-h-[48px] transition-colors hover:bg-bg-tertiary ${
                   isCurrent ? 'border-l-2 border-accent bg-accent/5' : ''
                 }`}

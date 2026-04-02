@@ -414,7 +414,7 @@ class PlaybackManager {
     if (!state.crossfadeEnabled || this.crossfading) return;
 
     const audio = this.getActiveAudio();
-    const remaining = audio.duration - audio.currentTime;
+    const remaining = (audio.duration - audio.currentTime) / (audio.playbackRate || 1);
 
     if (isNaN(remaining)) return;
 

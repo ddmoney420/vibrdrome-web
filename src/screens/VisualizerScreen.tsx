@@ -183,6 +183,7 @@ export default function VisualizerScreen() {
   const startTimeRef = useRef<number>(performance.now());
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const butterchurnRef = useRef<any>(null);
+  const fallbackCtxRef = useRef<AudioContext | null>(null);
 
   const [mode, setMode] = useState<'shader' | 'milkdrop'>('shader');
   const [presetIndex, setPresetIndex] = useState(0);
@@ -352,16 +353,16 @@ export default function VisualizerScreen() {
 
         // If no analyser yet (no audio playing), create a fallback so butterchurn can render
         if (!analyser) {
-          const audioCtx = new AudioContext();
-          analyser = audioCtx.createAnalyser();
+          const fallbackCtx = new AudioContext();
+          fallbackCtxRef.current = fallbackCtx;
+          analyser = fallbackCtx.createAnalyser();
           analyser.fftSize = 2048;
-          // Need a connected graph for the context to be running
-          const osc = audioCtx.createOscillator();
-          const silentGain = audioCtx.createGain();
+          const osc = fallbackCtx.createOscillator();
+          const silentGain = fallbackCtx.createGain();
           silentGain.gain.value = 0;
           osc.connect(silentGain);
           silentGain.connect(analyser);
-          analyser.connect(audioCtx.destination);
+          analyser.connect(fallbackCtx.destination);
           osc.start();
         }
 
@@ -413,6 +414,10 @@ export default function VisualizerScreen() {
       cancelled = true;
       if (milkdropFrameRef.current) cancelAnimationFrame(milkdropFrameRef.current);
       butterchurnRef.current = null;
+      if (fallbackCtxRef.current) {
+        fallbackCtxRef.current.close().catch(() => { /* ignore */ });
+        fallbackCtxRef.current = null;
+      }
       setMilkdropReady(false);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps

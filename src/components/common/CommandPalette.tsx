@@ -162,12 +162,17 @@ export default function CommandPalette() {
     });
   }
 
-  // Keyboard navigation
+  // Keyboard navigation — use ref to avoid stale closure
+  const resultsRef = useRef(results);
+  const selectedRef = useRef(selectedIndex);
+  resultsRef.current = results;
+  selectedRef.current = selectedIndex;
+
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
-        setSelectedIndex((i) => Math.min(i + 1, results.length - 1));
+        setSelectedIndex((i) => Math.min(i + 1, resultsRef.current.length - 1));
         break;
       case 'ArrowUp':
         e.preventDefault();
@@ -175,15 +180,14 @@ export default function CommandPalette() {
         break;
       case 'Enter':
         e.preventDefault();
-        if (results[selectedIndex]) results[selectedIndex].onSelect();
+        resultsRef.current[selectedRef.current]?.onSelect();
         break;
       case 'Escape':
         e.preventDefault();
         close();
         break;
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [results.length, selectedIndex, close]);
+  }, [close]);
 
   // Reset selection when results change
   useEffect(() => {
@@ -203,7 +207,7 @@ export default function CommandPalette() {
   const typeLabels: Record<string, string> = { nav: 'Go to', action: 'Action', artist: 'Artist', album: 'Album', song: 'Song' };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh] bg-black/60" onClick={close}>
+    <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh] bg-black/60" role="dialog" aria-modal="true" aria-label="Command palette" onClick={close}>
       <div
         className="w-full max-w-lg rounded-xl bg-bg-secondary shadow-2xl border border-border overflow-hidden"
         onClick={(e) => e.stopPropagation()}

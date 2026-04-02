@@ -81,8 +81,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await client.ping();
 
       const { servers } = get();
-      const exists = servers.some((s) => s.id === server.id);
-      const updatedServers = exists ? servers : [...servers, server];
+      // Check by URL+username to prevent duplicates when re-logging
+      const existingIdx = servers.findIndex((s) => s.url === server.url && s.username === server.username);
+      const exists = existingIdx >= 0;
+      if (exists) {
+        server = { ...server, id: servers[existingIdx].id };
+      }
+      const updatedServers = exists
+        ? servers.map((s, i) => (i === existingIdx ? server : s))
+        : [...servers, server];
 
       localStorage.setItem(SERVERS_KEY, JSON.stringify(updatedServers));
       localStorage.setItem(ACTIVE_SERVER_KEY, server.id);

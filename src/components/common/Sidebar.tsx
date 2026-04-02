@@ -37,16 +37,7 @@ export default function Sidebar() {
         return { Artists: total };
       }).catch(() => ({})),
       // Use search3 with wildcard to get album/song counts
-      client.getGenres().then((g) => {
-        // Sum up song and album counts from genres
-        let totalSongs = 0;
-        let totalAlbums = 0;
-        for (const genre of g) {
-          totalSongs += genre.songCount ?? 0;
-          totalAlbums += genre.albumCount ?? 0;
-        }
-        return { Genres: g.length, Songs: totalSongs, Albums: totalAlbums };
-      }).catch(() => ({})),
+      client.getGenres().then((g) => ({ Genres: g.length })).catch(() => ({})),
       client.getInternetRadioStations().then((s) => ({ Radio: s.length })).catch(() => ({})),
       client.getPlaylists().then((p) => ({ Playlists: p.length })).catch(() => ({})),
     ]).then((results) => {

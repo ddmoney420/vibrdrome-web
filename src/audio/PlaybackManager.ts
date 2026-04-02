@@ -406,6 +406,11 @@ class PlaybackManager {
       getSubsonicClient().scrobble(song.id, true).catch((err) => {
         console.error('[PlaybackManager] Scrobble error:', err);
       });
+
+      // Log to local play history for smart playlists
+      import('../stores/playHistoryStore').then(({ logPlay }) => {
+        logPlay({ songId: song.id, title: song.title, artist: song.artist, album: song.album, timestamp: Date.now() });
+      });
     }
   }
 

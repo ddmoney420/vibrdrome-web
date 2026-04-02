@@ -115,7 +115,6 @@ export function usePlayback() {
 
     // Don't auto-play when radio just stopped — show last song but don't play
     if (wasRadioRef.current) {
-      wasRadioRef.current = false;
       lastSongIdRef.current = currentSong.id;
       return;
     }
@@ -136,8 +135,15 @@ export function usePlayback() {
   // Watch for isPlaying changes -> pause/resume
   useEffect(() => {
     if (!currentSong) return;
-    // Don't control song audio when in radio mode
-    if (radioMode) return;
+    // Don't control song audio when in radio mode or just exited radio
+    if (radioMode) {
+      prevIsPlayingRef.current = isPlaying;
+      return;
+    }
+    if (wasRadioRef.current) {
+      prevIsPlayingRef.current = isPlaying;
+      return;
+    }
     if (playTriggeredRef.current) {
       playTriggeredRef.current = false;
       prevIsPlayingRef.current = isPlaying;
@@ -158,6 +164,14 @@ export function usePlayback() {
       manager.pause();
     }
   }, [isPlaying, currentSong, radioMode]);
+
+  // Clear wasRadio flag after effects have processed
+  useEffect(() => {
+    if (wasRadioRef.current && !radioMode) {
+      const timer = setTimeout(() => { wasRadioRef.current = false; }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [radioMode]);
 
   // Watch for playback speed changes
   useEffect(() => {

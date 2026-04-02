@@ -7,7 +7,8 @@ import { useMusicFolderStore } from '../stores/musicFolderStore';
 import type { LibraryItem, CustomCarousel } from '../stores/libraryStore';
 import AlbumCard from '../components/common/AlbumCard';
 import Header from '../components/common/Header';
-import type { Album } from '../types/subsonic';
+import type { Album, Playlist } from '../types/subsonic';
+import CoverArt from '../components/common/CoverArt';
 
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 const CAROUSEL_SIZE = 20;
@@ -180,6 +181,7 @@ const CAROUSEL_LABELS: Record<string, string> = {
   starred: 'Starred Albums',
   thisYear: `Released in ${new Date().getFullYear()}`,
   recent: 'Recently Played',
+  playlists: 'Playlists',
 };
 
 const CAROUSEL_SEE_ALL: Record<string, string> = {
@@ -189,6 +191,7 @@ const CAROUSEL_SEE_ALL: Record<string, string> = {
   starred: '/favorites',
   thisYear: `/albums?type=byYear&fromYear=${new Date().getFullYear()}&toYear=${new Date().getFullYear()}`,
   recent: '/albums?type=recent',
+  playlists: '/playlists',
 };
 
 export default function LibraryScreen() {
@@ -271,13 +274,17 @@ export default function LibraryScreen() {
 
       {/* Default Carousels */}
       {visibleCarousels.map((carousel) => (
-        <AlbumCarousel
-          key={`${carousel.id}:${activeFolderId ?? 'all'}`}
-          type={carousel.id}
-          folderId={activeFolderId}
-          title={CAROUSEL_LABELS[carousel.id] ?? carousel.label}
-          onSeeAll={() => navigate(CAROUSEL_SEE_ALL[carousel.id] ?? '/albums')}
-        />
+        carousel.id === 'playlists' ? (
+          <PlaylistCarousel key="playlists" onSeeAll={() => navigate('/playlists')} />
+        ) : (
+          <AlbumCarousel
+            key={`${carousel.id}:${activeFolderId ?? 'all'}`}
+            type={carousel.id}
+            folderId={activeFolderId}
+            title={CAROUSEL_LABELS[carousel.id] ?? carousel.label}
+            onSeeAll={() => navigate(CAROUSEL_SEE_ALL[carousel.id] ?? '/albums')}
+          />
+        )
       ))}
 
       {/* Custom Carousels */}
@@ -307,6 +314,56 @@ export default function LibraryScreen() {
         <CustomizeModal onClose={() => setShowCustomize(false)} />
       )}
     </div>
+  );
+}
+
+function PlaylistCarousel({ onSeeAll }: { onSeeAll: () => void }) {
+  const navigate = useNavigate();
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    getSubsonicClient().getPlaylists()
+      .then((data) => { if (!cancelled) setPlaylists(data); })
+      .catch(() => { /* silently fail */ })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  return (
+    <section className="mb-6">
+      <div className="flex items-center justify-between px-4 pb-3">
+        <h2 className="text-lg font-bold text-text-primary">Playlists</h2>
+        <button onClick={onSeeAll} className="text-sm font-medium text-accent transition-colors hover:text-accent-hover">
+          See All
+        </button>
+      </div>
+      {loading ? (
+        <div className="flex items-center justify-center py-8">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-bg-tertiary border-t-accent" />
+        </div>
+      ) : playlists.length === 0 ? (
+        <p className="px-4 text-sm text-text-muted">No playlists</p>
+      ) : (
+        <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory px-3 pb-2 scrollbar-hide md:px-4">
+          {playlists.map((pl) => (
+            <button
+              key={pl.id}
+              onClick={() => navigate(`/playlist/${pl.id}`)}
+              className="group flex snap-start shrink-0 flex-col gap-2 text-left"
+              style={{ width: 120 }}
+            >
+              <CoverArt coverArt={pl.coverArt} size={120} className="transition-transform duration-200 group-hover:scale-[1.03]" />
+              <div className="min-w-0 px-0.5">
+                <p className="truncate text-sm font-medium text-text-primary">{pl.name}</p>
+                <p className="truncate text-xs text-text-secondary">{pl.songCount ?? 0} songs</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 

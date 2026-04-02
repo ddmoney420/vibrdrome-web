@@ -59,7 +59,7 @@ export default function PlaylistsScreen() {
         }
       />
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto px-4 pb-20">
         {playlists.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
             <p className="text-text-muted">No playlists yet</p>
@@ -71,25 +71,27 @@ export default function PlaylistsScreen() {
             </button>
           </div>
         ) : (
-          playlists.map((playlist) => (
-            <button
-              key={playlist.id}
-              onClick={() => navigate(`/playlist/${playlist.id}`)}
-              className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-bg-tertiary"
-            >
-              <CoverArt coverArt={playlist.coverArt} size={40} className="shrink-0 rounded-lg" />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-text-primary">{playlist.name}</p>
-                <p className="text-xs text-text-muted">
-                  {playlist.songCount ?? 0} songs
-                  {playlist.duration ? ` \u00B7 ${formatDuration(playlist.duration)}` : ''}
-                </p>
-              </div>
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4 shrink-0 text-text-muted">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          ))
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+            {playlists.map((playlist) => (
+              <button
+                key={playlist.id}
+                onClick={() => navigate(`/playlist/${playlist.id}`)}
+                className="group flex flex-col gap-2 text-left"
+              >
+                <CoverArt
+                  coverArt={playlist.coverArt}
+                  className="w-full transition-transform duration-200 group-hover:scale-[1.03]"
+                />
+                <div className="min-w-0 px-0.5">
+                  <p className="truncate text-sm font-medium text-text-primary">{playlist.name}</p>
+                  <p className="truncate text-xs text-text-muted">
+                    {playlist.songCount ?? 0} songs
+                    {playlist.duration ? ` \u00B7 ${formatDuration(playlist.duration)}` : ''}
+                  </p>
+                </div>
+              </button>
+            ))}
+          </div>
         )}
       </div>
     </div>

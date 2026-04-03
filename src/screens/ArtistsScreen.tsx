@@ -61,7 +61,11 @@ export default function ArtistsScreen() {
     load();
   }, [filterGenre, allArtistGenres.size, activeFolderId]);
 
+  const [radioLoading, setRadioLoading] = useState(false);
+
   const handleArtistRadio = async (artistId: string, artistName: string) => {
+    if (radioLoading) return;
+    setRadioLoading(true);
     try {
       const client = getSubsonicClient();
 
@@ -89,6 +93,8 @@ export default function ArtistsScreen() {
       }
     } catch {
       console.error('Failed to start artist radio');
+    } finally {
+      setRadioLoading(false);
     }
   };
 

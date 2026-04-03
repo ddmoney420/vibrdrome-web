@@ -5,6 +5,7 @@ const QUEUE_KEY = 'vibrdrome_queue';
 const PLAYER_SETTINGS_KEY = 'vibrdrome_player_settings';
 
 const SPEED_OPTIONS = [1.0, 1.25, 1.5, 2.0, 0.5, 0.75];
+let starBusy = false;
 
 function shuffleArray(length: number, currentIndex: number): number[] {
   const indices = Array.from({ length }, (_, i) => i);
@@ -366,8 +367,10 @@ export const usePlayerStore = create<PlaybackState>((set, get) => ({
   },
 
   toggleStarCurrent: async () => {
+    if (starBusy) return;
+    starBusy = true;
     const { currentSong, queue, currentIndex } = get();
-    if (!currentSong) return;
+    if (!currentSong) { starBusy = false; return; }
 
     const starred = !currentSong.starred;
 
@@ -390,6 +393,8 @@ export const usePlayerStore = create<PlaybackState>((set, get) => ({
     } catch {
       // Revert on failure
       set({ currentSong, queue });
+    } finally {
+      starBusy = false;
     }
   },
 

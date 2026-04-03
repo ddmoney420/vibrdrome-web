@@ -33,6 +33,7 @@ class PlaybackManager {
   private previousVolume = 1;
   private playId = 0;
   private radioAudio: HTMLAudioElement | null = null;
+  private radioPlayId = 0;
   private unsubscribeEQ: (() => void) | null = null;
 
   constructor() {
@@ -174,6 +175,8 @@ class PlaybackManager {
   }
 
   async playRadio(streamUrl: string): Promise<void> {
+    const thisRadioId = ++this.radioPlayId;
+
     // Stop EVERYTHING first
     this.stopRadio();
     this.cancelCrossfade();
@@ -187,18 +190,26 @@ class PlaybackManager {
 
     // Resolve PLS/M3U
     const resolvedUrl = await this.resolveRadioUrl(streamUrl);
+    if (thisRadioId !== this.radioPlayId) return; // stale
 
     const audio = new Audio(resolvedUrl);
     audio.volume = this.currentVolume;
     audio.addEventListener('error', () => {
+      if (this.radioPlayId !== thisRadioId) return;
       console.error('[PlaybackManager] Radio stream error');
       usePlayerStore.getState().stopRadio();
     });
 
     try {
       await audio.play();
+      if (thisRadioId !== this.radioPlayId) {
+        audio.pause();
+        audio.src = '';
+        return;
+      }
       this.radioAudio = audio;
     } catch (err) {
+      if (thisRadioId !== this.radioPlayId) return;
       console.error('[PlaybackManager] Radio play error:', err);
       usePlayerStore.getState().stopRadio();
     }

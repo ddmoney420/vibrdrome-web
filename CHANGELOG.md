@@ -3,9 +3,37 @@
 All notable changes to Vibrdrome Web are documented here.
 
 ## [Unreleased]
-- Radio playback through mini-player
-- Smart playlists with configurable thresholds (data collecting)
-- Server-managed transcoding / quality picker
+- Unit testing framework setup
+
+---
+
+## [1.6.0] - 2026-04-02
+
+### Added
+- Radio in mini-player: play/pause, stop, station artwork, full-screen radio view
+- Split-pane right panel: radio-aware controls with live indicator
+- Smart playlists: Heavy Rotation, Forgotten Gems, Recently Added Unplayed
+- Configurable smart playlist thresholds (days/months)
+- Stream quality picker: Original, 320k, 256k, 192k, 128k, 96k
+- EQ limiter prevents bass boost clipping/distortion
+- Waveform seekbar on desktop Now Playing and split-pane
+- Drag-and-drop queue reorder (QueueScreen + Now Playing panel)
+- Multi-select with batch actions (Play, Play Next, Add to Queue)
+- Play history tracking in IndexedDB
+- Mini-player: previous, next, repeat buttons
+- Album filters: genre dropdown, year input
+- Artist filters: genre dropdown, artist radio
+- In-app first-run tooltips
+- Smart Playlists pill on library
+- Radio artwork fix (ra- prefix workaround for Navidrome bug #5293)
+
+### Fixed
+- Radio and song playback no longer mix
+- Stopping radio returns to last song without auto-playing
+- seek() now actually seeks audio (not just UI)
+- Suppress false audio error logs during radio
+- Duplicate React key warning in custom carousels
+- lodash security vulnerability patched
 
 ---
 

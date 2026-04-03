@@ -118,8 +118,10 @@ export async function getArtistImageUrl(artistName: string): Promise<string | nu
     const thumbUrl = (page as any)?.imageinfo?.[0]?.thumburl;
 
     if (thumbUrl) {
-      await setCache(cacheKey, thumbUrl);
-      return thumbUrl;
+      // Force HTTPS to avoid mixed content warnings
+      const secureUrl = thumbUrl.replace(/^http:\/\//, 'https://');
+      await setCache(cacheKey, secureUrl);
+      return secureUrl;
     }
 
     return null;

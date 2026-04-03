@@ -55,6 +55,7 @@ const DEFAULT_PILLS: LibraryItem[] = [
   { id: 'playlists', label: 'Playlists', visible: true },
   { id: 'recentlyAdded', label: 'Recently Added', visible: true },
   { id: 'generations', label: 'Generations', visible: true },
+  { id: 'smartPlaylists', label: 'Smart Playlists', visible: true },
   { id: 'recentlyPlayed', label: 'Recently Played', visible: true },
   { id: 'randomMix', label: 'Random Mix', visible: true },
   { id: 'randomAlbum', label: 'Random Album', visible: true },

@@ -138,8 +138,21 @@ export default function ArtistDetailScreen() {
 }
 
 function ArtistBio({ artistName }: { artistName: string }) {
-  const { info, loading, hasApiKey } = useArtistInfo(artistName);
+  const navigate = useNavigate();
+  const [viewingArtist, setViewingArtist] = useState(artistName);
   const [expanded, setExpanded] = useState(false);
+  const [trackedName, setTrackedName] = useState(artistName);
+
+  // Reset when parent artist changes (derived state)
+  if (trackedName !== artistName) {
+    setTrackedName(artistName);
+    setViewingArtist(artistName);
+    setExpanded(false);
+  }
+
+  const isViewingDifferent = viewingArtist !== artistName;
+  const { info, loading, hasApiKey } = useArtistInfo(viewingArtist);
+  const { imageUrl: artistImage, coverArt: artistCoverArt, artistId } = useArtistImage(viewingArtist);
 
   if (!hasApiKey) return null;
   if (loading) {
@@ -157,6 +170,38 @@ function ArtistBio({ artistName }: { artistName: string }) {
 
   return (
     <div className="mb-6 space-y-4">
+      {/* Back button when viewing different artist */}
+      {isViewingDifferent && (
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setViewingArtist(artistName)}
+            className="flex items-center gap-1.5 text-xs font-medium text-accent hover:underline"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3 w-3">
+              <path fillRule="evenodd" d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z" clipRule="evenodd" />
+            </svg>
+            Back to {artistName}
+          </button>
+          {/* Header for the browsed artist */}
+          <div className="flex items-center gap-2">
+            {artistCoverArt ? (
+              <CoverArt coverArt={artistCoverArt} size={32} className="!rounded-full" />
+            ) : artistImage ? (
+              <img src={artistImage} alt="" className="h-8 w-8 rounded-full object-cover" />
+            ) : null}
+            <span className="text-sm font-bold text-text-primary">{info.name}</span>
+            {artistId && (
+              <button
+                onClick={() => navigate(`/artist/${artistId}`)}
+                className="rounded-full bg-bg-tertiary px-2 py-0.5 text-[10px] font-medium text-text-secondary hover:text-text-primary"
+              >
+                View
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Bio */}
       {bio && (
         <div>
@@ -199,7 +244,7 @@ function ArtistBio({ artistName }: { artistName: string }) {
           <h3 className="mb-2 text-sm font-semibold uppercase tracking-wider text-text-muted">Similar Artists</h3>
           <div className="flex gap-3 overflow-x-auto pb-2">
             {info.similar.map((s) => (
-              <SimilarArtistCard key={s.name} name={s.name} />
+              <SimilarArtistCard key={s.name} name={s.name} onBrowse={setViewingArtist} />
             ))}
           </div>
         </div>
@@ -208,7 +253,7 @@ function ArtistBio({ artistName }: { artistName: string }) {
   );
 }
 
-function SimilarArtistCard({ name }: { name: string }) {
+function SimilarArtistCard({ name, onBrowse }: { name: string; onBrowse: (name: string) => void }) {
   const navigate = useNavigate();
   const { imageUrl, artistId, coverArt } = useArtistImage(name);
 
@@ -218,7 +263,7 @@ function SimilarArtistCard({ name }: { name: string }) {
         if (artistId) {
           navigate(`/artist/${artistId}`);
         } else {
-          navigate(`/search?q=${encodeURIComponent(name)}`);
+          onBrowse(name);
         }
       }}
       className="flex w-20 shrink-0 flex-col items-center gap-1.5 text-center"

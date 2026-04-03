@@ -32,11 +32,14 @@
 - Filters on Artists (name, genre), Albums (name, artist, genre, year), and Songs (artist, genre, year)
 - Artist radio — one-click play similar songs/top songs for any artist
 - Multi-select with batch actions (Play, Play Next, Add to Queue)
+- Smart playlists: Heavy Rotation, Forgotten Gems, Recently Added Unplayed (configurable thresholds)
+- Browse similar artist bios inline without leaving the page
 
 **Playback** ♪┏(・o･)┛♪
 - Drag-and-drop queue reorder with up/down arrows for touch
 - Shuffle, repeat (all/one), and crossfade
-- 10-band equalizer powered by Web Audio API
+- 10-band equalizer with limiter (prevents bass boost clipping)
+- Stream quality picker: Original, 320k, 256k, 192k, 128k, 96k
 - Waveform seekbar — canvas-rendered audio waveform with click/drag to seek
 - Playback speed control
 - Sleep timer with fade-out

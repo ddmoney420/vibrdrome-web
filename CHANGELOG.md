@@ -26,6 +26,8 @@ All notable changes to Vibrdrome Web are documented here.
 - In-app first-run tooltips
 - Smart Playlists pill on library
 - Radio artwork fix (ra- prefix workaround for Navidrome bug #5293)
+- Browse similar artist bios inline on artist detail page (no search redirect)
+- Spam-click protection on radio, star toggle, artist radio
 
 ### Fixed
 - Radio and song playback no longer mix

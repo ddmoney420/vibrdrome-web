@@ -69,22 +69,30 @@ export default function RightPane() {
             )}
           </div>
 
-          {/* Waveform Seek */}
-          <div className="mt-3 w-full">
-            <WaveformSeekbar
-              songId={currentSong?.id}
-              progress={durationMs > 0 ? positionMs / durationMs : 0}
-              onSeek={(p) => {
-                const ms = Math.round(p * durationMs);
-                getPlaybackManager().seek(ms);
-                usePlayerStore.getState().setPosition(ms);
-              }}
-            />
-            <div className="mt-1 flex justify-between text-[10px] text-text-muted">
-              <span>{formatTime(positionMs)}</span>
-              <span>{formatTime(durationMs)}</span>
+          {/* Waveform Seek — hide for radio */}
+          {!radioMode && (
+            <div className="mt-3 w-full">
+              <WaveformSeekbar
+                songId={currentSong?.id}
+                progress={durationMs > 0 ? positionMs / durationMs : 0}
+                onSeek={(p) => {
+                  const ms = Math.round(p * durationMs);
+                  getPlaybackManager().seek(ms);
+                  usePlayerStore.getState().setPosition(ms);
+                }}
+              />
+              <div className="mt-1 flex justify-between text-[10px] text-text-muted">
+                <span>{formatTime(positionMs)}</span>
+                <span>{formatTime(durationMs)}</span>
+              </div>
             </div>
-          </div>
+          )}
+          {radioMode && (
+            <div className="mt-3 flex items-center justify-center gap-2">
+              <div className={`h-2 w-2 rounded-full ${radioPlaying ? 'bg-green-400 animate-pulse' : 'bg-text-muted'}`} />
+              <span className="text-xs text-text-muted">{radioPlaying ? 'Live' : 'Paused'}</span>
+            </div>
+          )}
 
           {/* Transport controls */}
           <div className="mt-2 flex items-center gap-3">

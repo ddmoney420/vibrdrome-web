@@ -348,6 +348,7 @@ class PlaybackManager {
   }
 
   destroy(): void {
+    this.stopRadio();
     this.stopPositionTracking();
     this.cancelCrossfade();
     this.cancelSleepTimer();

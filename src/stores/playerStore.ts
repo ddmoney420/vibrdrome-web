@@ -321,6 +321,9 @@ export const usePlayerStore = create<PlaybackState>((set, get) => ({
   setDuration: (ms) => set({ durationMs: ms }),
   seek: (ms) => {
     set({ positionMs: ms });
+    import('../audio/PlaybackManager').then(({ getPlaybackManager }) => {
+      getPlaybackManager().seek(ms);
+    });
   },
 
   toggleShuffle: () => {

@@ -421,8 +421,8 @@ function AlbumCarousel({
         <p className="px-4 text-sm text-text-muted">No albums found</p>
       ) : (
         <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory px-3 pb-2 scrollbar-hide md:px-4">
-          {albums.map((album) => (
-            <div key={album.id} className="snap-start shrink-0">
+          {albums.map((album, i) => (
+            <div key={`${album.id}-${i}`} className="snap-start shrink-0">
               <AlbumCard album={album} size="small" />
             </div>
           ))}
@@ -508,8 +508,8 @@ function CustomAlbumCarousel({
         <p className="px-4 text-sm text-text-muted">No albums found</p>
       ) : (
         <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory px-3 pb-2 scrollbar-hide md:px-4">
-          {albums.map((album) => (
-            <div key={album.id} className="snap-start shrink-0">
+          {albums.map((album, i) => (
+            <div key={`${album.id}-${i}`} className="snap-start shrink-0">
               <AlbumCard album={album} size="small" />
             </div>
           ))}

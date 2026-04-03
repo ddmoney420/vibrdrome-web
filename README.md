@@ -10,11 +10,19 @@
 
 **[Try it live at web.vibrdrome.io](https://web.vibrdrome.io)**
 
-![Library](screenshot.png)
+![Library with Split-Pane](screenshot.png)
 
-![Now Playing](screenshot-player.png)
+![Desktop Now Playing](screenshot-player.png)
 
-![Playlists](screenshot-playlists.png)
+![Library Carousels](screenshot-library.png)
+
+![Radio](screenshot-radio.png)
+
+![Themes](screenshot-themes.png)
+
+![Smart Playlists](screenshot-smart.png)
+
+![Command Palette](screenshot-command.png)
 
 ---
 

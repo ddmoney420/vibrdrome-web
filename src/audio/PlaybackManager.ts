@@ -740,10 +740,12 @@ class PlaybackManager {
 
   private handleError(player: 'A' | 'B'): void {
     if (player !== this.activePlayer) return;
-    if (this.radioAudio) return; // Ignore errors from cleared sources during radio
+    if (this.radioAudio) return;
+    // Ignore errors from empty/cleared sources
+    const audio = player === 'A' ? this.playerA : this.playerB;
+    if (!audio.src || audio.src === window.location.href) return;
     console.error(`[PlaybackManager] Audio error on player ${player}`);
-    // Try to skip to next track
-    usePlayerStore.getState().next();
+    usePlayerStore.getState().setPlaying(false);
   }
 
   private handleMetadata(player: 'A' | 'B'): void {

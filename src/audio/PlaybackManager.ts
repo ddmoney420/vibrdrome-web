@@ -295,6 +295,10 @@ class PlaybackManager {
       activeGain.gain.cancelScheduledValues(now);
       activeGain.gain.setTargetAtTime(this.currentVolume, now, 0.02);
     }
+    // Also update radio audio volume
+    if (this.radioAudio) {
+      this.radioAudio.volume = this.currentVolume;
+    }
   }
 
   setPlaybackRate(rate: number): void {

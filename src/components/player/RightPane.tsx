@@ -157,7 +157,13 @@ export default function RightPane() {
         </div>
       ) : (
         <div className="flex-1 overflow-hidden" style={{ minHeight: 0 }}>
-          <NowPlayingLyrics />
+          {radioMode ? (
+            <div className="flex h-full items-center justify-center">
+              <p className="text-sm text-text-muted">Lyrics not available for radio</p>
+            </div>
+          ) : (
+            <NowPlayingLyrics />
+          )}
         </div>
       )}
     </div>

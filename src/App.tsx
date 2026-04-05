@@ -10,6 +10,7 @@ import { usePlayback } from './audio/usePlayback';
 import { darkenHex } from './utils/color';
 import CommandPalette from './components/common/CommandPalette';
 import RightPane from './components/player/RightPane';
+import PopOutPlayer from './components/player/PopOutPlayer';
 
 // Error boundary for stale chunk errors after deploys
 class ChunkErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
@@ -133,6 +134,7 @@ export default function App() {
   }, []);
 
   const radioMode = usePlayerStore((s) => s.radioMode);
+  const popOutPlayerOpen = useUIStore((s) => s.popOutPlayerOpen);
   const hasPlayback = currentSong !== null || radioMode !== null;
   const showMiniPlayer =
     hasPlayback && !HIDE_MINIPLAYER_ROUTES.includes(location.pathname);
@@ -275,6 +277,10 @@ export default function App() {
         <Suspense fallback={null}>
           <MiniPlayer />
         </Suspense>
+      )}
+
+      {popOutPlayerOpen && hasPlayback && (
+        <PopOutPlayer onClose={() => useUIStore.getState().setPopOutPlayerOpen(false)} />
       )}
     </div>
   );

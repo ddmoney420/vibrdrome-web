@@ -33,6 +33,9 @@ interface UIState {
   lastfmApiKey: string;
   setLastfmApiKey: (key: string) => void;
 
+  popOutPlayerOpen: boolean;
+  setPopOutPlayerOpen: (open: boolean) => void;
+
   commandPaletteOpen: boolean;
   openCommandPalette: () => void;
   closeCommandPalette: () => void;
@@ -118,6 +121,9 @@ export const useUIStore = create<UIState>((set) => ({
     try { localStorage.setItem(STREAM_QUALITY_KEY, String(quality)); } catch { /* ignore */ }
     set({ streamQuality: quality });
   },
+
+  popOutPlayerOpen: false,
+  setPopOutPlayerOpen: (open) => set({ popOutPlayerOpen: open }),
 
   commandPaletteOpen: false,
   openCommandPalette: () => set({ commandPaletteOpen: true }),

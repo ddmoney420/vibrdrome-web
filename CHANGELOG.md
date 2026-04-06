@@ -4,6 +4,20 @@ All notable changes to Vibrdrome Web are documented here.
 
 ## [Unreleased]
 - Unit testing framework setup
+- Document Picture-in-Picture support (Chrome native PiP window)
+
+## [1.6.1] - 2026-04-06
+
+### Added
+- Pop-out mini player: draggable floating window with S/M/L/XL sizes
+- Scalable waveform seekbar in pop-out player (30-120px height)
+- macOS-style traffic light controls (close/minimize/maximize)
+- Pop-out button in mini-player toolbar
+
+### Fixed
+- Lyrics tab crash during radio playback (React error #301)
+- Volume slider not affecting radio streams
+- Mixed content warning from HTTP Wikimedia image URLs
 
 ---
 

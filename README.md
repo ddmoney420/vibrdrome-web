@@ -72,7 +72,8 @@
 **Mini Player**
 - Progress ring around spinning album art
 - Live waveform visualizer bars
-- Quick actions: star, lyrics, visualizer
+- Quick actions: star, lyrics, visualizer, previous, next, repeat
+- Pop-out mini player: draggable floating window with S/M/L/XL sizes and scalable waveform
 
 **Visualizer**
 - 6 WebGL shader presets (Plasma, Kaleidoscope, Tunnel, Fractal Pulse, Nebula, Warp Speed)

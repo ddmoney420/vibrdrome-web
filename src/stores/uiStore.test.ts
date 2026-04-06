@@ -12,7 +12,6 @@ beforeEach(() => {
     epilepsyWarningDismissed: false,
     commandPaletteOpen: false,
     popOutPlayerOpen: false,
-    radioPlaying: false,
   });
 });
 

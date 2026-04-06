@@ -4,7 +4,7 @@ import { hexToHsl, hslToHex, darkenHex, isValidHex } from './color';
 describe('color utils', () => {
   describe('hexToHsl', () => {
     it('converts white', () => {
-      const { h, s, l } = hexToHsl('#ffffff');
+      const { l, s } = hexToHsl('#ffffff');
       expect(l).toBe(100);
       expect(s).toBe(0);
     });
@@ -15,15 +15,15 @@ describe('color utils', () => {
     });
 
     it('converts pure red', () => {
-      const { h, s, l } = hexToHsl('#ff0000');
-      expect(h).toBe(0);
-      expect(s).toBe(100);
-      expect(l).toBe(50);
+      const result = hexToHsl('#ff0000');
+      expect(result.h).toBe(0);
+      expect(result.s).toBe(100);
+      expect(result.l).toBe(50);
     });
 
     it('handles 3-digit hex', () => {
-      const { h, s, l } = hexToHsl('#fff');
-      expect(l).toBe(100);
+      const result = hexToHsl('#fff');
+      expect(result.l).toBe(100);
     });
   });
 

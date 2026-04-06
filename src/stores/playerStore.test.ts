@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { usePlayerStore } from './playerStore';
+import type { Song } from '../types/subsonic';
 
 // Reset store between tests
 beforeEach(() => {
@@ -21,7 +22,7 @@ beforeEach(() => {
   });
 });
 
-const makeSong = (id: string, title = `Song ${id}`) => ({
+const makeSong = (id: string, title = `Song ${id}`): Song => ({
   id,
   title,
   artist: 'Test Artist',
@@ -33,7 +34,7 @@ describe('playerStore', () => {
   describe('playSongs', () => {
     it('sets queue and current song', () => {
       const songs = [makeSong('1'), makeSong('2'), makeSong('3')];
-      usePlayerStore.getState().playSongs(songs as any, 0);
+      usePlayerStore.getState().playSongs(songs, 0);
 
       const state = usePlayerStore.getState();
       expect(state.queue).toHaveLength(3);
@@ -44,7 +45,7 @@ describe('playerStore', () => {
 
     it('starts at specified index', () => {
       const songs = [makeSong('1'), makeSong('2'), makeSong('3')];
-      usePlayerStore.getState().playSongs(songs as any, 2);
+      usePlayerStore.getState().playSongs(songs, 2);
 
       expect(usePlayerStore.getState().currentSong?.id).toBe('3');
       expect(usePlayerStore.getState().currentIndex).toBe(2);
@@ -52,7 +53,7 @@ describe('playerStore', () => {
 
     it('clears radio mode', () => {
       usePlayerStore.setState({ radioMode: { stationId: 'r1', stationName: 'Test', streamUrl: 'http://test' }, radioPlaying: true });
-      usePlayerStore.getState().playSongs([makeSong('1')] as any, 0);
+      usePlayerStore.getState().playSongs([makeSong('1')], 0);
 
       expect(usePlayerStore.getState().radioMode).toBeNull();
       expect(usePlayerStore.getState().radioPlaying).toBe(false);
@@ -61,7 +62,7 @@ describe('playerStore', () => {
 
   describe('next', () => {
     it('advances to next song', () => {
-      usePlayerStore.getState().playSongs([makeSong('1'), makeSong('2'), makeSong('3')] as any, 0);
+      usePlayerStore.getState().playSongs([makeSong('1'), makeSong('2'), makeSong('3')], 0);
       usePlayerStore.getState().next();
 
       expect(usePlayerStore.getState().currentSong?.id).toBe('2');
@@ -69,7 +70,7 @@ describe('playerStore', () => {
     });
 
     it('stops at end of queue when repeat is off', () => {
-      usePlayerStore.getState().playSongs([makeSong('1'), makeSong('2')] as any, 1);
+      usePlayerStore.getState().playSongs([makeSong('1'), makeSong('2')], 1);
       usePlayerStore.getState().next();
 
       expect(usePlayerStore.getState().isPlaying).toBe(false);
@@ -77,7 +78,7 @@ describe('playerStore', () => {
 
     it('wraps to beginning when repeat all', () => {
       usePlayerStore.setState({ repeatMode: 'all' });
-      usePlayerStore.getState().playSongs([makeSong('1'), makeSong('2')] as any, 1);
+      usePlayerStore.getState().playSongs([makeSong('1'), makeSong('2')], 1);
       usePlayerStore.getState().next();
 
       expect(usePlayerStore.getState().currentSong?.id).toBe('1');
@@ -92,7 +93,7 @@ describe('playerStore', () => {
 
   describe('previous', () => {
     it('goes to previous song', () => {
-      usePlayerStore.getState().playSongs([makeSong('1'), makeSong('2'), makeSong('3')] as any, 2);
+      usePlayerStore.getState().playSongs([makeSong('1'), makeSong('2'), makeSong('3')], 2);
       usePlayerStore.setState({ positionMs: 0 }); // within 3 seconds
       usePlayerStore.getState().previous();
 
@@ -100,7 +101,7 @@ describe('playerStore', () => {
     });
 
     it('restarts current song if past 3 seconds', () => {
-      usePlayerStore.getState().playSongs([makeSong('1'), makeSong('2')] as any, 1);
+      usePlayerStore.getState().playSongs([makeSong('1'), makeSong('2')], 1);
       usePlayerStore.setState({ positionMs: 5000 });
       usePlayerStore.getState().previous();
 
@@ -111,8 +112,8 @@ describe('playerStore', () => {
 
   describe('queue manipulation', () => {
     it('playNext inserts at correct position', () => {
-      usePlayerStore.getState().playSongs([makeSong('1'), makeSong('2')] as any, 0);
-      usePlayerStore.getState().playNext(makeSong('inserted') as any);
+      usePlayerStore.getState().playSongs([makeSong('1'), makeSong('2')], 0);
+      usePlayerStore.getState().playNext(makeSong('inserted'));
 
       const queue = usePlayerStore.getState().queue;
       expect(queue[1].id).toBe('inserted');
@@ -120,15 +121,15 @@ describe('playerStore', () => {
     });
 
     it('addToQueue appends to end', () => {
-      usePlayerStore.getState().playSongs([makeSong('1')] as any, 0);
-      usePlayerStore.getState().addToQueue(makeSong('appended') as any);
+      usePlayerStore.getState().playSongs([makeSong('1')], 0);
+      usePlayerStore.getState().addToQueue(makeSong('appended'));
 
       const queue = usePlayerStore.getState().queue;
       expect(queue[queue.length - 1].id).toBe('appended');
     });
 
     it('removeFromQueue removes correct song', () => {
-      usePlayerStore.getState().playSongs([makeSong('1'), makeSong('2'), makeSong('3')] as any, 0);
+      usePlayerStore.getState().playSongs([makeSong('1'), makeSong('2'), makeSong('3')], 0);
       usePlayerStore.getState().removeFromQueue(1);
 
       const queue = usePlayerStore.getState().queue;
@@ -137,7 +138,7 @@ describe('playerStore', () => {
     });
 
     it('removeFromQueue adjusts currentIndex when removing before current', () => {
-      usePlayerStore.getState().playSongs([makeSong('1'), makeSong('2'), makeSong('3')] as any, 2);
+      usePlayerStore.getState().playSongs([makeSong('1'), makeSong('2'), makeSong('3')], 2);
       usePlayerStore.getState().removeFromQueue(0);
 
       expect(usePlayerStore.getState().currentIndex).toBe(1);
@@ -145,7 +146,7 @@ describe('playerStore', () => {
     });
 
     it('clearQueue resets everything', () => {
-      usePlayerStore.getState().playSongs([makeSong('1'), makeSong('2')] as any, 0);
+      usePlayerStore.getState().playSongs([makeSong('1'), makeSong('2')], 0);
       usePlayerStore.getState().clearQueue();
 
       const state = usePlayerStore.getState();
@@ -157,21 +158,21 @@ describe('playerStore', () => {
 
   describe('reorderQueue', () => {
     it('moves song forward', () => {
-      usePlayerStore.getState().playSongs([makeSong('1'), makeSong('2'), makeSong('3')] as any, 0);
+      usePlayerStore.getState().playSongs([makeSong('1'), makeSong('2'), makeSong('3')], 0);
       usePlayerStore.getState().reorderQueue(0, 2);
 
       expect(usePlayerStore.getState().queue.map((s) => s.id)).toEqual(['2', '3', '1']);
     });
 
     it('moves song backward', () => {
-      usePlayerStore.getState().playSongs([makeSong('1'), makeSong('2'), makeSong('3')] as any, 0);
+      usePlayerStore.getState().playSongs([makeSong('1'), makeSong('2'), makeSong('3')], 0);
       usePlayerStore.getState().reorderQueue(2, 0);
 
       expect(usePlayerStore.getState().queue.map((s) => s.id)).toEqual(['3', '1', '2']);
     });
 
     it('tracks currentIndex correctly when moving current song', () => {
-      usePlayerStore.getState().playSongs([makeSong('1'), makeSong('2'), makeSong('3')] as any, 0);
+      usePlayerStore.getState().playSongs([makeSong('1'), makeSong('2'), makeSong('3')], 0);
       usePlayerStore.getState().reorderQueue(0, 2);
 
       expect(usePlayerStore.getState().currentIndex).toBe(2);
@@ -179,7 +180,7 @@ describe('playerStore', () => {
     });
 
     it('does nothing for same index', () => {
-      usePlayerStore.getState().playSongs([makeSong('1'), makeSong('2')] as any, 0);
+      usePlayerStore.getState().playSongs([makeSong('1'), makeSong('2')], 0);
       usePlayerStore.getState().reorderQueue(0, 0);
 
       expect(usePlayerStore.getState().queue.map((s) => s.id)).toEqual(['1', '2']);
@@ -188,7 +189,7 @@ describe('playerStore', () => {
 
   describe('shuffle', () => {
     it('toggleShuffle enables and generates shuffleOrder', () => {
-      usePlayerStore.getState().playSongs([makeSong('1'), makeSong('2'), makeSong('3')] as any, 0);
+      usePlayerStore.getState().playSongs([makeSong('1'), makeSong('2'), makeSong('3')], 0);
       usePlayerStore.getState().toggleShuffle();
 
       const state = usePlayerStore.getState();
@@ -197,7 +198,7 @@ describe('playerStore', () => {
     });
 
     it('toggleShuffle disables and clears shuffleOrder', () => {
-      usePlayerStore.getState().playSongs([makeSong('1'), makeSong('2'), makeSong('3')] as any, 0);
+      usePlayerStore.getState().playSongs([makeSong('1'), makeSong('2'), makeSong('3')], 0);
       usePlayerStore.getState().toggleShuffle();
       usePlayerStore.getState().toggleShuffle();
 
@@ -206,11 +207,11 @@ describe('playerStore', () => {
     });
 
     it('playNext updates shuffleOrder', () => {
-      usePlayerStore.getState().playSongs([makeSong('1'), makeSong('2')] as any, 0);
+      usePlayerStore.getState().playSongs([makeSong('1'), makeSong('2')], 0);
       usePlayerStore.getState().toggleShuffle();
       const orderBefore = usePlayerStore.getState().shuffleOrder.length;
 
-      usePlayerStore.getState().playNext(makeSong('3') as any);
+      usePlayerStore.getState().playNext(makeSong('3'));
 
       expect(usePlayerStore.getState().shuffleOrder.length).toBe(orderBefore + 1);
     });
@@ -263,7 +264,7 @@ describe('playerStore', () => {
         stationName: 'Test FM',
         streamUrl: 'http://test.stream',
       });
-      usePlayerStore.getState().playSongs([makeSong('1')] as any, 0);
+      usePlayerStore.getState().playSongs([makeSong('1')], 0);
 
       expect(usePlayerStore.getState().radioMode).toBeNull();
     });

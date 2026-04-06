@@ -4,12 +4,13 @@ import { getPlaybackManager } from '../../audio/PlaybackManager';
 import CoverArt from '../common/CoverArt';
 import WaveformSeekbar from './WaveformSeekbar';
 
-type Size = 'small' | 'medium' | 'large';
+type Size = 'small' | 'medium' | 'large' | 'xlarge';
 
 const SIZES = {
   small: { width: 280, waveHeight: 30 },
   medium: { width: 400, waveHeight: 50 },
   large: { width: 520, waveHeight: 80 },
+  xlarge: { width: 1040, waveHeight: 160 },
 };
 
 function formatTime(ms: number): string {
@@ -92,18 +93,18 @@ export default function PopOutPlayer({ onClose }: PopOutPlayerProps) {
           <div className="flex gap-1">
             <div className="h-2.5 w-2.5 rounded-full bg-red-400 cursor-pointer" onClick={onClose} />
             <div className="h-2.5 w-2.5 rounded-full bg-yellow-400 cursor-pointer" onClick={() => setSize(size === 'small' ? 'medium' : 'small')} />
-            <div className="h-2.5 w-2.5 rounded-full bg-green-400 cursor-pointer" onClick={() => setSize(size === 'large' ? 'medium' : 'large')} />
+            <div className="h-2.5 w-2.5 rounded-full bg-green-400 cursor-pointer" onClick={() => setSize(size === 'xlarge' ? 'medium' : 'xlarge')} />
           </div>
           <span className="text-[10px] text-text-muted ml-1">Mini Player</span>
         </div>
         <div className="flex items-center gap-1">
-          {(['small', 'medium', 'large'] as const).map((s) => (
+          {(['small', 'medium', 'large', 'xlarge'] as const).map((s) => (
             <button
               key={s}
               onClick={() => setSize(s)}
               className={`rounded px-1.5 py-0.5 text-[9px] font-medium ${size === s ? 'bg-accent text-white' : 'text-text-muted hover:text-text-primary'}`}
             >
-              {s[0].toUpperCase()}
+              {s === 'xlarge' ? 'XL' : s[0].toUpperCase()}
             </button>
           ))}
         </div>
@@ -113,7 +114,7 @@ export default function PopOutPlayer({ onClose }: PopOutPlayerProps) {
       <div className="px-3 pb-3">
         <div className="flex items-center gap-3">
           {/* Album art */}
-          <CoverArt coverArt={coverArt} size={size === 'small' ? 40 : size === 'medium' ? 56 : 72} className="shrink-0 rounded-lg" />
+          <CoverArt coverArt={coverArt} size={size === 'small' ? 40 : size === 'medium' ? 56 : size === 'large' ? 72 : 120} className="shrink-0 rounded-lg" />
 
           {/* Song info */}
           <div className="min-w-0 flex-1">

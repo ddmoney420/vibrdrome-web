@@ -10,7 +10,7 @@ const SIZES = {
   small: { width: 280, waveHeight: 30 },
   medium: { width: 400, waveHeight: 50 },
   large: { width: 520, waveHeight: 80 },
-  xlarge: { width: 1040, waveHeight: 160 },
+  xlarge: { width: 1040, waveHeight: 120 },
 };
 
 function formatTime(ms: number): string {
@@ -111,7 +111,7 @@ export default function PopOutPlayer({ onClose }: PopOutPlayerProps) {
       </div>
 
       {/* Content */}
-      <div className="px-3 pb-3">
+      <div className="px-3 pb-1">
         <div className="flex items-center gap-3">
           {/* Album art */}
           <CoverArt coverArt={coverArt} size={size === 'small' ? 40 : size === 'medium' ? 56 : size === 'large' ? 72 : 120} className="shrink-0 rounded-lg" />
@@ -172,7 +172,7 @@ export default function PopOutPlayer({ onClose }: PopOutPlayerProps) {
 
         {/* Time display */}
         {!isRadio && (
-          <div className="mt-1 flex justify-between text-[10px] text-text-muted">
+          <div className="flex justify-between text-[10px] text-text-muted">
             <span>{formatTime(positionMs)}</span>
             <span>{formatTime(durationMs)}</span>
           </div>

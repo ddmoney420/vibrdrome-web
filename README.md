@@ -124,6 +124,15 @@ npm run build
 
 Output lands in `dist/` — deploy to any static host (Cloudflare Pages, Vercel, Netlify, etc.).
 
+### Run Tests
+
+```bash
+npm run test:run    # Run once
+npm run test        # Watch mode
+```
+
+120 tests across 11 suites covering stores, API clients, utilities, and hooks.
+
 ### Docker
 
 ```bash

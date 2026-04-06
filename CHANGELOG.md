@@ -3,7 +3,6 @@
 All notable changes to Vibrdrome Web are documented here.
 
 ## [Unreleased]
-- Unit testing framework setup
 - Document Picture-in-Picture support (Chrome native PiP window)
 
 ## [1.6.1] - 2026-04-06
@@ -18,6 +17,13 @@ All notable changes to Vibrdrome Web are documented here.
 - Lyrics tab crash during radio playback (React error #301)
 - Volume slider not affecting radio streams
 - Mixed content warning from HTTP Wikimedia image URLs
+- seek() now actually seeks audio (not just UI)
+- Spam-click protection on radio, star toggle, artist radio
+
+### Developer
+- Unit testing framework: Vitest + happy-dom + @testing-library/react
+- 120 tests across 11 suites (stores, API clients, utilities, hooks)
+- `npm run test` / `npm run test:run` scripts
 
 ---
 

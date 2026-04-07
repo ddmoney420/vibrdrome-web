@@ -50,15 +50,21 @@ export default function NowPlayingLyrics() {
     return () => { cancelled = true; };
   }, [songId, status]);
 
+  const containerRef = useRef<HTMLDivElement>(null);
   const lastLineIdxRef = useRef(-1);
   useEffect(() => {
-    if (currentLineRef.current) {
-      // Only scroll when the highlighted line actually changes
+    if (currentLineRef.current && containerRef.current) {
       const el = currentLineRef.current;
+      const container = containerRef.current;
       const idx = Number(el.dataset.lineIdx ?? '-1');
       if (idx !== lastLineIdxRef.current) {
         lastLineIdxRef.current = idx;
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Scroll within container only — avoids scrollIntoView bubbling to parent elements
+        const elTop = el.offsetTop;
+        const elHeight = el.offsetHeight;
+        const containerHeight = container.clientHeight;
+        const targetScroll = elTop - containerHeight / 2 + elHeight / 2;
+        container.scrollTo({ top: targetScroll, behavior: 'smooth' });
       }
     }
   }, [positionMs]);
@@ -91,7 +97,7 @@ export default function NowPlayingLyrics() {
   if (lyrics.synced && lyrics.line) {
     const currentIdx = getCurrentLineIndex(lyrics.line);
     return (
-      <div className="h-full overflow-y-auto px-4 py-4 space-y-2">
+      <div ref={containerRef} className="h-full overflow-y-auto px-4 py-4 space-y-2">
         {lyrics.line.map((line, i) => (
           <button
             key={i}

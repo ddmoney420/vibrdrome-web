@@ -15,6 +15,7 @@ export default function LyricsScreen() {
 
   const currentLineRef = useRef<HTMLButtonElement | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const lastLineIdxRef = useRef(-1);
 
   // Load lyrics when song changes
   useEffect(() => {
@@ -50,13 +51,18 @@ export default function LyricsScreen() {
   }, [currentSong?.id]);
 
   // Auto-scroll only when the current line index changes
-  const lastScrollIdx = useRef(-1);
   useEffect(() => {
-    if (currentLineRef.current) {
-      const idx = Number(currentLineRef.current.dataset.lineIdx ?? '-1');
-      if (idx !== lastScrollIdx.current) {
-        lastScrollIdx.current = idx;
-        currentLineRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (currentLineRef.current && containerRef.current) {
+      const el = currentLineRef.current;
+      const container = containerRef.current;
+      const idx = Number(el.dataset.lineIdx ?? '-1');
+      if (idx !== lastLineIdxRef.current) {
+        lastLineIdxRef.current = idx;
+        const elTop = el.offsetTop - container.offsetTop;
+        const elHeight = el.offsetHeight;
+        const containerHeight = container.clientHeight;
+        const targetScroll = elTop - containerHeight / 2 + elHeight / 2;
+        container.scrollTo({ top: targetScroll, behavior: 'smooth' });
       }
     }
   }, [positionMs]);

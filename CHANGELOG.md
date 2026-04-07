@@ -5,6 +5,18 @@ All notable changes to Vibrdrome Web are documented here.
 ## [Unreleased]
 - Document Picture-in-Picture support (Chrome native PiP window)
 
+## [1.6.2] - 2026-04-07
+
+### Fixed
+- Lyrics auto-scroll no longer hijacks parent layout on desktop Now Playing — back button and tab headers stay visible
+- Same fix applied to full-screen Lyrics view
+
+### Added
+- Discord bug report template (`bug-report-template.md`)
+- Discord feature request template (`feature-request-template.md`)
+
+---
+
 ## [1.6.1] - 2026-04-06
 
 ### Added

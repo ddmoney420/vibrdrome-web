@@ -59,7 +59,7 @@
 - Persistent right panel with Playing, Queue, and Lyrics tabs
 - Browse your library while controlling playback
 - Waveform seekbar and transport controls in the side panel
-- Synced lyrics with click-to-seek
+- Synced lyrics with click-to-seek (contained scrolling — no layout shift)
 
 **Desktop Now Playing** (ﾉ◕ヮ◕)ﾉ
 - Spinning vinyl album art with blurred background

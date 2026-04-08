@@ -1,6 +1,8 @@
+import { useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePlayerStore } from '../../stores/playerStore';
 import { useUIStore } from '../../stores/uiStore';
+import { getPlaybackManager } from '../../audio/PlaybackManager';
 import CoverArt from '../common/CoverArt';
 import FirstRunTooltip from '../common/FirstRunTooltip';
 import ProgressRing from './ProgressRing';
@@ -9,6 +11,15 @@ import MiniWaveform from './MiniWaveform';
 export default function MiniPlayer() {
   const navigate = useNavigate();
   const { currentSong, isPlaying, positionMs, durationMs, togglePlay, next, previous, repeatMode, cycleRepeat, toggleStarCurrent, radioMode, radioPlaying, stopRadio } = usePlayerStore();
+  const pm = useRef(getPlaybackManager());
+  const [volume, setVolume] = useState(() => Math.round(getPlaybackManager().getVolume() * 100));
+  const [showVolume, setShowVolume] = useState(false);
+
+  const handleVolumeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = Number(e.target.value);
+    setVolume(v);
+    pm.current.setVolume(v / 100);
+  }, []);
 
   if (!currentSong && !radioMode) return null;
 
@@ -99,6 +110,44 @@ export default function MiniPlayer() {
             <path d="M6.194 12.753a.75.75 0 001.06.053L16.5 4.44v2.81a.75.75 0 001.5 0v-4.5a.75.75 0 00-.75-.75h-4.5a.75.75 0 000 1.5h2.553l-9.056 8.194a.75.75 0 00-.053 1.06z" />
           </svg>
         </button>
+
+        {/* Volume control — inline slider */}
+        <div className="hidden sm:flex items-center gap-1"
+          onMouseEnter={() => setShowVolume(true)}
+          onMouseLeave={() => setShowVolume(false)}
+        >
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              const newVol = volume === 0 ? 100 : 0;
+              setVolume(newVol);
+              pm.current.setVolume(newVol / 100);
+            }}
+            className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-text-primary"
+            aria-label="Volume"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4">
+              {volume === 0 ? (
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6L7.5 9.5H4v5h3.5L12 18V6zM16 9l4 4m0-4l-4 4" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072M12 6L7.5 9.5H4v5h3.5L12 18V6z" />
+              )}
+            </svg>
+          </button>
+          <div
+            className={`overflow-hidden transition-all duration-200 ${showVolume ? 'w-20 opacity-100' : 'w-0 opacity-0'}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={volume}
+              onChange={handleVolumeChange}
+              className="h-1 w-20 cursor-pointer appearance-none rounded-full bg-bg-tertiary accent-accent [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-accent"
+            />
+          </div>
+        </div>
 
         {/* Visualizer — always visible */}
         <FirstRunTooltip id="mini-visualizer" message="Open the full-screen visualizer with WebGL effects" position="top" delay={5000}>

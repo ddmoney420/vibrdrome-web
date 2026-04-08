@@ -72,7 +72,7 @@
 **Mini Player**
 - Progress ring around spinning album art
 - Live waveform visualizer bars
-- Quick actions: star, lyrics, visualizer, previous, next, repeat
+- Quick actions: star, lyrics, visualizer, previous, next, repeat, volume
 - Pop-out mini player: draggable floating window with S/M/L/XL sizes and scalable waveform
 
 **Visualizer**

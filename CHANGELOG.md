@@ -5,6 +5,13 @@ All notable changes to Vibrdrome Web are documented here.
 ## [Unreleased]
 - Document Picture-in-Picture support (Chrome native PiP window)
 
+## [1.6.3] - 2026-04-08
+
+### Added
+- Volume control on mini-player — inline slider on hover, click icon to mute/unmute
+
+---
+
 ## [1.6.2] - 2026-04-07
 
 ### Fixed

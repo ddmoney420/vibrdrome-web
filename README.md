@@ -95,6 +95,7 @@
 **Design**
 - Responsive grid layouts — Artists, Albums, Genres, Playlists, Radio, Folders
 - Sidebar with library counts (artists, genres, playlists, radio)
+- Offline playback — download albums and playlists for offline listening
 - Offline-capable PWA
 - Share buttons on albums, artists, and playlists (playlist links include server + ID)
 - Import/export settings (back up EQ, theme, preferences as JSON)

@@ -5,6 +5,18 @@ All notable changes to Vibrdrome Web are documented here.
 ## [Unreleased]
 - Document Picture-in-Picture support (Chrome native PiP window)
 
+## [1.8.0] - 2026-04-14
+
+### Added
+- Offline playback — download albums and playlists for offline listening
+- Download button on album and playlist detail screens
+- Downloads screen with active downloads, progress tracking, and cached content grouped by album
+- Storage usage indicator with clear all option
+- Service worker rewrite: cache-first strategy for audio streams, automatic cover art caching
+- DownloadManager with sequential download queue and byte-level progress tracking
+
+---
+
 ## [1.7.0] - 2026-04-14
 
 ### Added

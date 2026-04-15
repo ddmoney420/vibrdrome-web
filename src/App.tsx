@@ -12,6 +12,7 @@ import CommandPalette from './components/common/CommandPalette';
 import ShortcutsOverlay from './components/common/ShortcutsOverlay';
 import RightPane from './components/player/RightPane';
 import PopOutPlayer from './components/player/PopOutPlayer';
+import { useDownloadStore } from './stores/downloadStore';
 
 // Error boundary for stale chunk errors after deploys
 class ChunkErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
@@ -99,9 +100,10 @@ export default function App() {
   // Initialize playback engine
   usePlayback();
 
-  // Load auth state from storage on mount
+  // Load auth state and cached downloads on mount
   useEffect(() => {
     loadFromStorage();
+    useDownloadStore.getState().loadCachedSongs();
   }, [loadFromStorage]);
 
   // Apply theme to html element

@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getSubsonicClient } from '../api/SubsonicClient';
 import { usePlayerStore } from '../stores/playerStore';
-import { shareUrl } from '../utils/share';
+import { shareUrl, buildPlaylistShareUrl } from '../utils/share';
+import { useAuthStore } from '../stores/authStore';
 import type { Playlist } from '../types/subsonic';
 import { Header, SongRow, LoadingSpinner, CoverArt } from '../components/common';
 
@@ -126,7 +127,15 @@ export default function PlaylistDetailScreen() {
               Shuffle
             </button>
             <button
-              onClick={() => shareUrl(playlist.name)}
+              onClick={() => {
+                const server = useAuthStore.getState().servers.find(
+                  (s) => s.id === useAuthStore.getState().activeServerId
+                );
+                const url = server && playlistId
+                  ? buildPlaylistShareUrl(playlistId, server.url)
+                  : undefined;
+                shareUrl(playlist.name, url);
+              }}
               className="flex h-9 w-9 items-center justify-center rounded-full border border-border text-text-secondary transition-colors hover:bg-bg-tertiary"
               aria-label="Share"
             >

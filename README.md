@@ -48,6 +48,7 @@
 - Shuffle, repeat (all/one), and crossfade
 - 10-band equalizer with limiter (prevents bass boost clipping)
 - Stream quality picker: Original, 320k, 256k, 192k, 128k, 96k
+- ReplayGain with peak prevention (Track/Album/Off modes)
 - Waveform seekbar — canvas-rendered audio waveform with click/drag to seek
 - Playback speed control
 - Sleep timer with configurable fade-out (10s, 30s, 60s)
@@ -94,7 +95,8 @@
 - Responsive grid layouts — Artists, Albums, Genres, Playlists, Radio, Folders
 - Sidebar with library counts (artists, genres, playlists, radio)
 - Offline-capable PWA
-- Share buttons on albums, artists, and playlists
+- Share buttons on albums, artists, and playlists (playlist links include server + ID)
+- Import/export settings (back up EQ, theme, preferences as JSON)
 - Docker support for self-hosting
 
 ---

@@ -9,6 +9,7 @@ const ACCENT_COLOR_KEY = 'vibrdrome_accent_color';
 const LASTFM_KEY = 'vibrdrome_lastfm_key';
 const NOTIFICATIONS_KEY = 'vibrdrome_notifications';
 const SLEEP_FADE_KEY = 'vibrdrome_sleep_fade_duration';
+const REPLAYGAIN_MODE_KEY = 'vibrdrome_replaygain_mode';
 const DEFAULT_ACCENT = '#8b5cf6';
 
 type Theme = 'system' | 'dark' | 'light' | 'apple' | 'apple-dark' | 'retro' | 'terminal' | 'midnight' | 'sunset';
@@ -43,6 +44,9 @@ interface UIState {
 
   sleepFadeDuration: number;
   setSleepFadeDuration: (seconds: number) => void;
+
+  replayGainMode: 'track' | 'album' | 'off';
+  setReplayGainMode: (mode: 'track' | 'album' | 'off') => void;
 
   shortcutsOverlayOpen: boolean;
   setShortcutsOverlayOpen: (open: boolean) => void;
@@ -148,6 +152,19 @@ export const useUIStore = create<UIState>((set) => ({
   setSleepFadeDuration: (seconds) => {
     try { localStorage.setItem(SLEEP_FADE_KEY, String(seconds)); } catch { /* ignore */ }
     set({ sleepFadeDuration: seconds });
+  },
+
+  replayGainMode: (() => {
+    try {
+      const stored = localStorage.getItem(REPLAYGAIN_MODE_KEY);
+      if (stored === 'track' || stored === 'album' || stored === 'off') return stored;
+    } catch { /* ignore */ }
+    return 'track' as const;
+  })(),
+
+  setReplayGainMode: (mode) => {
+    try { localStorage.setItem(REPLAYGAIN_MODE_KEY, mode); } catch { /* ignore */ }
+    set({ replayGainMode: mode });
   },
 
   shortcutsOverlayOpen: false,

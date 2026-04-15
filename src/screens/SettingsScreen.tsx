@@ -5,6 +5,7 @@ import { useUIStore } from '../stores/uiStore';
 import { usePlayerStore } from '../stores/playerStore';
 import { useEQStore } from '../stores/eqStore';
 import { isValidHex } from '../utils/color';
+import { exportSettings, importSettings } from '../utils/settingsIO';
 import { Header } from '../components/common';
 import ThemePicker from '../components/settings/ThemePicker';
 
@@ -13,7 +14,7 @@ export default function SettingsScreen() {
   const { servers, activeServerId, logout } = useAuthStore();
   const { accentColor, setAccentColor, lastfmApiKey, setLastfmApiKey, reduceMotion, setReduceMotion, keyboardShortcutsEnabled, setKeyboardShortcutsEnabled, streamQuality, setStreamQuality } = useUIStore();
   const { crossfadeEnabled, crossfadeDuration, setCrossfade, setCrossfadeDuration } = usePlayerStore();
-  const { sleepFadeDuration, setSleepFadeDuration, notificationsEnabled, setNotificationsEnabled } = useUIStore();
+  const { sleepFadeDuration, setSleepFadeDuration, notificationsEnabled, setNotificationsEnabled, replayGainMode, setReplayGainMode } = useUIStore();
   const eqEnabled = useEQStore((s) => s.enabled);
 
   const activeServer = servers.find((s) => s.id === activeServerId);
@@ -158,6 +159,24 @@ export default function SettingsScreen() {
                     <option value={10}>10s</option>
                     <option value={30}>30s</option>
                     <option value={60}>60s</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="border-t border-border pt-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm text-text-primary">ReplayGain</span>
+                    <p className="text-xs text-text-muted">Normalize volume across tracks</p>
+                  </div>
+                  <select
+                    value={replayGainMode}
+                    onChange={(e) => setReplayGainMode(e.target.value as 'track' | 'album' | 'off')}
+                    className="rounded border border-border bg-bg-tertiary px-2 py-1 text-xs text-text-primary outline-none"
+                  >
+                    <option value="track">Track</option>
+                    <option value="album">Album</option>
+                    <option value="off">Off</option>
                   </select>
                 </div>
               </div>
@@ -320,6 +339,36 @@ export default function SettingsScreen() {
               >
                 Clear Cache
               </button>
+              <div className="mt-3 flex gap-2 border-t border-border pt-3">
+                <button
+                  onClick={exportSettings}
+                  className="rounded-lg border border-border px-4 py-2 text-sm text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-text-primary"
+                >
+                  Export Settings
+                </button>
+                <button
+                  onClick={() => {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = '.json';
+                    input.onchange = async () => {
+                      const file = input.files?.[0];
+                      if (!file) return;
+                      try {
+                        const result = await importSettings(file);
+                        alert(`Imported ${result.imported} settings. Reloading...`);
+                        window.location.reload();
+                      } catch {
+                        alert('Invalid settings file');
+                      }
+                    };
+                    input.click();
+                  }}
+                  className="rounded-lg border border-border px-4 py-2 text-sm text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-text-primary"
+                >
+                  Import Settings
+                </button>
+              </div>
             </div>
           </section>
 
@@ -329,7 +378,7 @@ export default function SettingsScreen() {
               About
             </h2>
             <div className="rounded-lg bg-bg-secondary p-4">
-              <p className="text-sm text-text-muted">Vibrdrome Web v1.6.4</p>
+              <p className="text-sm text-text-muted">Vibrdrome Web v1.6.5</p>
             </div>
           </section>
 

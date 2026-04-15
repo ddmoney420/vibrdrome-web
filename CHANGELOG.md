@@ -5,6 +5,17 @@ All notable changes to Vibrdrome Web are documented here.
 ## [Unreleased]
 - Document Picture-in-Picture support (Chrome native PiP window)
 
+## [1.6.5] - 2026-04-14
+
+### Added
+- ReplayGain peak prevention — clamps gain to prevent clipping when gain x peak > 1.0
+- ReplayGain mode picker in Settings — choose Track, Album, or Off
+- Import/export settings — back up and restore all preferences as JSON (excludes server credentials)
+- Playlist sharing links — share button generates deep link with server URL + playlist ID
+- Share route (`/share`) — opens shared playlist or prompts login for different server
+
+---
+
 ## [1.6.4] - 2026-04-14
 
 ### Added

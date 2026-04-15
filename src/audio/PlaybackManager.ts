@@ -661,13 +661,29 @@ class PlaybackManager {
     }
   }
 
-  private applyReplayGain(song: Song): void {
+  private async applyReplayGain(song: Song): Promise<void> {
     if (!song.replayGain) return;
 
-    const trackGain = song.replayGain.trackGain ?? song.replayGain.albumGain ?? 0;
-    if (trackGain === 0) return;
+    const mode = (await import('../stores/uiStore')).useUIStore.getState().replayGainMode;
+    if (mode === 'off') return;
 
-    const gainMultiplier = Math.pow(10, trackGain / 20);
+    const gain = mode === 'album'
+      ? (song.replayGain.albumGain ?? song.replayGain.trackGain ?? 0)
+      : (song.replayGain.trackGain ?? song.replayGain.albumGain ?? 0);
+
+    if (gain === 0) return;
+
+    const peak = mode === 'album'
+      ? (song.replayGain.albumPeak ?? song.replayGain.trackPeak ?? 1.0)
+      : (song.replayGain.trackPeak ?? song.replayGain.albumPeak ?? 1.0);
+
+    let gainMultiplier = Math.pow(10, gain / 20);
+
+    // Prevent clipping: scale down if gain would exceed peak headroom
+    if (gainMultiplier * peak > 1.0) {
+      gainMultiplier = 1.0 / peak;
+    }
+
     const activeGain = this.activePlayer === 'A' ? this.gainA : this.gainB;
     if (activeGain) {
       const now = this.audioContext?.currentTime ?? 0;

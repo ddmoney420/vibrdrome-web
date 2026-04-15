@@ -82,6 +82,7 @@ const QueueScreen = lazyWithRetry(() => import('./screens/QueueScreen'));
 const LyricsScreen = lazyWithRetry(() => import('./screens/LyricsScreen'));
 const EQScreen = lazyWithRetry(() => import('./screens/EQScreen'));
 const VisualizerScreen = lazyWithRetry(() => import('./screens/VisualizerScreen'));
+const ShareScreen = lazyWithRetry(() => import('./screens/ShareScreen'));
 
 const MiniPlayer = lazyWithRetry(() => import('./components/player/MiniPlayer'));
 
@@ -160,6 +161,7 @@ export default function App() {
         <Suspense fallback={<LoadingSpinner />}>
           <Routes>
             <Route path="/login" element={<LoginScreen />} />
+            <Route path="/share" element={<ShareScreen />} />
 
             {/* Protected routes */}
             <Route

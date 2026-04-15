@@ -32,14 +32,20 @@ npm run dev        # starts dev server at http://localhost:5173
 
 ### Docker
 
-Build and run the production image:
+Build and run with Docker Compose:
+
+```bash
+docker compose up --build
+```
+
+Or build and run manually:
 
 ```bash
 docker build -t vibrdrome-web .
 docker run -p 8080:80 vibrdrome-web
 ```
 
-The app will be available at `http://localhost:8080`. The image uses a multi-stage build (Node 20 → nginx:alpine) and serves the SPA with proper routing and gzip compression.
+The app will be available at `http://localhost:8080`. The image uses a multi-stage build (Node 20 → nginx:alpine), runs as a non-root user, and serves the SPA with security headers, gzip compression, and a built-in health check.
 
 ## Development Workflow
 

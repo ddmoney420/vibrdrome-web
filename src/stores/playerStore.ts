@@ -44,6 +44,7 @@ interface PlaybackState {
   playbackSpeed: number;
   crossfadeEnabled: boolean;
   crossfadeDuration: number;
+  gaplessEnabled: boolean;
 
   playSongs: (songs: Song[], startIndex?: number) => void;
   playNext: (song: Song) => void;
@@ -64,6 +65,7 @@ interface PlaybackState {
   setSpeed: (speed: number) => void;
   setCrossfade: (enabled: boolean) => void;
   setCrossfadeDuration: (seconds: number) => void;
+  setGapless: (enabled: boolean) => void;
   toggleStarCurrent: () => Promise<void>;
   reorderQueue: (from: number, to: number) => void;
   playRadio: (station: RadioState) => void;
@@ -87,6 +89,7 @@ function persistSettings(state: PlaybackState) {
       playbackSpeed: state.playbackSpeed,
       crossfadeEnabled: state.crossfadeEnabled,
       crossfadeDuration: state.crossfadeDuration,
+      gaplessEnabled: state.gaplessEnabled,
     }));
   } catch { /* storage full or unavailable */ }
 }
@@ -111,6 +114,7 @@ function loadPersistedState(): Partial<PlaybackState> {
       playbackSpeed: settingsData.playbackSpeed ?? 1.0,
       crossfadeEnabled: settingsData.crossfadeEnabled ?? false,
       crossfadeDuration: settingsData.crossfadeDuration ?? 5,
+      gaplessEnabled: settingsData.gaplessEnabled ?? true,
     };
   } catch {
     return {};
@@ -134,6 +138,7 @@ export const usePlayerStore = create<PlaybackState>((set, get) => ({
   playbackSpeed: persisted.playbackSpeed ?? 1.0,
   crossfadeEnabled: persisted.crossfadeEnabled ?? false,
   crossfadeDuration: persisted.crossfadeDuration ?? 5,
+  gaplessEnabled: persisted.gaplessEnabled ?? true,
 
   playSongs: (songs, startIndex = 0) => {
     // Stop radio if playing
@@ -363,6 +368,11 @@ export const usePlayerStore = create<PlaybackState>((set, get) => ({
 
   setCrossfadeDuration: (seconds) => {
     set({ crossfadeDuration: seconds });
+    persistSettings(get());
+  },
+
+  setGapless: (enabled) => {
+    set({ gaplessEnabled: enabled });
     persistSettings(get());
   },
 

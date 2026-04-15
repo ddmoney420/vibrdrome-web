@@ -48,6 +48,9 @@ interface UIState {
   replayGainMode: 'track' | 'album' | 'off';
   setReplayGainMode: (mode: 'track' | 'album' | 'off') => void;
 
+  castConnected: boolean;
+  setCastConnected: (connected: boolean) => void;
+
   shortcutsOverlayOpen: boolean;
   setShortcutsOverlayOpen: (open: boolean) => void;
 
@@ -166,6 +169,9 @@ export const useUIStore = create<UIState>((set) => ({
     try { localStorage.setItem(REPLAYGAIN_MODE_KEY, mode); } catch { /* ignore */ }
     set({ replayGainMode: mode });
   },
+
+  castConnected: false,
+  setCastConnected: (connected) => set({ castConnected: connected }),
 
   shortcutsOverlayOpen: false,
   setShortcutsOverlayOpen: (open) => set({ shortcutsOverlayOpen: open }),

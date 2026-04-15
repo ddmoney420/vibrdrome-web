@@ -13,7 +13,7 @@ export default function SettingsScreen() {
   const navigate = useNavigate();
   const { servers, activeServerId, logout } = useAuthStore();
   const { accentColor, setAccentColor, lastfmApiKey, setLastfmApiKey, reduceMotion, setReduceMotion, keyboardShortcutsEnabled, setKeyboardShortcutsEnabled, streamQuality, setStreamQuality } = useUIStore();
-  const { crossfadeEnabled, crossfadeDuration, setCrossfade, setCrossfadeDuration } = usePlayerStore();
+  const { crossfadeEnabled, crossfadeDuration, setCrossfade, setCrossfadeDuration, gaplessEnabled, setGapless } = usePlayerStore();
   const { sleepFadeDuration, setSleepFadeDuration, notificationsEnabled, setNotificationsEnabled, replayGainMode, setReplayGainMode } = useUIStore();
   const eqEnabled = useEQStore((s) => s.enabled);
 
@@ -122,6 +122,30 @@ export default function SettingsScreen() {
                     </select>
                   </div>
                 )}
+              </div>
+
+              <div className="border-t border-border pt-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm text-text-primary">Gapless Playback</span>
+                    <p className="text-xs text-text-muted">{crossfadeEnabled ? 'Disabled when crossfade is on' : 'Seamless track transitions'}</p>
+                  </div>
+                  <button
+                    role="switch"
+                    aria-checked={gaplessEnabled}
+                    disabled={crossfadeEnabled}
+                    onClick={() => setGapless(!gaplessEnabled)}
+                    className={`relative h-6 w-11 rounded-full transition-colors ${
+                      gaplessEnabled && !crossfadeEnabled ? 'bg-accent' : 'bg-bg-tertiary'
+                    } ${crossfadeEnabled ? 'opacity-50' : ''}`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                        gaplessEnabled && !crossfadeEnabled ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
               </div>
 
               <div className="border-t border-border pt-3">
@@ -378,7 +402,7 @@ export default function SettingsScreen() {
               About
             </h2>
             <div className="rounded-lg bg-bg-secondary p-4">
-              <p className="text-sm text-text-muted">Vibrdrome Web v1.6.5</p>
+              <p className="text-sm text-text-muted">Vibrdrome Web v1.7.0</p>
             </div>
           </section>
 

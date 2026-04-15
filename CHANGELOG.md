@@ -5,6 +5,20 @@ All notable changes to Vibrdrome Web are documented here.
 ## [Unreleased]
 - Document Picture-in-Picture support (Chrome native PiP window)
 
+## [1.7.0] - 2026-04-14
+
+### Added
+- Gapless playback — seamless track transitions when crossfade is disabled, pre-buffers next track 15s before end
+- Gapless toggle in Settings > Playback (on by default, disabled when crossfade is active)
+- Chromecast support — cast audio to Chromecast devices via Google Cast SDK
+- Cast button in mini-player (only visible when Cast SDK loads successfully)
+- Cast-aware play, pause, seek, and volume controls
+
+### Note
+- Chromecast requires the Subsonic server to be network-accessible to the Chromecast device
+
+---
+
 ## [1.6.5] - 2026-04-14
 
 ### Added

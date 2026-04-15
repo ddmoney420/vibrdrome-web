@@ -45,7 +45,8 @@
 
 **Playback** ♪┏(・o･)┛♪
 - Drag-and-drop queue reorder with up/down arrows for touch
-- Shuffle, repeat (all/one), and crossfade
+- Shuffle, repeat (all/one), crossfade, and gapless playback
+- Chromecast support — cast to any Chromecast device on your network
 - 10-band equalizer with limiter (prevents bass boost clipping)
 - Stream quality picker: Original, 320k, 256k, 192k, 128k, 96k
 - ReplayGain with peak prevention (Track/Album/Off modes)

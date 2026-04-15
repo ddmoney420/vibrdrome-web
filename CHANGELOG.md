@@ -5,6 +5,20 @@ All notable changes to Vibrdrome Web are documented here.
 ## [Unreleased]
 - Document Picture-in-Picture support (Chrome native PiP window)
 
+## [1.6.4] - 2026-04-14
+
+### Added
+- Docker default server URL injection via `VIBRDROME_DEFAULT_SERVER` env var — pre-fills login screen for self-hosted deployments
+- Keyboard shortcuts overlay — press `?` to view all shortcuts
+- Desktop notifications on track change — enable in Settings > Integrations
+- Configurable sleep timer fade duration (10s, 30s, 60s) with exponential curve for natural-sounding fade
+- Docker entrypoint script for runtime configuration
+
+### Changed
+- Sleep timer fade now uses exponential curve instead of linear for more natural volume reduction
+
+---
+
 ## [1.6.3] - 2026-04-08
 
 ### Added

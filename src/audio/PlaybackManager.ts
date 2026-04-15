@@ -8,7 +8,7 @@ const EQ_Q = 1.414;
 const POSITION_UPDATE_MS = 250;
 const SCROBBLE_MIN_SECONDS = 30;
 const SCROBBLE_PERCENT = 0.5;
-const SLEEP_FADE_SECONDS = 10;
+// Sleep fade duration is now configurable via uiStore.sleepFadeDuration
 
 class PlaybackManager {
   private audioContext: AudioContext | null = null;
@@ -322,7 +322,7 @@ class PlaybackManager {
     this.cancelSleepTimer();
     this.sleepRemainingMs = minutes * 60 * 1000;
 
-    this.sleepTimerId = window.setInterval(() => {
+    this.sleepTimerId = window.setInterval(async () => {
       this.sleepRemainingMs -= 1000;
 
       if (this.sleepRemainingMs <= 0) {
@@ -334,9 +334,11 @@ class PlaybackManager {
         return;
       }
 
-      // Fade during last N seconds
-      if (this.sleepRemainingMs <= SLEEP_FADE_SECONDS * 1000) {
-        const fraction = this.sleepRemainingMs / (SLEEP_FADE_SECONDS * 1000);
+      // Fade during last N seconds (configurable, default 10s)
+      const fadeSec = (await import('../stores/uiStore')).useUIStore.getState().sleepFadeDuration ?? 10;
+      if (this.sleepRemainingMs <= fadeSec * 1000) {
+        const linear = this.sleepRemainingMs / (fadeSec * 1000);
+        const fraction = linear * linear; // exponential curve for natural-sounding fade
         const activeGain = this.activePlayer === 'A' ? this.gainA : this.gainB;
         if (activeGain) {
           activeGain.gain.value = this.currentVolume * fraction;

@@ -3,6 +3,7 @@ import { getPlaybackManager } from './PlaybackManager';
 import { usePlayerStore } from '../stores/playerStore';
 import { useUIStore } from '../stores/uiStore';
 import { useEQStore } from '../stores/eqStore';
+import { getSubsonicClient } from '../api/SubsonicClient';
 
 // The PlaybackManager is a singleton — grab it once at module level
 const manager = getPlaybackManager();
@@ -85,6 +86,9 @@ export function usePlayback() {
         case 'R':
           if (!store.radioMode) store.cycleRepeat();
           break;
+        case '?':
+          useUIStore.getState().setShortcutsOverlayOpen(true);
+          break;
       }
     };
 
@@ -119,6 +123,19 @@ export function usePlayback() {
 
     playTriggeredRef.current = true;
     manager.play(currentSong);
+
+    // Desktop notification
+    if (useUIStore.getState().notificationsEnabled && Notification.permission === 'granted') {
+      const icon = currentSong.coverArt
+        ? getSubsonicClient().getCoverArt(currentSong.coverArt, 256)
+        : undefined;
+      new Notification(currentSong.title, {
+        body: `${currentSong.artist ?? 'Unknown Artist'} — ${currentSong.album ?? 'Unknown Album'}`,
+        icon,
+        silent: true,
+        tag: 'vibrdrome-now-playing',
+      });
+    }
   }, [currentSong]);
 
   // Track previous isPlaying to detect actual toggles

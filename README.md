@@ -50,9 +50,10 @@
 - Stream quality picker: Original, 320k, 256k, 192k, 128k, 96k
 - Waveform seekbar — canvas-rendered audio waveform with click/drag to seek
 - Playback speed control
-- Sleep timer with fade-out
+- Sleep timer with configurable fade-out (10s, 30s, 60s)
+- Desktop notifications on track change
 - Scrobbling and now playing reporting
-- Keyboard shortcuts (Space, arrows, M, S, R) — toggle in Settings
+- Keyboard shortcuts (Space, arrows, M, S, R) — press ? to view all
 - Play history tracking for future smart playlists
 
 **Split-Pane Desktop View**
@@ -147,6 +148,12 @@ docker build -t vibrdrome-web .
 docker run -p 8080:80 vibrdrome-web
 ```
 
+Pre-fill the login screen with your server URL (for self-hosted deployments):
+
+```bash
+docker run -p 8080:80 -e VIBRDROME_DEFAULT_SERVER=https://music.example.com ddmoney420/vibrdrome-web
+```
+
 Docker Compose:
 
 ```yaml
@@ -155,6 +162,8 @@ services:
     image: ddmoney420/vibrdrome-web
     ports:
       - "8080:80"
+    environment:
+      - VIBRDROME_DEFAULT_SERVER=https://music.example.com
     restart: unless-stopped
 ```
 

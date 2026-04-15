@@ -13,6 +13,7 @@ export default function SettingsScreen() {
   const { servers, activeServerId, logout } = useAuthStore();
   const { accentColor, setAccentColor, lastfmApiKey, setLastfmApiKey, reduceMotion, setReduceMotion, keyboardShortcutsEnabled, setKeyboardShortcutsEnabled, streamQuality, setStreamQuality } = useUIStore();
   const { crossfadeEnabled, crossfadeDuration, setCrossfade, setCrossfadeDuration } = usePlayerStore();
+  const { sleepFadeDuration, setSleepFadeDuration, notificationsEnabled, setNotificationsEnabled } = useUIStore();
   const eqEnabled = useEQStore((s) => s.enabled);
 
   const activeServer = servers.find((s) => s.id === activeServerId);
@@ -142,6 +143,24 @@ export default function SettingsScreen() {
                   </select>
                 </div>
               </div>
+
+              <div className="border-t border-border pt-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm text-text-primary">Sleep Timer Fade</span>
+                    <p className="text-xs text-text-muted">Gradually lower volume before pausing</p>
+                  </div>
+                  <select
+                    value={sleepFadeDuration}
+                    onChange={(e) => setSleepFadeDuration(Number(e.target.value))}
+                    className="rounded border border-border bg-bg-tertiary px-2 py-1 text-xs text-text-primary outline-none"
+                  >
+                    <option value={10}>10s</option>
+                    <option value={30}>30s</option>
+                    <option value={60}>60s</option>
+                  </select>
+                </div>
+              </div>
             </div>
           </section>
 
@@ -192,7 +211,7 @@ export default function SettingsScreen() {
                 <div className="flex items-center justify-between">
                   <div>
                     <span className="text-sm text-text-primary">Keyboard Shortcuts</span>
-                    <p className="text-xs text-text-muted">Space, arrows, M, S, R for playback control</p>
+                    <p className="text-xs text-text-muted">Space, arrows, M, S, R for playback control — press ? to view all</p>
                   </div>
                   <button
                     role="switch"
@@ -256,6 +275,36 @@ export default function SettingsScreen() {
                 </p>
               </div>
 
+              <div className="border-t border-border pt-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm text-text-primary">Desktop Notifications</span>
+                    <p className="text-xs text-text-muted">Show a notification on track change</p>
+                  </div>
+                  <button
+                    role="switch"
+                    aria-checked={notificationsEnabled}
+                    onClick={async () => {
+                      if (!notificationsEnabled) {
+                        const perm = await Notification.requestPermission();
+                        if (perm === 'granted') setNotificationsEnabled(true);
+                      } else {
+                        setNotificationsEnabled(false);
+                      }
+                    }}
+                    className={`relative h-6 w-11 rounded-full transition-colors ${
+                      notificationsEnabled ? 'bg-accent' : 'bg-bg-tertiary'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                        notificationsEnabled ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+
             </div>
           </section>
 
@@ -280,7 +329,7 @@ export default function SettingsScreen() {
               About
             </h2>
             <div className="rounded-lg bg-bg-secondary p-4">
-              <p className="text-sm text-text-muted">Vibrdrome Web v1.6.1</p>
+              <p className="text-sm text-text-muted">Vibrdrome Web v1.6.4</p>
             </div>
           </section>
 

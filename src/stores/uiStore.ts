@@ -7,6 +7,8 @@ const STREAM_QUALITY_KEY = 'vibrdrome_stream_quality';
 const EPILEPSY_DISMISSED_KEY = 'vibrdrome_epilepsy_dismissed';
 const ACCENT_COLOR_KEY = 'vibrdrome_accent_color';
 const LASTFM_KEY = 'vibrdrome_lastfm_key';
+const NOTIFICATIONS_KEY = 'vibrdrome_notifications';
+const SLEEP_FADE_KEY = 'vibrdrome_sleep_fade_duration';
 const DEFAULT_ACCENT = '#8b5cf6';
 
 type Theme = 'system' | 'dark' | 'light' | 'apple' | 'apple-dark' | 'retro' | 'terminal' | 'midnight' | 'sunset';
@@ -35,6 +37,15 @@ interface UIState {
 
   popOutPlayerOpen: boolean;
   setPopOutPlayerOpen: (open: boolean) => void;
+
+  notificationsEnabled: boolean;
+  setNotificationsEnabled: (value: boolean) => void;
+
+  sleepFadeDuration: number;
+  setSleepFadeDuration: (seconds: number) => void;
+
+  shortcutsOverlayOpen: boolean;
+  setShortcutsOverlayOpen: (open: boolean) => void;
 
   commandPaletteOpen: boolean;
   openCommandPalette: () => void;
@@ -121,6 +132,26 @@ export const useUIStore = create<UIState>((set) => ({
     try { localStorage.setItem(STREAM_QUALITY_KEY, String(quality)); } catch { /* ignore */ }
     set({ streamQuality: quality });
   },
+
+  notificationsEnabled: loadBool(NOTIFICATIONS_KEY, false),
+
+  setNotificationsEnabled: (value) => {
+    try { localStorage.setItem(NOTIFICATIONS_KEY, String(value)); } catch { /* ignore */ }
+    set({ notificationsEnabled: value });
+  },
+
+  sleepFadeDuration: (() => {
+    try { return Number(localStorage.getItem(SLEEP_FADE_KEY)) || 10; }
+    catch { return 10; }
+  })(),
+
+  setSleepFadeDuration: (seconds) => {
+    try { localStorage.setItem(SLEEP_FADE_KEY, String(seconds)); } catch { /* ignore */ }
+    set({ sleepFadeDuration: seconds });
+  },
+
+  shortcutsOverlayOpen: false,
+  setShortcutsOverlayOpen: (open) => set({ shortcutsOverlayOpen: open }),
 
   popOutPlayerOpen: false,
   setPopOutPlayerOpen: (open) => set({ popOutPlayerOpen: open }),

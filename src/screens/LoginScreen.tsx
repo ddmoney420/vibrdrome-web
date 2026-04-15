@@ -10,7 +10,11 @@ export default function LoginScreen() {
     useAuthStore();
 
   const [name, setName] = useState('');
-  const [url, setUrl] = useState('');
+  const [url, setUrl] = useState(() => {
+    const config = (window as unknown as Record<string, unknown>).__VIBRDROME_CONFIG__ as { defaultServerUrl?: string } | undefined;
+    const defaultUrl = config?.defaultServerUrl ?? '';
+    return defaultUrl.startsWith('__') ? '' : defaultUrl;
+  });
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 

@@ -4,6 +4,7 @@ import { usePlayerStore } from '../stores/playerStore';
 import { useUIStore } from '../stores/uiStore';
 import { useEQStore } from '../stores/eqStore';
 import { getSubsonicClient } from '../api/SubsonicClient';
+import { syncPosition, loadServerQueue } from '../utils/queueSync';
 
 // The PlaybackManager is a singleton — grab it once at module level
 const manager = getPlaybackManager();
@@ -169,6 +170,7 @@ export function usePlayback() {
       }
     } else {
       manager.pause();
+      syncPosition();
     }
   }, [isPlaying, currentSong]);
 
@@ -181,6 +183,27 @@ export function usePlayback() {
   useEffect(() => {
     manager.updateEQ(eqBands, eqEnabled);
   }, [eqBands, eqEnabled]);
+
+  // Server queue sync: periodic position save + startup load + beforeunload
+  useEffect(() => {
+    // Load queue from server if local queue is empty
+    loadServerQueue();
+
+    // Save position every 30s while playing
+    const interval = setInterval(() => {
+      const { currentSong: song, isPlaying: playing } = usePlayerStore.getState();
+      if (song && playing) syncPosition();
+    }, 30_000);
+
+    // Save on page unload
+    const handleUnload = () => syncPosition();
+    window.addEventListener('beforeunload', handleUnload);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('beforeunload', handleUnload);
+    };
+  }, []);
 
   return manager;
 }

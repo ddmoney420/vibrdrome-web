@@ -79,6 +79,9 @@ function persistQueue(state: PlaybackState) {
       currentIndex: state.currentIndex,
     }));
   } catch { /* storage full or unavailable */ }
+
+  // Debounced server sync (checks queueSyncEnabled internally)
+  import('../utils/queueSync').then(({ scheduleQueueSync }) => scheduleQueueSync());
 }
 
 function persistSettings(state: PlaybackState) {

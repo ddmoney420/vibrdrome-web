@@ -109,6 +109,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: () => {
+    import('../utils/queueSync').then(({ cancelPendingSync }) => cancelPendingSync());
     localStorage.removeItem(ACTIVE_SERVER_KEY);
     set({ activeServerId: null, isAuthenticated: false, error: null });
   },

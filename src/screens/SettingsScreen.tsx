@@ -14,7 +14,7 @@ export default function SettingsScreen() {
   const { servers, activeServerId, logout } = useAuthStore();
   const { accentColor, setAccentColor, lastfmApiKey, setLastfmApiKey, reduceMotion, setReduceMotion, keyboardShortcutsEnabled, setKeyboardShortcutsEnabled, streamQuality, setStreamQuality } = useUIStore();
   const { crossfadeEnabled, crossfadeDuration, setCrossfade, setCrossfadeDuration, gaplessEnabled, setGapless } = usePlayerStore();
-  const { sleepFadeDuration, setSleepFadeDuration, notificationsEnabled, setNotificationsEnabled, replayGainMode, setReplayGainMode } = useUIStore();
+  const { sleepFadeDuration, setSleepFadeDuration, notificationsEnabled, setNotificationsEnabled, replayGainMode, setReplayGainMode, queueSyncEnabled, setQueueSyncEnabled } = useUIStore();
   const eqEnabled = useEQStore((s) => s.enabled);
 
   const activeServer = servers.find((s) => s.id === activeServerId);
@@ -348,6 +348,29 @@ export default function SettingsScreen() {
                 </div>
               </div>
 
+              <div className="border-t border-border pt-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm text-text-primary">Sync Queue</span>
+                    <p className="text-xs text-text-muted">Save queue and position to server for cross-device sync</p>
+                  </div>
+                  <button
+                    role="switch"
+                    aria-checked={queueSyncEnabled}
+                    onClick={() => setQueueSyncEnabled(!queueSyncEnabled)}
+                    className={`relative h-6 w-11 rounded-full transition-colors ${
+                      queueSyncEnabled ? 'bg-accent' : 'bg-bg-tertiary'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                        queueSyncEnabled ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+
             </div>
           </section>
 
@@ -402,7 +425,7 @@ export default function SettingsScreen() {
               About
             </h2>
             <div className="rounded-lg bg-bg-secondary p-4">
-              <p className="text-sm text-text-muted">Vibrdrome Web v1.8.0</p>
+              <p className="text-sm text-text-muted">Vibrdrome Web v1.8.1</p>
             </div>
           </section>
 

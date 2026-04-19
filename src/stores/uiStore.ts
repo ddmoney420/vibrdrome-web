@@ -10,6 +10,7 @@ const LASTFM_KEY = 'vibrdrome_lastfm_key';
 const NOTIFICATIONS_KEY = 'vibrdrome_notifications';
 const SLEEP_FADE_KEY = 'vibrdrome_sleep_fade_duration';
 const REPLAYGAIN_MODE_KEY = 'vibrdrome_replaygain_mode';
+const QUEUE_SYNC_KEY = 'vibrdrome_queue_sync';
 const DEFAULT_ACCENT = '#8b5cf6';
 
 type Theme = 'system' | 'dark' | 'light' | 'apple' | 'apple-dark' | 'retro' | 'terminal' | 'midnight' | 'sunset';
@@ -47,6 +48,9 @@ interface UIState {
 
   replayGainMode: 'track' | 'album' | 'off';
   setReplayGainMode: (mode: 'track' | 'album' | 'off') => void;
+
+  queueSyncEnabled: boolean;
+  setQueueSyncEnabled: (value: boolean) => void;
 
   castConnected: boolean;
   setCastConnected: (connected: boolean) => void;
@@ -168,6 +172,13 @@ export const useUIStore = create<UIState>((set) => ({
   setReplayGainMode: (mode) => {
     try { localStorage.setItem(REPLAYGAIN_MODE_KEY, mode); } catch { /* ignore */ }
     set({ replayGainMode: mode });
+  },
+
+  queueSyncEnabled: loadBool(QUEUE_SYNC_KEY, false),
+
+  setQueueSyncEnabled: (value) => {
+    try { localStorage.setItem(QUEUE_SYNC_KEY, String(value)); } catch { /* ignore */ }
+    set({ queueSyncEnabled: value });
   },
 
   castConnected: false,

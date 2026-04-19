@@ -40,9 +40,12 @@ class SubsonicClient {
   private config: ServerConfig | null = null;
   private useLegacyAuth = false;
 
+  private extensionsCache: import('../types/subsonic').OpenSubsonicExtension[] | null = null;
+
   setConfig(config: ServerConfig): void {
     this.config = config;
     this.useLegacyAuth = config.useLegacyAuth ?? false;
+    this.extensionsCache = null;
   }
 
   isConfigured(): boolean {
@@ -407,6 +410,39 @@ class SubsonicClient {
     await this.requestMultiValue(
       'savePlayQueue',
       { current, position },
+      { id: ids },
+    );
+  }
+
+  // --- Index-Based Queue (OpenSubsonic) ---
+
+  async getOpenSubsonicExtensions(): Promise<import('../types/subsonic').OpenSubsonicExtension[]> {
+    if (this.extensionsCache !== null) return this.extensionsCache;
+    try {
+      const data = await this.request<{
+        openSubsonicExtensions?: import('../types/subsonic').OpenSubsonicExtension[];
+      }>('getOpenSubsonicExtensions');
+      this.extensionsCache = data.openSubsonicExtensions ?? [];
+    } catch {
+      this.extensionsCache = [];
+    }
+    return this.extensionsCache;
+  }
+
+  async supportsIndexBasedQueue(): Promise<boolean> {
+    const exts = await this.getOpenSubsonicExtensions();
+    return exts.some((e) => e.name === 'indexBasedQueue');
+  }
+
+  async getPlayQueueByIndex(): Promise<import('../types/subsonic').PlayQueueByIndex> {
+    const data = await this.request<{ playQueue: import('../types/subsonic').PlayQueueByIndex }>('getPlayQueueByIndex');
+    return data.playQueue ?? { entry: [] };
+  }
+
+  async savePlayQueueByIndex(ids: string[], currentIndex: number, position?: number): Promise<void> {
+    await this.requestMultiValue(
+      'savePlayQueueByIndex',
+      { currentIndex, position },
       { id: ids },
     );
   }

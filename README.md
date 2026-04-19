@@ -56,6 +56,7 @@
 - Desktop notifications on track change
 - Scrobbling and now playing reporting
 - Keyboard shortcuts (Space, arrows, M, S, R) — press ? to view all
+- Server-side queue sync — save queue and position to server for cross-device playback (OpenSubsonic)
 - Play history tracking for future smart playlists
 
 **Split-Pane Desktop View**

@@ -27,6 +27,7 @@ export default function StationSearchScreen() {
     }
 
     if (!query.trim()) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clear results when query is empty
       setResults([]);
       setSearched(false);
       return;

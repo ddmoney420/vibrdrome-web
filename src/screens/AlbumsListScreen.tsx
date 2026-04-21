@@ -44,6 +44,7 @@ export default function AlbumsListScreen() {
 
   useEffect(() => {
     offsetRef.current = 0;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset when fetch dependencies change
     setAlbums([]);
     setHasMore(true);
     fetchPage(0, true);

@@ -1,6 +1,6 @@
 /** Convert hex color (#RRGGBB or #RGB) to HSL */
 export function hexToHsl(hex: string): { h: number; s: number; l: number } {
-  let r = 0, g = 0, b = 0;
+  let r: number, g: number, b: number;
   const clean = hex.replace('#', '');
 
   if (clean.length === 3) {

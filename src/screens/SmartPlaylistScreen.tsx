@@ -107,6 +107,7 @@ export default function SmartPlaylistScreen() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- load data when params change
     loadPlaylist(activeType);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeType, heavyRotationDays, forgottenGemsMonths, recentUnplayedDays]);

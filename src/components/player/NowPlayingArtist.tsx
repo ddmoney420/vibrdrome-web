@@ -18,6 +18,7 @@ export default function NowPlayingArtist() {
 
   // Reset when song changes
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional reset when prop changes
     setViewingArtist(currentArtistName);
   }, [currentArtistName]);
 
@@ -27,6 +28,7 @@ export default function NowPlayingArtist() {
 
   // Reset expanded when artist changes
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional reset when artist changes
     setExpanded(false);
   }, [viewingArtist]);
 

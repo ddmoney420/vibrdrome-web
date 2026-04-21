@@ -12,7 +12,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version-file: .nvmrc
           cache: npm
 
       - run: npm ci
@@ -36,6 +36,10 @@ jobs:
           username: ddmoney420
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Extract version from package.json
+        id: version
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
       - uses: docker/build-push-action@v6
         with:
           context: .
@@ -43,5 +47,6 @@ jobs:
           tags: |
             ddmoney420/vibrdrome-web:latest
             ddmoney420/vibrdrome-web:${{ github.sha }}
+            ddmoney420/vibrdrome-web:v${{ steps.version.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

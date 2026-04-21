@@ -1,3 +1,8 @@
+export function buildPlaylistShareUrl(playlistId: string, serverUrl: string): string {
+  const params = new URLSearchParams({ server: serverUrl, playlist: playlistId });
+  return `${window.location.origin}/share?${params.toString()}`;
+}
+
 export async function shareUrl(title: string, url?: string): Promise<void> {
   const shareData = {
     title,

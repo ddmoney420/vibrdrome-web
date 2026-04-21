@@ -5,6 +5,7 @@ import { useUIStore } from '../stores/uiStore';
 import { usePlayerStore } from '../stores/playerStore';
 import { useEQStore } from '../stores/eqStore';
 import { isValidHex } from '../utils/color';
+import { exportSettings, importSettings } from '../utils/settingsIO';
 import { Header } from '../components/common';
 import ThemePicker from '../components/settings/ThemePicker';
 
@@ -12,7 +13,8 @@ export default function SettingsScreen() {
   const navigate = useNavigate();
   const { servers, activeServerId, logout } = useAuthStore();
   const { accentColor, setAccentColor, lastfmApiKey, setLastfmApiKey, reduceMotion, setReduceMotion, keyboardShortcutsEnabled, setKeyboardShortcutsEnabled, streamQuality, setStreamQuality } = useUIStore();
-  const { crossfadeEnabled, crossfadeDuration, setCrossfade, setCrossfadeDuration } = usePlayerStore();
+  const { crossfadeEnabled, crossfadeDuration, setCrossfade, setCrossfadeDuration, gaplessEnabled, setGapless } = usePlayerStore();
+  const { sleepFadeDuration, setSleepFadeDuration, notificationsEnabled, setNotificationsEnabled, replayGainMode, setReplayGainMode, queueSyncEnabled, setQueueSyncEnabled } = useUIStore();
   const eqEnabled = useEQStore((s) => s.enabled);
 
   const activeServer = servers.find((s) => s.id === activeServerId);
@@ -125,6 +127,30 @@ export default function SettingsScreen() {
               <div className="border-t border-border pt-3">
                 <div className="flex items-center justify-between">
                   <div>
+                    <span className="text-sm text-text-primary">Gapless Playback</span>
+                    <p className="text-xs text-text-muted">{crossfadeEnabled ? 'Disabled when crossfade is on' : 'Seamless track transitions'}</p>
+                  </div>
+                  <button
+                    role="switch"
+                    aria-checked={gaplessEnabled}
+                    disabled={crossfadeEnabled}
+                    onClick={() => setGapless(!gaplessEnabled)}
+                    className={`relative h-6 w-11 rounded-full transition-colors ${
+                      gaplessEnabled && !crossfadeEnabled ? 'bg-accent' : 'bg-bg-tertiary'
+                    } ${crossfadeEnabled ? 'opacity-50' : ''}`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                        gaplessEnabled && !crossfadeEnabled ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              <div className="border-t border-border pt-3">
+                <div className="flex items-center justify-between">
+                  <div>
                     <span className="text-sm text-text-primary">Stream Quality</span>
                     <p className="text-xs text-text-muted">Lower quality saves bandwidth on mobile</p>
                   </div>
@@ -139,6 +165,42 @@ export default function SettingsScreen() {
                     <option value={192}>Standard (192 kbps)</option>
                     <option value={128}>Low (128 kbps)</option>
                     <option value={96}>Very Low (96 kbps)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="border-t border-border pt-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm text-text-primary">Sleep Timer Fade</span>
+                    <p className="text-xs text-text-muted">Gradually lower volume before pausing</p>
+                  </div>
+                  <select
+                    value={sleepFadeDuration}
+                    onChange={(e) => setSleepFadeDuration(Number(e.target.value))}
+                    className="rounded border border-border bg-bg-tertiary px-2 py-1 text-xs text-text-primary outline-none"
+                  >
+                    <option value={10}>10s</option>
+                    <option value={30}>30s</option>
+                    <option value={60}>60s</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="border-t border-border pt-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm text-text-primary">ReplayGain</span>
+                    <p className="text-xs text-text-muted">Normalize volume across tracks</p>
+                  </div>
+                  <select
+                    value={replayGainMode}
+                    onChange={(e) => setReplayGainMode(e.target.value as 'track' | 'album' | 'off')}
+                    className="rounded border border-border bg-bg-tertiary px-2 py-1 text-xs text-text-primary outline-none"
+                  >
+                    <option value="track">Track</option>
+                    <option value="album">Album</option>
+                    <option value="off">Off</option>
                   </select>
                 </div>
               </div>
@@ -192,7 +254,7 @@ export default function SettingsScreen() {
                 <div className="flex items-center justify-between">
                   <div>
                     <span className="text-sm text-text-primary">Keyboard Shortcuts</span>
-                    <p className="text-xs text-text-muted">Space, arrows, M, S, R for playback control</p>
+                    <p className="text-xs text-text-muted">Space, arrows, M, S, R for playback control — press ? to view all</p>
                   </div>
                   <button
                     role="switch"
@@ -256,6 +318,59 @@ export default function SettingsScreen() {
                 </p>
               </div>
 
+              <div className="border-t border-border pt-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm text-text-primary">Desktop Notifications</span>
+                    <p className="text-xs text-text-muted">Show a notification on track change</p>
+                  </div>
+                  <button
+                    role="switch"
+                    aria-checked={notificationsEnabled}
+                    onClick={async () => {
+                      if (!notificationsEnabled) {
+                        const perm = await Notification.requestPermission();
+                        if (perm === 'granted') setNotificationsEnabled(true);
+                      } else {
+                        setNotificationsEnabled(false);
+                      }
+                    }}
+                    className={`relative h-6 w-11 rounded-full transition-colors ${
+                      notificationsEnabled ? 'bg-accent' : 'bg-bg-tertiary'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                        notificationsEnabled ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              <div className="border-t border-border pt-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm text-text-primary">Sync Queue</span>
+                    <p className="text-xs text-text-muted">Save queue and position to server for cross-device sync</p>
+                  </div>
+                  <button
+                    role="switch"
+                    aria-checked={queueSyncEnabled}
+                    onClick={() => setQueueSyncEnabled(!queueSyncEnabled)}
+                    className={`relative h-6 w-11 rounded-full transition-colors ${
+                      queueSyncEnabled ? 'bg-accent' : 'bg-bg-tertiary'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                        queueSyncEnabled ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+
             </div>
           </section>
 
@@ -271,6 +386,36 @@ export default function SettingsScreen() {
               >
                 Clear Cache
               </button>
+              <div className="mt-3 flex gap-2 border-t border-border pt-3">
+                <button
+                  onClick={exportSettings}
+                  className="rounded-lg border border-border px-4 py-2 text-sm text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-text-primary"
+                >
+                  Export Settings
+                </button>
+                <button
+                  onClick={() => {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = '.json';
+                    input.onchange = async () => {
+                      const file = input.files?.[0];
+                      if (!file) return;
+                      try {
+                        const result = await importSettings(file);
+                        alert(`Imported ${result.imported} settings. Reloading...`);
+                        window.location.reload();
+                      } catch {
+                        alert('Invalid settings file');
+                      }
+                    };
+                    input.click();
+                  }}
+                  className="rounded-lg border border-border px-4 py-2 text-sm text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-text-primary"
+                >
+                  Import Settings
+                </button>
+              </div>
             </div>
           </section>
 
@@ -280,7 +425,7 @@ export default function SettingsScreen() {
               About
             </h2>
             <div className="rounded-lg bg-bg-secondary p-4">
-              <p className="text-sm text-text-muted">Vibrdrome Web v1.6.1</p>
+              <p className="text-sm text-text-muted">Vibrdrome Web v1.8.1-beta.1</p>
             </div>
           </section>
 

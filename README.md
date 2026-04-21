@@ -45,14 +45,18 @@
 
 **Playback** ♪┏(・o･)┛♪
 - Drag-and-drop queue reorder with up/down arrows for touch
-- Shuffle, repeat (all/one), and crossfade
+- Shuffle, repeat (all/one), crossfade, and gapless playback
+- Chromecast support — cast to any Chromecast device on your network
 - 10-band equalizer with limiter (prevents bass boost clipping)
 - Stream quality picker: Original, 320k, 256k, 192k, 128k, 96k
+- ReplayGain with peak prevention (Track/Album/Off modes)
 - Waveform seekbar — canvas-rendered audio waveform with click/drag to seek
 - Playback speed control
-- Sleep timer with fade-out
+- Sleep timer with configurable fade-out (10s, 30s, 60s)
+- Desktop notifications on track change
 - Scrobbling and now playing reporting
-- Keyboard shortcuts (Space, arrows, M, S, R) — toggle in Settings
+- Keyboard shortcuts (Space, arrows, M, S, R) — press ? to view all
+- Server-side queue sync — save queue and position to server for cross-device playback (OpenSubsonic)
 - Play history tracking for future smart playlists
 
 **Split-Pane Desktop View**
@@ -92,8 +96,10 @@
 **Design**
 - Responsive grid layouts — Artists, Albums, Genres, Playlists, Radio, Folders
 - Sidebar with library counts (artists, genres, playlists, radio)
+- Offline playback — download albums and playlists for offline listening
 - Offline-capable PWA
-- Share buttons on albums, artists, and playlists
+- Share buttons on albums, artists, and playlists (playlist links include server + ID)
+- Import/export settings (back up EQ, theme, preferences as JSON)
 - Docker support for self-hosting
 
 ---
@@ -147,6 +153,12 @@ docker build -t vibrdrome-web .
 docker run -p 8080:80 vibrdrome-web
 ```
 
+Pre-fill the login screen with your server URL (for self-hosted deployments):
+
+```bash
+docker run -p 8080:80 -e VIBRDROME_DEFAULT_SERVER=https://music.example.com ddmoney420/vibrdrome-web
+```
+
 Docker Compose:
 
 ```yaml
@@ -155,6 +167,8 @@ services:
     image: ddmoney420/vibrdrome-web
     ports:
       - "8080:80"
+    environment:
+      - VIBRDROME_DEFAULT_SERVER=https://music.example.com
     restart: unless-stopped
 ```
 

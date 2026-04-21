@@ -5,6 +5,74 @@ All notable changes to Vibrdrome Web are documented here.
 ## [Unreleased]
 - Document Picture-in-Picture support (Chrome native PiP window)
 
+## [1.8.1-beta.1] - 2026-04-21
+
+### Added
+- Server-side queue sync via OpenSubsonic `indexBasedQueue` extension (Navidrome 0.61+)
+- Opt-in "Sync Queue" toggle in Settings > Integrations
+- Debounced queue saves (1.5s) to avoid hammering on rapid changes
+- Periodic playback position sync every 30s and on pause
+- Queue restoration from server on startup when local queue is empty
+- Feature detection: falls back to legacy `savePlayQueue`/`getPlayQueue` for non-OpenSubsonic servers
+- Local position persistence — playback position saved to localStorage on pause and page unload, restored on reload
+
+### Fixed
+- Gapless playback: tracks now advance in correct order when clicking next (spurious ended events no longer trigger wrong preloaded track)
+- Now Playing reports accurate time after page reload (position restores from localStorage or server)
+
+---
+
+## [1.8.0] - 2026-04-14
+
+### Added
+- Offline playback — download albums and playlists for offline listening
+- Download button on album and playlist detail screens
+- Downloads screen with active downloads, progress tracking, and cached content grouped by album
+- Storage usage indicator with clear all option
+- Service worker rewrite: cache-first strategy for audio streams, automatic cover art caching
+- DownloadManager with sequential download queue and byte-level progress tracking
+
+---
+
+## [1.7.0] - 2026-04-14
+
+### Added
+- Gapless playback — seamless track transitions when crossfade is disabled, pre-buffers next track 15s before end
+- Gapless toggle in Settings > Playback (on by default, disabled when crossfade is active)
+- Chromecast support — cast audio to Chromecast devices via Google Cast SDK
+- Cast button in mini-player (only visible when Cast SDK loads successfully)
+- Cast-aware play, pause, seek, and volume controls
+
+### Note
+- Chromecast requires the Subsonic server to be network-accessible to the Chromecast device
+
+---
+
+## [1.6.5] - 2026-04-14
+
+### Added
+- ReplayGain peak prevention — clamps gain to prevent clipping when gain x peak > 1.0
+- ReplayGain mode picker in Settings — choose Track, Album, or Off
+- Import/export settings — back up and restore all preferences as JSON (excludes server credentials)
+- Playlist sharing links — share button generates deep link with server URL + playlist ID
+- Share route (`/share`) — opens shared playlist or prompts login for different server
+
+---
+
+## [1.6.4] - 2026-04-14
+
+### Added
+- Docker default server URL injection via `VIBRDROME_DEFAULT_SERVER` env var — pre-fills login screen for self-hosted deployments
+- Keyboard shortcuts overlay — press `?` to view all shortcuts
+- Desktop notifications on track change — enable in Settings > Integrations
+- Configurable sleep timer fade duration (10s, 30s, 60s) with exponential curve for natural-sounding fade
+- Docker entrypoint script for runtime configuration
+
+### Changed
+- Sleep timer fade now uses exponential curve instead of linear for more natural volume reduction
+
+---
+
 ## [1.6.3] - 2026-04-08
 
 ### Added

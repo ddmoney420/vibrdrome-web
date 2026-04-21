@@ -9,8 +9,10 @@ import Sidebar from './components/common/Sidebar';
 import { usePlayback } from './audio/usePlayback';
 import { darkenHex } from './utils/color';
 import CommandPalette from './components/common/CommandPalette';
+import ShortcutsOverlay from './components/common/ShortcutsOverlay';
 import RightPane from './components/player/RightPane';
 import PopOutPlayer from './components/player/PopOutPlayer';
+import { useDownloadStore } from './stores/downloadStore';
 
 // Error boundary for stale chunk errors after deploys
 class ChunkErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
@@ -81,6 +83,7 @@ const QueueScreen = lazyWithRetry(() => import('./screens/QueueScreen'));
 const LyricsScreen = lazyWithRetry(() => import('./screens/LyricsScreen'));
 const EQScreen = lazyWithRetry(() => import('./screens/EQScreen'));
 const VisualizerScreen = lazyWithRetry(() => import('./screens/VisualizerScreen'));
+const ShareScreen = lazyWithRetry(() => import('./screens/ShareScreen'));
 
 const MiniPlayer = lazyWithRetry(() => import('./components/player/MiniPlayer'));
 
@@ -97,9 +100,10 @@ export default function App() {
   // Initialize playback engine
   usePlayback();
 
-  // Load auth state from storage on mount
+  // Load auth state and cached downloads on mount
   useEffect(() => {
     loadFromStorage();
+    useDownloadStore.getState().loadCachedSongs();
   }, [loadFromStorage]);
 
   // Apply theme to html element
@@ -135,6 +139,8 @@ export default function App() {
 
   const radioMode = usePlayerStore((s) => s.radioMode);
   const popOutPlayerOpen = useUIStore((s) => s.popOutPlayerOpen);
+  const shortcutsOverlayOpen = useUIStore((s) => s.shortcutsOverlayOpen);
+  const setShortcutsOverlayOpen = useUIStore((s) => s.setShortcutsOverlayOpen);
   const hasPlayback = currentSong !== null || radioMode !== null;
   const showMiniPlayer =
     hasPlayback && !HIDE_MINIPLAYER_ROUTES.includes(location.pathname);
@@ -146,6 +152,10 @@ export default function App() {
   return (
     <div className="flex h-dvh flex-col bg-bg-primary text-text-primary">
       {isAuthenticated && <CommandPalette />}
+      <ShortcutsOverlay
+        open={shortcutsOverlayOpen}
+        onClose={() => setShortcutsOverlayOpen(false)}
+      />
       <div className="flex flex-1 overflow-hidden">
         {showSidebar && <Sidebar />}
         <div className="flex-1 overflow-y-auto">
@@ -153,6 +163,7 @@ export default function App() {
         <Suspense fallback={<LoadingSpinner />}>
           <Routes>
             <Route path="/login" element={<LoginScreen />} />
+            <Route path="/share" element={<ShareScreen />} />
 
             {/* Protected routes */}
             <Route

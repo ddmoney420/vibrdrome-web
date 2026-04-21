@@ -5,6 +5,7 @@ import { usePlayerStore } from '../stores/playerStore';
 import { shareUrl } from '../utils/share';
 import type { Album } from '../types/subsonic';
 import { Header, CoverArt, SongRow, LoadingSpinner } from '../components/common';
+import DownloadButton from '../components/common/DownloadButton';
 
 function formatDuration(totalSeconds: number): string {
   const hours = Math.floor(totalSeconds / 3600);
@@ -174,6 +175,10 @@ export default function AlbumDetailScreen() {
                 />
               </svg>
             </button>
+
+            {album.song && album.song.length > 0 && (
+              <DownloadButton songs={album.song} albumId={album.id} />
+            )}
           </div>
         </div>
 

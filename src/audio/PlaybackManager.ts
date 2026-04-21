@@ -8,7 +8,7 @@ const EQ_Q = 1.414;
 const POSITION_UPDATE_MS = 250;
 const SCROBBLE_MIN_SECONDS = 30;
 const SCROBBLE_PERCENT = 0.5;
-const SLEEP_FADE_SECONDS = 10;
+// Sleep fade duration is now configurable via uiStore.sleepFadeDuration
 
 class PlaybackManager {
   private audioContext: AudioContext | null = null;
@@ -35,6 +35,8 @@ class PlaybackManager {
   private radioAudio: HTMLAudioElement | null = null;
   private radioPlayId = 0;
   private unsubscribeEQ: (() => void) | null = null;
+  private preloadedSongId: string | null = null;
+  private preloadedIndex: number = -1;
 
   constructor() {
     this.playerA = new Audio();
@@ -99,12 +101,32 @@ class PlaybackManager {
     // Guard against rapid-fire calls (e.g. clicking next repeatedly)
     const thisPlayId = ++this.playId;
 
-    // Cancel any active crossfade
+    // If casting, send to Chromecast instead of local playback
+    const uiState = (await import('../stores/uiStore')).useUIStore.getState();
+    if (uiState.castConnected) {
+      const { getCastManager } = await import('./CastManager');
+      const client = getSubsonicClient();
+      const quality = uiState.streamQuality;
+      const url = client.stream(song.id, quality || undefined);
+      const artUrl = song.coverArt ? client.getCoverArt(song.coverArt, 512) : undefined;
+      await getCastManager().loadMedia(url, song.title, song.artist ?? 'Unknown Artist', song.album ?? 'Unknown Album', artUrl);
+      this.scrobbled = false;
+      getSubsonicClient().scrobble(song.id, false).catch(() => {});
+      this.updateMediaSession(song);
+      this.startPositionTracking();
+      return;
+    }
+
+    // Cancel any active crossfade and clear preload
     this.cancelCrossfade();
+    this.clearPreload();
+
+    // Pause current audio before changing src to prevent spurious 'ended' events
+    this.getActiveAudio().pause();
 
     const audio = this.getActiveAudio();
     // Dynamic import to avoid circular dep
-    const quality = (await import('../stores/uiStore')).useUIStore.getState().streamQuality;
+    const quality = uiState.streamQuality;
     const url = getSubsonicClient().stream(song.id, quality || undefined);
 
     audio.src = url;
@@ -154,11 +176,22 @@ class PlaybackManager {
   }
 
   pause(): void {
+    import('../stores/uiStore').then(({ useUIStore }) => {
+      if (useUIStore.getState().castConnected) {
+        import('./CastManager').then(({ getCastManager }) => getCastManager().pause());
+      }
+    });
     this.getActiveAudio().pause();
     this.stopPositionTracking();
   }
 
   async resume(): Promise<void> {
+    if ((await import('../stores/uiStore')).useUIStore.getState().castConnected) {
+      const { getCastManager } = await import('./CastManager');
+      getCastManager().play();
+      this.startPositionTracking();
+      return;
+    }
     if (this.audioContext?.state === 'suspended') {
       await this.audioContext.resume();
     }
@@ -265,6 +298,11 @@ class PlaybackManager {
   }
 
   seek(timeMs: number): void {
+    import('../stores/uiStore').then(({ useUIStore }) => {
+      if (useUIStore.getState().castConnected) {
+        import('./CastManager').then(({ getCastManager }) => getCastManager().seek(timeMs / 1000));
+      }
+    });
     const audio = this.getActiveAudio();
     audio.currentTime = timeMs / 1000;
     usePlayerStore.getState().setPosition(timeMs);
@@ -299,6 +337,12 @@ class PlaybackManager {
     if (this.radioAudio) {
       this.radioAudio.volume = this.currentVolume;
     }
+    // Also update cast volume
+    import('../stores/uiStore').then(({ useUIStore }) => {
+      if (useUIStore.getState().castConnected) {
+        import('./CastManager').then(({ getCastManager }) => getCastManager().setVolume(this.currentVolume));
+      }
+    });
   }
 
   setPlaybackRate(rate: number): void {
@@ -322,7 +366,7 @@ class PlaybackManager {
     this.cancelSleepTimer();
     this.sleepRemainingMs = minutes * 60 * 1000;
 
-    this.sleepTimerId = window.setInterval(() => {
+    this.sleepTimerId = window.setInterval(async () => {
       this.sleepRemainingMs -= 1000;
 
       if (this.sleepRemainingMs <= 0) {
@@ -334,9 +378,11 @@ class PlaybackManager {
         return;
       }
 
-      // Fade during last N seconds
-      if (this.sleepRemainingMs <= SLEEP_FADE_SECONDS * 1000) {
-        const fraction = this.sleepRemainingMs / (SLEEP_FADE_SECONDS * 1000);
+      // Fade during last N seconds (configurable, default 10s)
+      const fadeSec = (await import('../stores/uiStore')).useUIStore.getState().sleepFadeDuration ?? 10;
+      if (this.sleepRemainingMs <= fadeSec * 1000) {
+        const linear = this.sleepRemainingMs / (fadeSec * 1000);
+        const fraction = linear * linear; // exponential curve for natural-sounding fade
         const activeGain = this.activePlayer === 'A' ? this.gainA : this.gainB;
         if (activeGain) {
           activeGain.gain.value = this.currentVolume * fraction;
@@ -479,6 +525,7 @@ class PlaybackManager {
           usePlayerStore.getState().setPosition(positionMs);
           this.checkScrobble();
           this.checkCrossfadeStart();
+          this.checkGaplessPreload();
         }
       }
       this.positionInterval = window.requestAnimationFrame(tick);
@@ -659,13 +706,29 @@ class PlaybackManager {
     }
   }
 
-  private applyReplayGain(song: Song): void {
+  private async applyReplayGain(song: Song): Promise<void> {
     if (!song.replayGain) return;
 
-    const trackGain = song.replayGain.trackGain ?? song.replayGain.albumGain ?? 0;
-    if (trackGain === 0) return;
+    const mode = (await import('../stores/uiStore')).useUIStore.getState().replayGainMode;
+    if (mode === 'off') return;
 
-    const gainMultiplier = Math.pow(10, trackGain / 20);
+    const gain = mode === 'album'
+      ? (song.replayGain.albumGain ?? song.replayGain.trackGain ?? 0)
+      : (song.replayGain.trackGain ?? song.replayGain.albumGain ?? 0);
+
+    if (gain === 0) return;
+
+    const peak = mode === 'album'
+      ? (song.replayGain.albumPeak ?? song.replayGain.trackPeak ?? 1.0)
+      : (song.replayGain.trackPeak ?? song.replayGain.albumPeak ?? 1.0);
+
+    let gainMultiplier = Math.pow(10, gain / 20);
+
+    // Prevent clipping: scale down if gain would exceed peak headroom
+    if (gainMultiplier * peak > 1.0) {
+      gainMultiplier = 1.0 / peak;
+    }
+
     const activeGain = this.activePlayer === 'A' ? this.gainA : this.gainB;
     if (activeGain) {
       const now = this.audioContext?.currentTime ?? 0;
@@ -736,6 +799,9 @@ class PlaybackManager {
     if (player !== this.activePlayer || this.crossfading) return;
     // Don't advance queue if radio is active (src was cleared for radio)
     if (this.radioAudio) return;
+    // Don't handle if the source was cleared (manual skip triggers ended event)
+    const audio = player === 'A' ? this.playerA : this.playerB;
+    if (!audio.src || audio.src === window.location.href) return;
 
     this.stopPositionTracking();
 
@@ -749,9 +815,122 @@ class PlaybackManager {
       });
       this.scrobbled = false;
       this.startPositionTracking();
-    } else {
-      state.next();
+      return;
     }
+
+    // Gapless: if next track is preloaded on inactive player, swap instantly
+    if (this.preloadedSongId && state.gaplessEnabled && !state.crossfadeEnabled) {
+      const nextSong = state.queue[this.preloadedIndex];
+      if (nextSong && nextSong.id === this.preloadedSongId) {
+        const inactiveAudio = this.getInactiveAudio();
+        inactiveAudio.play().catch((err) => {
+          console.error('[PlaybackManager] Gapless play error:', err);
+        });
+
+        // Stop old player
+        this.getActiveAudio().pause();
+        this.getActiveAudio().src = '';
+
+        // Save index before clearing
+        const nextIndex = this.preloadedIndex;
+
+        // Swap active player
+        this.activePlayer = this.activePlayer === 'A' ? 'B' : 'A';
+        this.scrobbled = false;
+        this.preloadedSongId = null;
+        this.preloadedIndex = -1;
+
+        // Set gains
+        const activeGain = this.activePlayer === 'A' ? this.gainA : this.gainB;
+        const inactiveGain = this.activePlayer === 'A' ? this.gainB : this.gainA;
+        const now = this.audioContext?.currentTime ?? 0;
+        if (activeGain) {
+          activeGain.gain.cancelScheduledValues(now);
+          activeGain.gain.setTargetAtTime(this.currentVolume, now, 0.005);
+        }
+        if (inactiveGain) {
+          inactiveGain.gain.cancelScheduledValues(now);
+          inactiveGain.gain.setTargetAtTime(0, now, 0.005);
+        }
+
+        // Update store directly to avoid re-triggering play from the hook
+        usePlayerStore.setState({
+          currentIndex: nextIndex,
+          currentSong: nextSong,
+          isPlaying: true,
+          positionMs: 0,
+        });
+
+        this.applyReplayGain(nextSong);
+        this.updateMediaSession(nextSong);
+        this.startPositionTracking();
+
+        // Send scrobble
+        getSubsonicClient().scrobble(nextSong.id, false).catch(() => {});
+        return;
+      }
+    }
+
+    // Fallback: normal next
+    state.next();
+  }
+
+  private clearPreload(): void {
+    if (this.preloadedSongId) {
+      const inactive = this.getInactiveAudio();
+      inactive.pause();
+      inactive.src = '';
+      inactive.load();
+      this.preloadedSongId = null;
+      this.preloadedIndex = -1;
+    }
+  }
+
+  private checkGaplessPreload(): void {
+    const state = usePlayerStore.getState();
+    // Only preload if gapless enabled, crossfade disabled, not already preloaded, not crossfading
+    if (!state.gaplessEnabled || state.crossfadeEnabled || this.crossfading || this.preloadedSongId) return;
+
+    const audio = this.getActiveAudio();
+    // Don't preload if active player has no real source (e.g., between plays)
+    if (!audio.src || audio.src === window.location.href) return;
+    const remaining = audio.duration - audio.currentTime;
+    if (isNaN(remaining) || remaining > 15 || remaining <= 0) return;
+
+    // Determine next song (same logic as crossfade)
+    const { queue, currentIndex, shuffleEnabled, shuffleOrder, repeatMode } = state;
+    if (queue.length <= 1 && repeatMode !== 'all') return;
+    if (repeatMode === 'one') return;
+
+    let nextIndex: number;
+    if (shuffleEnabled && shuffleOrder.length > 0) {
+      const shufflePos = shuffleOrder.indexOf(currentIndex);
+      const nextShufflePos = shufflePos + 1;
+      if (nextShufflePos >= shuffleOrder.length) {
+        if (repeatMode === 'all') nextIndex = shuffleOrder[0];
+        else return;
+      } else {
+        nextIndex = shuffleOrder[nextShufflePos];
+      }
+    } else {
+      nextIndex = currentIndex + 1;
+      if (nextIndex >= queue.length) {
+        if (repeatMode === 'all') nextIndex = 0;
+        else return;
+      }
+    }
+
+    const nextSong = queue[nextIndex];
+    if (!nextSong) return;
+
+    // Preload on inactive player
+    const inactive = this.getInactiveAudio();
+    const url = getSubsonicClient().stream(nextSong.id);
+    inactive.src = url;
+    inactive.preload = 'auto';
+    inactive.load();
+    this.preloadedSongId = nextSong.id;
+    this.preloadedIndex = nextIndex;
   }
 
   private handleError(player: 'A' | 'B'): void {

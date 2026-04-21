@@ -3,6 +3,8 @@ import { getPlaybackManager } from './PlaybackManager';
 import { usePlayerStore } from '../stores/playerStore';
 import { useUIStore } from '../stores/uiStore';
 import { useEQStore } from '../stores/eqStore';
+import { getSubsonicClient } from '../api/SubsonicClient';
+import { syncPosition, loadServerQueue } from '../utils/queueSync';
 
 // The PlaybackManager is a singleton — grab it once at module level
 const manager = getPlaybackManager();
@@ -85,6 +87,9 @@ export function usePlayback() {
         case 'R':
           if (!store.radioMode) store.cycleRepeat();
           break;
+        case '?':
+          useUIStore.getState().setShortcutsOverlayOpen(true);
+          break;
       }
     };
 
@@ -118,7 +123,26 @@ export function usePlayback() {
     if (usePlayerStore.getState().radioMode) return;
 
     playTriggeredRef.current = true;
-    manager.play(currentSong);
+    const restoredPosition = usePlayerStore.getState().positionMs;
+    manager.play(currentSong).then(() => {
+      // Seek to restored position after reload (e.g., page refresh mid-song)
+      if (restoredPosition > 0) {
+        manager.seek(restoredPosition);
+      }
+    });
+
+    // Desktop notification
+    if (useUIStore.getState().notificationsEnabled && Notification.permission === 'granted') {
+      const icon = currentSong.coverArt
+        ? getSubsonicClient().getCoverArt(currentSong.coverArt, 256)
+        : undefined;
+      new Notification(currentSong.title, {
+        body: `${currentSong.artist ?? 'Unknown Artist'} — ${currentSong.album ?? 'Unknown Album'}`,
+        icon,
+        silent: true,
+        tag: 'vibrdrome-now-playing',
+      });
+    }
   }, [currentSong]);
 
   // Track previous isPlaying to detect actual toggles
@@ -152,6 +176,17 @@ export function usePlayback() {
       }
     } else {
       manager.pause();
+      syncPosition();
+      // Persist position locally for restore on reload
+      const state = usePlayerStore.getState();
+      try {
+        const raw = localStorage.getItem('vibrdrome_queue');
+        if (raw) {
+          const data = JSON.parse(raw);
+          data.positionMs = state.positionMs;
+          localStorage.setItem('vibrdrome_queue', JSON.stringify(data));
+        }
+      } catch { /* ignore */ }
     }
   }, [isPlaying, currentSong]);
 
@@ -164,6 +199,38 @@ export function usePlayback() {
   useEffect(() => {
     manager.updateEQ(eqBands, eqEnabled);
   }, [eqBands, eqEnabled]);
+
+  // Server queue sync: periodic position save + startup load + beforeunload
+  useEffect(() => {
+    // Load queue from server if local queue is empty
+    loadServerQueue();
+
+    // Save position every 30s while playing
+    const interval = setInterval(() => {
+      const { currentSong: song, isPlaying: playing } = usePlayerStore.getState();
+      if (song && playing) syncPosition();
+    }, 30_000);
+
+    // Save on page unload (server + local)
+    const handleUnload = () => {
+      syncPosition();
+      try {
+        const state = usePlayerStore.getState();
+        const raw = localStorage.getItem('vibrdrome_queue');
+        if (raw) {
+          const data = JSON.parse(raw);
+          data.positionMs = state.positionMs;
+          localStorage.setItem('vibrdrome_queue', JSON.stringify(data));
+        }
+      } catch { /* ignore */ }
+    };
+    window.addEventListener('beforeunload', handleUnload);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('beforeunload', handleUnload);
+    };
+  }, []);
 
   return manager;
 }

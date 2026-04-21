@@ -1,0 +1,14 @@
+services:
+  vibrdrome-web:
+    build: .
+    ports:
+      - "8080:80"
+    environment:
+      - VIBRDROME_DEFAULT_SERVER=  # e.g. https://music.example.com
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 30s
+      timeout: 3s
+      start_period: 5s
+      retries: 3

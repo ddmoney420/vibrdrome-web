@@ -7,6 +7,7 @@ import CoverArt from '../common/CoverArt';
 import FirstRunTooltip from '../common/FirstRunTooltip';
 import ProgressRing from './ProgressRing';
 import MiniWaveform from './MiniWaveform';
+import CastButton from './CastButton';
 
 export default function MiniPlayer() {
   const navigate = useNavigate();
@@ -161,6 +162,9 @@ export default function MiniPlayer() {
           </svg>
         </button>
         </FirstRunTooltip>
+
+        {/* Chromecast */}
+        <CastButton />
 
         {/* Previous — hide for radio */}
         {!isRadio && (

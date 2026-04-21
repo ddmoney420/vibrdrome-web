@@ -123,6 +123,19 @@ export interface PlayQueue {
   entry?: Song[];
 }
 
+export interface PlayQueueByIndex {
+  currentIndex?: number;
+  position?: number;
+  changed?: string;
+  changedBy?: string;
+  entry?: Song[];
+}
+
+export interface OpenSubsonicExtension {
+  name: string;
+  versions: number[];
+}
+
 export interface MusicFolder {
   id: string;
   name?: string;

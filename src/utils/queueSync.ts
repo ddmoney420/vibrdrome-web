@@ -1,11 +1,10 @@
 /**
  * Server-side queue sync via OpenSubsonic indexBasedQueue extension.
  * Debounced saves, periodic position sync, and startup queue restoration.
+ *
+ * All imports are dynamic to avoid EnvironmentTeardownError in tests —
+ * this module is loaded lazily from playerStore's persistQueue().
  */
-
-import { getSubsonicClient } from '../api/SubsonicClient';
-import { usePlayerStore } from '../stores/playerStore';
-import { useUIStore } from '../stores/uiStore';
 
 const DEBOUNCE_MS = 1500;
 let debounceTimer: number | null = null;
@@ -35,6 +34,10 @@ export function syncPosition(): void {
  * and the local queue is empty (client wins on conflict).
  */
 export async function loadServerQueue(): Promise<void> {
+  const { useUIStore } = await import('../stores/uiStore');
+  const { usePlayerStore } = await import('../stores/playerStore');
+  const { getSubsonicClient } = await import('../api/SubsonicClient');
+
   if (!useUIStore.getState().queueSyncEnabled) return;
 
   const { queue } = usePlayerStore.getState();
@@ -85,6 +88,10 @@ export function cancelPendingSync(): void {
 }
 
 async function saveQueueToServer(): Promise<void> {
+  const { useUIStore } = await import('../stores/uiStore');
+  const { usePlayerStore } = await import('../stores/playerStore');
+  const { getSubsonicClient } = await import('../api/SubsonicClient');
+
   if (!useUIStore.getState().queueSyncEnabled) return;
 
   const { queue, currentIndex, positionMs, radioMode } = usePlayerStore.getState();

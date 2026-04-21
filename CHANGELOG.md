@@ -5,16 +5,20 @@ All notable changes to Vibrdrome Web are documented here.
 ## [Unreleased]
 - Document Picture-in-Picture support (Chrome native PiP window)
 
-## [1.8.1] - 2026-04-19
+## [1.8.1-beta.1] - 2026-04-21
 
 ### Added
-- Server-side queue sync via OpenSubsonic `indexBasedQueue` extension (Navidrome 0.62+)
+- Server-side queue sync via OpenSubsonic `indexBasedQueue` extension (Navidrome 0.61+)
 - Opt-in "Sync Queue" toggle in Settings > Integrations
 - Debounced queue saves (1.5s) to avoid hammering on rapid changes
 - Periodic playback position sync every 30s and on pause
 - Queue restoration from server on startup when local queue is empty
 - Feature detection: falls back to legacy `savePlayQueue`/`getPlayQueue` for non-OpenSubsonic servers
-- `getOpenSubsonicExtensions()` API method with session-level caching
+- Local position persistence — playback position saved to localStorage on pause and page unload, restored on reload
+
+### Fixed
+- Gapless playback: tracks now advance in correct order when clicking next (spurious ended events no longer trigger wrong preloaded track)
+- Now Playing reports accurate time after page reload (position restores from localStorage or server)
 
 ---
 

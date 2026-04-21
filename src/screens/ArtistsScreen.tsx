@@ -20,6 +20,7 @@ export default function ArtistsScreen() {
   const [allArtistGenres, setAllArtistGenres] = useState<Map<string, Set<string>>>(new Map());
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- set loading before async fetch
     setLoading(true);
     const load = async () => {
       try {

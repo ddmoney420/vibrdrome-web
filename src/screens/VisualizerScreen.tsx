@@ -180,7 +180,7 @@ export default function VisualizerScreen() {
   const programRef = useRef<WebGLProgram | null>(null);
   const animFrameRef = useRef<number>(0);
   const milkdropFrameRef = useRef<number>(0);
-  const startTimeRef = useRef<number>(performance.now());
+  const startTimeRef = useRef<number>(0);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const butterchurnRef = useRef<any>(null);
   const fallbackCtxRef = useRef<AudioContext | null>(null);
@@ -200,6 +200,11 @@ export default function VisualizerScreen() {
     setShowOverlay(true);
     if (overlayTimeoutRef.current) clearTimeout(overlayTimeoutRef.current);
     overlayTimeoutRef.current = setTimeout(() => setShowOverlay(false), 4000);
+  }, []);
+
+  // Set start time on mount
+  useEffect(() => {
+    startTimeRef.current = performance.now();
   }, []);
 
   // Initialize WebGL and fullscreen quad buffer
@@ -437,6 +442,7 @@ export default function VisualizerScreen() {
 
   // Auto-hide overlay
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- show overlay on mount
     resetOverlayTimer();
     return () => {
       if (overlayTimeoutRef.current) clearTimeout(overlayTimeoutRef.current);

@@ -64,6 +64,7 @@ export default function SongsScreen() {
   }, [activeFolderId, filterGenre]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset when load dependencies change
     setHasMore(true);
     loadSongs(false);
   }, [loadSongs]);
@@ -82,6 +83,7 @@ export default function SongsScreen() {
       if (!isNaN(y)) filtered = filtered.filter((s) => s.year === y);
     }
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- derived filtering
     setSongs(filtered);
   }, [allSongs, filterArtist, filterYear]);
 

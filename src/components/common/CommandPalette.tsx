@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getSubsonicClient } from '../../api/SubsonicClient';
 import { usePlayerStore } from '../../stores/playerStore';
@@ -61,6 +61,7 @@ export default function CommandPalette() {
   // Focus input on open
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional reset when dialog opens
       setQuery('');
       setSelectedIndex(0);
       setServerResults({ artists: [], albums: [], songs: [] });
@@ -73,6 +74,7 @@ export default function CommandPalette() {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     if (query.length < 2) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clearing results when query is too short
       setServerResults({ artists: [], albums: [], songs: [] });
       setSearching(false);
       return;
@@ -97,76 +99,81 @@ export default function CommandPalette() {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [query]);
 
-  // Build results list
-  const store = usePlayerStore.getState();
-  const quickActions: QuickAction[] = [
-    { label: isPlaying() ? 'Pause' : 'Play', action: () => store.togglePlay(), icon: 'M8 5v14l11-7z' },
-    { label: 'Next Track', action: () => store.next(), icon: 'M6 18l8.5-6L6 6v12zm8.5-6v6h2V6h-2v6z' },
-    { label: 'Previous Track', action: () => store.previous(), icon: 'M6 6h2v12H6V6zm3.5 6l8.5 6V6l-8.5 6z' },
-    { label: 'Toggle Shuffle', action: () => store.toggleShuffle(), icon: 'M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5' },
-    { label: 'Cycle Repeat', action: () => store.cycleRepeat(), icon: 'M17 1l4 4-4 4' },
-  ];
+  const playing = usePlayerStore((s) => s.isPlaying);
 
-  function isPlaying() { return usePlayerStore.getState().isPlaying; }
+  const results = useMemo(() => {
+    const items: ResultItem[] = [];
+    const store = usePlayerStore.getState();
 
-  const results: ResultItem[] = [];
+    const quickActions: QuickAction[] = [
+      { label: playing ? 'Pause' : 'Play', action: () => store.togglePlay(), icon: 'M8 5v14l11-7z' },
+      { label: 'Next Track', action: () => store.next(), icon: 'M6 18l8.5-6L6 6v12zm8.5-6v6h2V6h-2v6z' },
+      { label: 'Previous Track', action: () => store.previous(), icon: 'M6 6h2v12H6V6zm3.5 6l8.5 6V6l-8.5 6z' },
+      { label: 'Toggle Shuffle', action: () => store.toggleShuffle(), icon: 'M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5' },
+      { label: 'Cycle Repeat', action: () => store.cycleRepeat(), icon: 'M17 1l4 4-4 4' },
+    ];
 
-  // Navigation
-  const filteredNav = fuzzyFilter(NAV_ITEMS, query, (n) => n.label);
-  for (const nav of filteredNav.slice(0, query ? 5 : 6)) {
-    results.push({
-      type: 'nav',
-      label: nav.label,
-      onSelect: () => { close(); navigate(nav.path); },
-    });
-  }
+    // Navigation
+    const filteredNav = fuzzyFilter(NAV_ITEMS, query, (n) => n.label);
+    for (const nav of filteredNav.slice(0, query ? 5 : 6)) {
+      items.push({
+        type: 'nav',
+        label: nav.label,
+        onSelect: () => { close(); navigate(nav.path); },
+      });
+    }
 
-  // Quick actions
-  const filteredActions = fuzzyFilter(quickActions, query, (a) => a.label);
-  for (const action of filteredActions.slice(0, query ? 3 : 3)) {
-    results.push({
-      type: 'action',
-      label: action.label,
-      onSelect: () => { close(); action.action(); },
-    });
-  }
+    // Quick actions
+    const filteredActions = fuzzyFilter(quickActions, query, (a) => a.label);
+    for (const action of filteredActions.slice(0, query ? 3 : 3)) {
+      items.push({
+        type: 'action',
+        label: action.label,
+        onSelect: () => { close(); action.action(); },
+      });
+    }
 
-  // Server results
-  for (const artist of serverResults.artists) {
-    results.push({
-      type: 'artist',
-      label: artist.name,
-      sublabel: `${artist.albumCount ?? 0} albums`,
-      coverArt: artist.coverArt,
-      onSelect: () => { close(); navigate(`/artist/${artist.id}`); },
-    });
-  }
+    // Server results
+    for (const artist of serverResults.artists) {
+      items.push({
+        type: 'artist',
+        label: artist.name,
+        sublabel: `${artist.albumCount ?? 0} albums`,
+        coverArt: artist.coverArt,
+        onSelect: () => { close(); navigate(`/artist/${artist.id}`); },
+      });
+    }
 
-  for (const album of serverResults.albums) {
-    results.push({
-      type: 'album',
-      label: album.name,
-      sublabel: album.artist,
-      coverArt: album.coverArt,
-      onSelect: () => { close(); navigate(`/album/${album.id}`); },
-    });
-  }
+    for (const album of serverResults.albums) {
+      items.push({
+        type: 'album',
+        label: album.name,
+        sublabel: album.artist,
+        coverArt: album.coverArt,
+        onSelect: () => { close(); navigate(`/album/${album.id}`); },
+      });
+    }
 
-  for (const song of serverResults.songs) {
-    results.push({
-      type: 'song',
-      label: song.title,
-      sublabel: `${song.artist ?? 'Unknown'} — ${song.album ?? ''}`,
-      coverArt: song.coverArt,
-      onSelect: () => { close(); usePlayerStore.getState().playSongs([song], 0); },
-    });
-  }
+    for (const song of serverResults.songs) {
+      items.push({
+        type: 'song',
+        label: song.title,
+        sublabel: `${song.artist ?? 'Unknown'} — ${song.album ?? ''}`,
+        coverArt: song.coverArt,
+        onSelect: () => { close(); usePlayerStore.getState().playSongs([song], 0); },
+      });
+    }
+
+    return items;
+  }, [query, serverResults, navigate, close, playing]);
 
   // Keyboard navigation — use ref to avoid stale closure
   const resultsRef = useRef(results);
   const selectedRef = useRef(selectedIndex);
-  resultsRef.current = results;
-  selectedRef.current = selectedIndex;
+  useEffect(() => {
+    resultsRef.current = results;
+    selectedRef.current = selectedIndex;
+  }, [results, selectedIndex]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     switch (e.key) {
@@ -191,6 +198,7 @@ export default function CommandPalette() {
 
   // Reset selection when results change
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional reset when query changes
     setSelectedIndex(0);
   }, [query]);
 

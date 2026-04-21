@@ -40,6 +40,7 @@ export default function RadioScreen() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data fetch
     fetchStations();
   }, []);
 

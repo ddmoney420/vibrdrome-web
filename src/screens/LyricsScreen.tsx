@@ -20,6 +20,7 @@ export default function LyricsScreen() {
   // Load lyrics when song changes
   useEffect(() => {
     if (!currentSong?.id) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clear lyrics when no song
       setLyrics(null);
       return;
     }

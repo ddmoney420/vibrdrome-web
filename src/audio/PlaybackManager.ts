@@ -121,6 +121,9 @@ class PlaybackManager {
     this.cancelCrossfade();
     this.clearPreload();
 
+    // Pause current audio before changing src to prevent spurious 'ended' events
+    this.getActiveAudio().pause();
+
     const audio = this.getActiveAudio();
     // Dynamic import to avoid circular dep
     const quality = uiState.streamQuality;
@@ -796,6 +799,9 @@ class PlaybackManager {
     if (player !== this.activePlayer || this.crossfading) return;
     // Don't advance queue if radio is active (src was cleared for radio)
     if (this.radioAudio) return;
+    // Don't handle if the source was cleared (manual skip triggers ended event)
+    const audio = player === 'A' ? this.playerA : this.playerB;
+    if (!audio.src || audio.src === window.location.href) return;
 
     this.stopPositionTracking();
 
@@ -886,6 +892,8 @@ class PlaybackManager {
     if (!state.gaplessEnabled || state.crossfadeEnabled || this.crossfading || this.preloadedSongId) return;
 
     const audio = this.getActiveAudio();
+    // Don't preload if active player has no real source (e.g., between plays)
+    if (!audio.src || audio.src === window.location.href) return;
     const remaining = audio.duration - audio.currentTime;
     if (isNaN(remaining) || remaining > 15 || remaining <= 0) return;
 

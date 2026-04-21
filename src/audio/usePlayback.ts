@@ -123,7 +123,13 @@ export function usePlayback() {
     if (usePlayerStore.getState().radioMode) return;
 
     playTriggeredRef.current = true;
-    manager.play(currentSong);
+    const restoredPosition = usePlayerStore.getState().positionMs;
+    manager.play(currentSong).then(() => {
+      // Seek to restored position after reload (e.g., page refresh mid-song)
+      if (restoredPosition > 0) {
+        manager.seek(restoredPosition);
+      }
+    });
 
     // Desktop notification
     if (useUIStore.getState().notificationsEnabled && Notification.permission === 'granted') {
@@ -171,6 +177,16 @@ export function usePlayback() {
     } else {
       manager.pause();
       syncPosition();
+      // Persist position locally for restore on reload
+      const state = usePlayerStore.getState();
+      try {
+        const raw = localStorage.getItem('vibrdrome_queue');
+        if (raw) {
+          const data = JSON.parse(raw);
+          data.positionMs = state.positionMs;
+          localStorage.setItem('vibrdrome_queue', JSON.stringify(data));
+        }
+      } catch { /* ignore */ }
     }
   }, [isPlaying, currentSong]);
 
@@ -195,8 +211,19 @@ export function usePlayback() {
       if (song && playing) syncPosition();
     }, 30_000);
 
-    // Save on page unload
-    const handleUnload = () => syncPosition();
+    // Save on page unload (server + local)
+    const handleUnload = () => {
+      syncPosition();
+      try {
+        const state = usePlayerStore.getState();
+        const raw = localStorage.getItem('vibrdrome_queue');
+        if (raw) {
+          const data = JSON.parse(raw);
+          data.positionMs = state.positionMs;
+          localStorage.setItem('vibrdrome_queue', JSON.stringify(data));
+        }
+      } catch { /* ignore */ }
+    };
     window.addEventListener('beforeunload', handleUnload);
 
     return () => {

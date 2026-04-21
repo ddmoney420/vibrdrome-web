@@ -77,6 +77,7 @@ function persistQueue(state: PlaybackState) {
     localStorage.setItem(QUEUE_KEY, JSON.stringify({
       queue: state.queue,
       currentIndex: state.currentIndex,
+      positionMs: state.positionMs,
     }));
   } catch { /* storage full or unavailable */ }
 
@@ -108,10 +109,13 @@ function loadPersistedState(): Partial<PlaybackState> {
     const currentIndex: number = queueData.currentIndex ?? -1;
     const currentSong = currentIndex >= 0 && currentIndex < queue.length ? queue[currentIndex] : null;
 
+    const positionMs: number = queueData.positionMs ?? 0;
+
     return {
       queue,
       currentIndex,
       currentSong,
+      positionMs,
       repeatMode: settingsData.repeatMode ?? 'off',
       shuffleEnabled: settingsData.shuffleEnabled ?? false,
       playbackSpeed: settingsData.playbackSpeed ?? 1.0,

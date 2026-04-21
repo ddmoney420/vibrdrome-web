@@ -51,7 +51,6 @@ export async function loadServerQueue(): Promise<void> {
       if (pq.entry && pq.entry.length > 0) {
         const index = pq.currentIndex ?? 0;
         usePlayerStore.getState().playSongs(pq.entry, index);
-        // Don't auto-play — just load the queue
         usePlayerStore.setState({ isPlaying: false });
         if (pq.position) {
           usePlayerStore.getState().setPosition(pq.position);
@@ -89,7 +88,7 @@ async function saveQueueToServer(): Promise<void> {
   if (!useUIStore.getState().queueSyncEnabled) return;
 
   const { queue, currentIndex, positionMs, radioMode } = usePlayerStore.getState();
-  if (radioMode) return; // don't sync radio state
+  if (radioMode) return;
 
   try {
     const client = getSubsonicClient();
@@ -99,7 +98,6 @@ async function saveQueueToServer(): Promise<void> {
     const indexBased = await client.supportsIndexBasedQueue();
 
     if (ids.length === 0) {
-      // Clear server queue
       if (indexBased) {
         await client.savePlayQueueByIndex([], 0, 0);
       } else {

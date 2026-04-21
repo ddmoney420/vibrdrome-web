@@ -13,14 +13,14 @@
     "prepare": "husky"
   },
   "dependencies": {
-    "@tailwindcss/vite": "^4.2.2",
+    "@tailwindcss/vite": "^4.2.4",
     "butterchurn": "^2.6.7",
     "butterchurn-presets": "^2.4.7",
     "idb": "^8.0.3",
     "md5": "^2.3.0",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4",
-    "react-router-dom": "^7.13.2",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "react-router-dom": "^7.14.2",
     "tailwindcss": "^4.2.2",
     "zustand": "^5.0.12"
   },

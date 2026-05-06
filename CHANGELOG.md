@@ -2,7 +2,7 @@
 
 All notable changes to Vibrdrome Web are documented here.
 
-## [Unreleased]
+## [ Unreleased ]
 - Document Picture-in-Picture support (Chrome native PiP window)
 
 ## [1.8.1-beta.2] - 2026-05-05

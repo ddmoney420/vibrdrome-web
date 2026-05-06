@@ -12,6 +12,9 @@ All notable changes to Vibrdrome Web are documented here.
 - Chromecast disconnect (user end-session, network drop, AutoJoin timeout) now resumes playback locally at the same position instead of going silent — Spotify-Connect-style handoff
 - Docker healthcheck failed on IPv6-only `localhost` resolution
 
+### Security
+- Dockerfile now runs `apk upgrade --no-cache` on the nginx:alpine base, picking up CVE-2026-27135 (HIGH, nghttp2-libs DoS) and any future Alpine security patches at build time
+
 ### Changed
 - Replaced dynamic `import('./CastManager')` chains in `pause`/`seek`/`setVolume`/`play` with a top-level static import — rapid slider drags no longer spawn out-of-order Promises
 - `seek()` no longer touches the local audio element while casting (was logically incorrect; silent in practice)

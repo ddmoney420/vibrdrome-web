@@ -12,6 +12,10 @@ LABEL org.opencontainers.image.title="Vibrdrome Web" \
       org.opencontainers.image.source="https://github.com/ddmoney420/vibrdrome-web" \
       org.opencontainers.image.license="MIT"
 
+# Pull in latest Alpine security patches so the image isn't pinned to whatever
+# nginx:alpine shipped with (e.g. CVE-2026-27135 in nghttp2-libs).
+RUN apk upgrade --no-cache
+
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY docker-entrypoint.sh /docker-entrypoint.sh

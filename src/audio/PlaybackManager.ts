@@ -1,6 +1,8 @@
 import { getSubsonicClient } from '../api/SubsonicClient';
 import { usePlayerStore } from '../stores/playerStore';
 import { useEQStore } from '../stores/eqStore';
+import { useUIStore } from '../stores/uiStore';
+import { getCastManager } from './CastManager';
 import type { Song } from '../types/subsonic';
 
 const EQ_FREQUENCIES = [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
@@ -37,6 +39,9 @@ class PlaybackManager {
   private unsubscribeEQ: (() => void) | null = null;
   private preloadedSongId: string | null = null;
   private preloadedIndex: number = -1;
+  // Suppresses the external-pause handler while we pause the audio element
+  // internally (e.g. during play() source swap, crossfade, gapless handoff).
+  private internalPause = false;
 
   constructor() {
     this.playerA = new Audio();
@@ -57,6 +62,15 @@ class PlaybackManager {
     // Handle duration metadata
     this.playerA.addEventListener('loadedmetadata', () => this.handleMetadata('A'));
     this.playerB.addEventListener('loadedmetadata', () => this.handleMetadata('B'));
+
+    // Detect external pauses (OS audio-focus loss, Bluetooth dropout, buffer underrun)
+    // so the UI reflects reality instead of showing "playing" while silent.
+    this.playerA.addEventListener('pause', () => this.handleExternalPause('A'));
+    this.playerB.addEventListener('pause', () => this.handleExternalPause('B'));
+
+    // When the cast session ends (user disconnects, network drops, etc.), resume
+    // playback locally at the same position so the music doesn't just stop.
+    getCastManager().onSessionEnd((lastPositionMs) => this.handleCastSessionEnded(lastPositionMs));
   }
 
   /** Call from a user gesture to ensure AudioContext is running before async work. */
@@ -102,9 +116,8 @@ class PlaybackManager {
     const thisPlayId = ++this.playId;
 
     // If casting, send to Chromecast instead of local playback
-    const uiState = (await import('../stores/uiStore')).useUIStore.getState();
+    const uiState = useUIStore.getState();
     if (uiState.castConnected) {
-      const { getCastManager } = await import('./CastManager');
       const client = getSubsonicClient();
       const quality = uiState.streamQuality;
       const url = client.stream(song.id, quality || undefined);
@@ -122,10 +135,11 @@ class PlaybackManager {
     this.clearPreload();
 
     // Pause current audio before changing src to prevent spurious 'ended' events
+    this.internalPause = true;
     this.getActiveAudio().pause();
+    this.internalPause = false;
 
     const audio = this.getActiveAudio();
-    // Dynamic import to avoid circular dep
     const quality = uiState.streamQuality;
     const url = getSubsonicClient().stream(song.id, quality || undefined);
 
@@ -176,18 +190,18 @@ class PlaybackManager {
   }
 
   pause(): void {
-    import('../stores/uiStore').then(({ useUIStore }) => {
-      if (useUIStore.getState().castConnected) {
-        import('./CastManager').then(({ getCastManager }) => getCastManager().pause());
-      }
-    });
-    this.getActiveAudio().pause();
+    if (useUIStore.getState().castConnected) {
+      getCastManager().pause();
+    } else {
+      this.internalPause = true;
+      this.getActiveAudio().pause();
+      this.internalPause = false;
+    }
     this.stopPositionTracking();
   }
 
   async resume(): Promise<void> {
-    if ((await import('../stores/uiStore')).useUIStore.getState().castConnected) {
-      const { getCastManager } = await import('./CastManager');
+    if (useUIStore.getState().castConnected) {
       getCastManager().play();
       this.startPositionTracking();
       return;
@@ -216,10 +230,12 @@ class PlaybackManager {
     this.stopPositionTracking();
 
     // Stop both song audio elements completely
+    this.internalPause = true;
     this.playerA.pause();
     this.playerA.src = '';
     this.playerB.pause();
     this.playerB.src = '';
+    this.internalPause = false;
 
     // Resolve PLS/M3U
     const resolvedUrl = await this.resolveRadioUrl(streamUrl);
@@ -298,17 +314,18 @@ class PlaybackManager {
   }
 
   seek(timeMs: number): void {
-    import('../stores/uiStore').then(({ useUIStore }) => {
-      if (useUIStore.getState().castConnected) {
-        import('./CastManager').then(({ getCastManager }) => getCastManager().seek(timeMs / 1000));
-      }
-    });
-    const audio = this.getActiveAudio();
-    audio.currentTime = timeMs / 1000;
+    if (useUIStore.getState().castConnected) {
+      getCastManager().seek(timeMs / 1000);
+    } else {
+      this.getActiveAudio().currentTime = timeMs / 1000;
+    }
     usePlayerStore.getState().setPosition(timeMs);
   }
 
   getPosition(): number {
+    if (useUIStore.getState().castConnected) {
+      return getCastManager().getCurrentTime();
+    }
     return this.getActiveAudio().currentTime;
   }
 
@@ -338,11 +355,9 @@ class PlaybackManager {
       this.radioAudio.volume = this.currentVolume;
     }
     // Also update cast volume
-    import('../stores/uiStore').then(({ useUIStore }) => {
-      if (useUIStore.getState().castConnected) {
-        import('./CastManager').then(({ getCastManager }) => getCastManager().setVolume(this.currentVolume));
-      }
-    });
+    if (useUIStore.getState().castConnected) {
+      getCastManager().setVolume(this.currentVolume);
+    }
   }
 
   setPlaybackRate(rate: number): void {
@@ -366,7 +381,7 @@ class PlaybackManager {
     this.cancelSleepTimer();
     this.sleepRemainingMs = minutes * 60 * 1000;
 
-    this.sleepTimerId = window.setInterval(async () => {
+    this.sleepTimerId = window.setInterval(() => {
       this.sleepRemainingMs -= 1000;
 
       if (this.sleepRemainingMs <= 0) {
@@ -379,7 +394,7 @@ class PlaybackManager {
       }
 
       // Fade during last N seconds (configurable, default 10s)
-      const fadeSec = (await import('../stores/uiStore')).useUIStore.getState().sleepFadeDuration ?? 10;
+      const fadeSec = useUIStore.getState().sleepFadeDuration ?? 10;
       if (this.sleepRemainingMs <= fadeSec * 1000) {
         const linear = this.sleepRemainingMs / (fadeSec * 1000);
         const fraction = linear * linear; // exponential curve for natural-sounding fade
@@ -515,11 +530,21 @@ class PlaybackManager {
 
     let lastUpdate = 0;
     const tick = () => {
-      const audio = this.getActiveAudio();
-      if (!audio.paused && !audio.ended) {
-        const now = performance.now();
-        // Only push state updates at ~250ms intervals to avoid excessive re-renders
-        if (now - lastUpdate >= POSITION_UPDATE_MS) {
+      const now = performance.now();
+      const shouldUpdate = now - lastUpdate >= POSITION_UPDATE_MS;
+
+      if (useUIStore.getState().castConnected) {
+        // Local audio is silent during cast — pull position from the cast SDK.
+        // Crossfade/gapless preload don't apply to single-track cast sessions.
+        if (shouldUpdate) {
+          lastUpdate = now;
+          const positionMs = Math.round(getCastManager().getCurrentTime() * 1000);
+          usePlayerStore.getState().setPosition(positionMs);
+          this.checkScrobble();
+        }
+      } else {
+        const audio = this.getActiveAudio();
+        if (!audio.paused && !audio.ended && shouldUpdate) {
           lastUpdate = now;
           const positionMs = Math.round(audio.currentTime * 1000);
           usePlayerStore.getState().setPosition(positionMs);
@@ -528,6 +553,7 @@ class PlaybackManager {
           this.checkGaplessPreload();
         }
       }
+
       this.positionInterval = window.requestAnimationFrame(tick);
     };
     this.positionInterval = window.requestAnimationFrame(tick);
@@ -547,9 +573,16 @@ class PlaybackManager {
     const song = state.currentSong;
     if (!song) return;
 
-    const audio = this.getActiveAudio();
-    const playedSeconds = audio.currentTime;
-    const durationSeconds = audio.duration;
+    let playedSeconds: number;
+    let durationSeconds: number;
+    if (useUIStore.getState().castConnected) {
+      playedSeconds = getCastManager().getCurrentTime();
+      durationSeconds = song.duration ?? NaN;
+    } else {
+      const audio = this.getActiveAudio();
+      playedSeconds = audio.currentTime;
+      durationSeconds = audio.duration;
+    }
 
     if (isNaN(durationSeconds) || durationSeconds <= 0) return;
 
@@ -706,10 +739,10 @@ class PlaybackManager {
     }
   }
 
-  private async applyReplayGain(song: Song): Promise<void> {
+  private applyReplayGain(song: Song): void {
     if (!song.replayGain) return;
 
-    const mode = (await import('../stores/uiStore')).useUIStore.getState().replayGainMode;
+    const mode = useUIStore.getState().replayGainMode;
     if (mode === 'off') return;
 
     const gain = mode === 'album'
@@ -803,6 +836,21 @@ class PlaybackManager {
     const audio = player === 'A' ? this.playerA : this.playerB;
     if (!audio.src || audio.src === window.location.href) return;
 
+    // Guard against premature `ended` from a truncated stream (transcoder
+    // closed early, network blip on a chunked response). Only treat as
+    // premature when we're well below the end on both an absolute and
+    // relative basis — otherwise tracks with slightly-off metadata get stuck.
+    if (
+      !isNaN(audio.duration) && audio.duration > 0 &&
+      audio.duration - audio.currentTime > 5 &&
+      audio.currentTime / audio.duration < 0.95
+    ) {
+      console.warn(`[PlaybackManager] Premature ended at ${audio.currentTime.toFixed(1)}/${audio.duration.toFixed(1)}s — stopping in place instead of auto-skip`);
+      this.stopPositionTracking();
+      usePlayerStore.getState().setPlaying(false);
+      return;
+    }
+
     this.stopPositionTracking();
 
     const state = usePlayerStore.getState();
@@ -828,8 +876,10 @@ class PlaybackManager {
         });
 
         // Stop old player
+        this.internalPause = true;
         this.getActiveAudio().pause();
         this.getActiveAudio().src = '';
+        this.internalPause = false;
 
         // Save index before clearing
         const nextIndex = this.preloadedIndex;
@@ -941,6 +991,82 @@ class PlaybackManager {
     if (!audio.src || audio.src === window.location.href) return;
     console.error(`[PlaybackManager] Audio error on player ${player}`);
     usePlayerStore.getState().setPlaying(false);
+  }
+
+  private handleExternalPause(player: 'A' | 'B'): void {
+    if (player !== this.activePlayer || this.crossfading || this.internalPause) return;
+    const audio = player === 'A' ? this.playerA : this.playerB;
+    // Ignore pauses caused by clearing src or by the natural end-of-track
+    if (!audio.src || audio.src === window.location.href || audio.ended) return;
+    // If the store thinks we're still playing, the pause came from outside
+    // (OS focus loss, Bluetooth dropout, buffer underrun). Reflect it in UI.
+    if (usePlayerStore.getState().isPlaying) {
+      usePlayerStore.getState().setPlaying(false);
+    }
+  }
+
+  private async handleCastSessionEnded(lastPositionMs: number): Promise<void> {
+    // CastManager has already flipped castConnected → false by the time this fires,
+    // so the local-playback path below won't bounce back into the cast branch.
+    const state = usePlayerStore.getState();
+    const song = state.currentSong;
+    if (!song || !state.isPlaying) return;
+
+    const thisPlayId = ++this.playId;
+
+    this.cancelCrossfade();
+    this.clearPreload();
+    this.internalPause = true;
+    this.getActiveAudio().pause();
+    this.internalPause = false;
+
+    const audio = this.getActiveAudio();
+    const quality = useUIStore.getState().streamQuality;
+    const url = getSubsonicClient().stream(song.id, quality || undefined);
+    audio.src = url;
+    audio.load();
+
+    // Seek to the last cast position once metadata is available.
+    audio.addEventListener(
+      'loadedmetadata',
+      () => {
+        if (thisPlayId === this.playId) {
+          audio.currentTime = lastPositionMs / 1000;
+        }
+      },
+      { once: true },
+    );
+
+    this.scrobbled = false;
+
+    try {
+      await audio.play();
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return;
+      console.error('[PlaybackManager] Cast handoff resume error:', err);
+      usePlayerStore.getState().setPlaying(false);
+      return;
+    }
+
+    if (thisPlayId !== this.playId) return;
+
+    if (!this.sourceA) this.ensureAudioChain();
+
+    const activeGain = this.activePlayer === 'A' ? this.gainA : this.gainB;
+    const inactiveGain = this.activePlayer === 'A' ? this.gainB : this.gainA;
+    const now = this.audioContext?.currentTime ?? 0;
+    if (activeGain) {
+      activeGain.gain.cancelScheduledValues(now);
+      activeGain.gain.setTargetAtTime(this.currentVolume, now, 0.02);
+    }
+    if (inactiveGain) {
+      inactiveGain.gain.cancelScheduledValues(now);
+      inactiveGain.gain.setTargetAtTime(0, now, 0.02);
+    }
+
+    this.applyReplayGain(song);
+    this.updateMediaSession(song);
+    this.startPositionTracking();
   }
 
   private handleMetadata(player: 'A' | 'B'): void {

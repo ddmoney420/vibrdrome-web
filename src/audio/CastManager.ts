@@ -21,6 +21,7 @@ declare global {
         };
         RemotePlayerEventType: {
           IS_CONNECTED_CHANGED: string;
+          CURRENT_TIME_CHANGED: string;
         };
         RemotePlayer: new () => RemotePlayer;
         RemotePlayerController: new (player: RemotePlayer) => RemotePlayerController;
@@ -59,6 +60,7 @@ interface MediaSession {
   pause(): void;
   seek(request: { currentTime: number }): void;
   setVolume(request: { volume: { level: number } }): void;
+  getEstimatedTime(): number;
 }
 
 interface MediaInfo {
@@ -77,6 +79,7 @@ interface CastImage {
 
 interface RemotePlayer {
   isConnected: boolean;
+  currentTime: number;
 }
 
 interface RemotePlayerController {
@@ -90,6 +93,10 @@ class CastManager {
   private sdkLoaded = false;
   private sdkFailed = false;
   private loadPromise: Promise<boolean> | null = null;
+  private remotePlayer: RemotePlayer | null = null;
+  private remotePlayerController: RemotePlayerController | null = null;
+  private lastKnownTimeSec = 0;
+  private sessionEndCallback: ((lastPositionMs: number) => void) | null = null;
 
   /**
    * Dynamically load the Google Cast SDK.
@@ -143,6 +150,20 @@ class CastManager {
       autoJoinPolicy: window.chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED,
     });
 
+    // Track currentTime so we can hand the last-known position to PlaybackManager
+    // when a session ends (the MediaSession is gone by then).
+    this.remotePlayer = new window.cast.framework.RemotePlayer();
+    this.remotePlayerController = new window.cast.framework.RemotePlayerController(this.remotePlayer);
+    const RemotePlayerEventType = window.cast.framework.RemotePlayerEventType;
+    this.remotePlayerController.addEventListener(
+      RemotePlayerEventType.CURRENT_TIME_CHANGED,
+      () => {
+        if (this.remotePlayer) {
+          this.lastKnownTimeSec = this.remotePlayer.currentTime;
+        }
+      },
+    );
+
     // Listen for session state changes
     const SessionState = window.cast.framework.SessionState;
     this.castContext.addEventListener('sessionstatechanged', (event) => {
@@ -150,6 +171,11 @@ class CastManager {
         event.sessionState === SessionState.SESSION_STARTED ||
         event.sessionState === SessionState.SESSION_RESUMED;
       useUIStore.getState().setCastConnected(connected);
+
+      if (event.sessionState === SessionState.SESSION_ENDED && this.sessionEndCallback) {
+        const lastMs = Math.round(this.lastKnownTimeSec * 1000);
+        this.sessionEndCallback(lastMs);
+      }
     });
   }
 
@@ -212,6 +238,24 @@ class CastManager {
   setVolume(level: number): void {
     const session = this.castContext?.getCurrentSession();
     session?.getMediaSession()?.setVolume({ volume: { level } });
+  }
+
+  /** Current cast playback position in seconds. Returns 0 when no media session is active. */
+  getCurrentTime(): number {
+    const session = this.castContext?.getCurrentSession();
+    const media = session?.getMediaSession();
+    if (media) {
+      try {
+        const t = media.getEstimatedTime();
+        if (typeof t === 'number' && !isNaN(t)) return t;
+      } catch { /* fall through to last-known */ }
+    }
+    return this.lastKnownTimeSec;
+  }
+
+  /** Register a handler invoked when the cast session ends, with the last observed position in ms. */
+  onSessionEnd(callback: ((lastPositionMs: number) => void) | null): void {
+    this.sessionEndCallback = callback;
   }
 }
 

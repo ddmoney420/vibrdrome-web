@@ -425,7 +425,7 @@ export default function SettingsScreen() {
               About
             </h2>
             <div className="rounded-lg bg-bg-secondary p-4">
-              <p className="text-sm text-text-muted">Vibrdrome Web v1.8.1-beta.1</p>
+              <p className="text-sm text-text-muted">Vibrdrome Web v1.8.1-beta.2</p>
             </div>
           </section>
 

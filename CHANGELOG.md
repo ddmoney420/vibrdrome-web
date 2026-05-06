@@ -5,6 +5,21 @@ All notable changes to Vibrdrome Web are documented here.
 ## [Unreleased]
 - Document Picture-in-Picture support (Chrome native PiP window)
 
+## [1.8.1-beta.2] - 2026-05-05
+
+### Fixed
+- Chromecast progress bar froze at 0:00 — position now reads from the cast MediaSession's `getEstimatedTime()` (with `CURRENT_TIME_CHANGED` fallback) instead of the silent local audio element
+- Chromecast disconnect (user end-session, network drop, AutoJoin timeout) now resumes playback locally at the same position instead of going silent — Spotify-Connect-style handoff
+- Docker healthcheck failed on IPv6-only `localhost` resolution
+
+### Changed
+- Replaced dynamic `import('./CastManager')` chains in `pause`/`seek`/`setVolume`/`play` with a top-level static import — rapid slider drags no longer spawn out-of-order Promises
+- `seek()` no longer touches the local audio element while casting (was logically incorrect; silent in practice)
+- Upgraded dev deps: ESLint 10, TypeScript 6, react-hooks 7.1.1; resolved all lint errors
+
+### Tests
+- Added 11 unit tests covering `CastManager.getCurrentTime` (with fallbacks), `onSessionEnd` callback delivery, and `PlaybackManager` cast-mode routing for `getPosition`/`seek`/`pause`/`setVolume`
+
 ## [1.8.1-beta.1] - 2026-04-21
 
 ### Added

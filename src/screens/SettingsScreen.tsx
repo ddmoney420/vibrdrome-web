@@ -522,8 +522,26 @@ export default function SettingsScreen() {
             <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-text-muted">
               About
             </h2>
-            <div className="rounded-lg bg-bg-secondary p-4">
+            <div className="space-y-3 rounded-lg bg-bg-secondary p-4">
               <p className="text-sm text-text-muted">Vibrdrome Web v1.8.1-beta.2</p>
+              <div className="border-t border-border pt-3">
+                <p className="text-xs font-medium text-text-secondary">Open-source components</p>
+                <p className="mt-1 text-xs text-text-muted">
+                  The Milkdrop visualizer uses{' '}
+                  <a
+                    href="https://github.com/ddmoney420/projectM-rs"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-accent hover:underline"
+                  >
+                    projectM-rs
+                  </a>{' '}
+                  (a projectM / Milkdrop derivative), licensed under LGPL-2.1.
+                  See <span className="font-mono">src/pmweb/NOTICE.md</span> and{' '}
+                  <span className="font-mono">COPYING</span> for the license and
+                  corresponding-source details.
+                </p>
+              </div>
             </div>
           </section>
 

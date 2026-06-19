@@ -5,6 +5,10 @@ import { useUIStore } from '../stores/uiStore';
 import { usePresetStore } from '../stores/presetStore';
 import type { PresetIndexEntry } from '../types/presets';
 
+// projectM preset category that is excluded from normal selection: these are
+// transition effects that fade to black by design, not standalone visuals.
+const TRANSITION_CATEGORY = '! Transition';
+
 // --- Shader Presets ---
 
 const VERTEX_SHADER = `
@@ -479,15 +483,26 @@ export default function VisualizerScreen() {
       pmEngineRef.current = engine;
 
       // Preset library from the preset store (manifest only — shards lazy-load).
+      // Exclude the "! Transition" category from the selectable list: those are
+      // transition effects that fade to black by design, not standalone visuals.
+      // They stay in the bundle/manifest/IndexedDB cache — only filtered out of
+      // normal next/prev/random/startup selection.
+      // TODO: stray black presets *outside* this category aren't caught here.
+      // Async GPU black-frame detection (a non-blocking readback) could skip
+      // those later if it becomes a real problem in practice.
       const store = usePresetStore.getState();
       await store.init();
-      const entries = store.listPresets();
-      if (entries.length === 0) throw new Error('no presets in manifest');
+      const entries = store.listPresets().filter((e) => e.category !== TRANSITION_CATEGORY);
+      if (entries.length === 0) throw new Error('no selectable presets in manifest');
       projectmEntriesRef.current = entries;
       if (!cancelled) setMilkdropPresetNames(entries.map((e) => e.name));
 
-      // Load the first preset (hard cut).
-      const text = await store.getPresetText(entries[0].path);
+      // Start on a RANDOM non-transition preset (index 0 is alphabetical — the
+      // worst case, the "! Transition" black presets). Set the index so the
+      // overlay name + nav stay consistent, then load it (hard cut).
+      const startIdx = Math.floor(Math.random() * entries.length);
+      if (!cancelled) setMilkdropPresetIndex(startIdx);
+      const text = await store.getPresetText(entries[startIdx].path);
       if (cancelled) return;
       if (text) engine.load_preset(text);
       if (!cancelled) setMilkdropReady(true);
@@ -555,8 +570,15 @@ export default function VisualizerScreen() {
   useEffect(() => {
     if (mode !== 'milkdrop' || milkdropEngine !== 'projectm') return;
     const engine = pmEngineRef.current;
-    const entry = projectmEntriesRef.current[milkdropPresetIndex];
-    if (!engine || !entry) return;
+    const entries = projectmEntriesRef.current;
+    if (!engine || entries.length === 0) return;
+    const entry = entries[milkdropPresetIndex];
+    if (!entry) {
+      // Index out of range (e.g. a stale/filtered selection) → jump to a random
+      // valid non-transition preset; this effect re-runs with the new index.
+      setMilkdropPresetIndex(Math.floor(Math.random() * entries.length));
+      return;
+    }
     let cancelled = false;
     usePresetStore
       .getState()

@@ -2,6 +2,12 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getPlaybackManager } from '../audio/PlaybackManager';
 import { useUIStore } from '../stores/uiStore';
+import { usePresetStore } from '../stores/presetStore';
+import type { PresetIndexEntry } from '../types/presets';
+
+// projectM preset category that is excluded from normal selection: these are
+// transition effects that fade to black by design, not standalone visuals.
+const TRANSITION_CATEGORY = '! Transition';
 
 // --- Shader Presets ---
 
@@ -185,12 +191,22 @@ export default function VisualizerScreen() {
   const butterchurnRef = useRef<any>(null);
   const fallbackCtxRef = useRef<AudioContext | null>(null);
 
+  // projectM-rs (WASM/WebGPU) engine — the primary Milkdrop engine when WebGPU
+  // is available. Renders on its own canvas; butterchurn stays the fallback.
+  const projectmCanvasRef = useRef<HTMLCanvasElement>(null);
+  const pmEngineRef = useRef<import('../pmweb/pm_web').PmEngine | null>(null);
+  const pmFrameRef = useRef<number>(0);
+  const projectmEntriesRef = useRef<PresetIndexEntry[]>([]);
+
   const [mode, setMode] = useState<'shader' | 'milkdrop'>('shader');
   const [presetIndex, setPresetIndex] = useState(0);
   const [milkdropPresetIndex, setMilkdropPresetIndex] = useState(0);
   const [milkdropPresetNames, setMilkdropPresetNames] = useState<string[]>([]);
   const [milkdropReady, setMilkdropReady] = useState(false);
   const [showOverlay, setShowOverlay] = useState(true);
+  // Which Milkdrop engine is active: 'projectm' (WebGPU) or 'butterchurn'
+  // (fallback), decided when milkdrop mode activates.
+  const [milkdropEngine, setMilkdropEngine] = useState<'projectm' | 'butterchurn' | null>(null);
 
   const overlayTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -317,9 +333,24 @@ export default function VisualizerScreen() {
     };
   }, [mode, presetIndex]);
 
-  // Initialize Butterchurn when switching to milkdrop mode
+  // Decide the Milkdrop engine when the mode activates: projectM-rs when WebGPU
+  // is available, else butterchurn. A projectM failure flips this to
+  // 'butterchurn' from the projectM effect below.
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- engine choice derives from mode + WebGPU availability */
     if (mode !== 'milkdrop') {
+      setMilkdropEngine(null);
+      return;
+    }
+    const hasWebGPU = typeof navigator !== 'undefined' && 'gpu' in navigator;
+    setMilkdropPresetIndex(0);
+    setMilkdropEngine(hasWebGPU ? 'projectm' : 'butterchurn');
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [mode]);
+
+  // Initialize Butterchurn when it's the chosen Milkdrop engine (fallback).
+  useEffect(() => {
+    if (mode !== 'milkdrop' || milkdropEngine !== 'butterchurn') {
       if (milkdropFrameRef.current) cancelAnimationFrame(milkdropFrameRef.current);
       return;
     }
@@ -426,9 +457,104 @@ export default function VisualizerScreen() {
       setMilkdropReady(false);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode]);
+  }, [mode, milkdropEngine]);
 
-  // Update milkdrop preset when index changes
+  // Initialize projectM-rs (WASM, WebGPU) when it's the chosen Milkdrop engine.
+  useEffect(() => {
+    if (mode !== 'milkdrop' || milkdropEngine !== 'projectm') return;
+    let cancelled = false;
+
+    async function initProjectM() {
+      const canvas = projectmCanvasRef.current;
+      if (!canvas) return;
+
+      // Lazy-load the WASM module only now (code-split chunk + .wasm).
+      const wasm = await import('../pmweb/pm_web.js');
+      if (cancelled) return;
+      await wasm.default();
+      wasm.start();
+
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.floor(canvas.clientWidth * dpr);
+      canvas.height = Math.floor(canvas.clientHeight * dpr);
+
+      const engine = await wasm.PmEngine.create(canvas, canvas.width, canvas.height);
+      if (cancelled) { engine.free(); return; }
+      pmEngineRef.current = engine;
+
+      // Preset library from the preset store (manifest only — shards lazy-load).
+      // Exclude the "! Transition" category from the selectable list: those are
+      // transition effects that fade to black by design, not standalone visuals.
+      // They stay in the bundle/manifest/IndexedDB cache — only filtered out of
+      // normal next/prev/random/startup selection.
+      // TODO: stray black presets *outside* this category aren't caught here.
+      // Async GPU black-frame detection (a non-blocking readback) could skip
+      // those later if it becomes a real problem in practice.
+      const store = usePresetStore.getState();
+      await store.init();
+      const entries = store.listPresets().filter((e) => e.category !== TRANSITION_CATEGORY);
+      if (entries.length === 0) throw new Error('no selectable presets in manifest');
+      projectmEntriesRef.current = entries;
+      if (!cancelled) setMilkdropPresetNames(entries.map((e) => e.name));
+
+      // Start on a RANDOM non-transition preset (index 0 is alphabetical — the
+      // worst case, the "! Transition" black presets). Set the index so the
+      // overlay name + nav stay consistent, then load it (hard cut).
+      const startIdx = Math.floor(Math.random() * entries.length);
+      if (!cancelled) setMilkdropPresetIndex(startIdx);
+      const text = await store.getPresetText(entries[startIdx].path);
+      if (cancelled) return;
+      if (text) engine.load_preset(text);
+      if (!cancelled) setMilkdropReady(true);
+
+      // Render loop — React owns rAF; feed the app's real playback audio.
+      let audioBuf: Float32Array<ArrayBuffer> | null = null;
+      const t0 = performance.now();
+      const loop = (tMs: number) => {
+        if (cancelled) return;
+        const c = projectmCanvasRef.current;
+        if (c) {
+          const w = Math.floor(c.clientWidth * dpr);
+          const h = Math.floor(c.clientHeight * dpr);
+          if (c.width !== w || c.height !== h) {
+            c.width = w;
+            c.height = h;
+            engine.resize(w, h);
+          }
+        }
+        const analyser = getPlaybackManager().getAnalyser();
+        if (analyser) {
+          if (!audioBuf || audioBuf.length !== analyser.fftSize) {
+            audioBuf = new Float32Array(analyser.fftSize);
+          }
+          analyser.getFloatTimeDomainData(audioBuf);
+          engine.push_audio(audioBuf);
+        }
+        engine.render((tMs - t0) / 1000);
+        pmFrameRef.current = requestAnimationFrame(loop);
+      };
+      pmFrameRef.current = requestAnimationFrame(loop);
+    }
+
+    initProjectM().catch((err) => {
+      console.error('[Visualizer] projectM-rs init failed → falling back to butterchurn', err);
+      if (!cancelled) setMilkdropEngine('butterchurn');
+    });
+
+    return () => {
+      cancelled = true;
+      if (pmFrameRef.current) cancelAnimationFrame(pmFrameRef.current);
+      pmFrameRef.current = 0;
+      if (pmEngineRef.current) {
+        try { pmEngineRef.current.free(); } catch { /* ignore */ }
+        pmEngineRef.current = null;
+      }
+      projectmEntriesRef.current = [];
+      setMilkdropReady(false);
+    };
+  }, [mode, milkdropEngine]);
+
+  // Update milkdrop preset when index changes (butterchurn).
   useEffect(() => {
     const bc = butterchurnRef.current;
     if (!bc || mode !== 'milkdrop') return;
@@ -439,6 +565,33 @@ export default function VisualizerScreen() {
       visualizer.loadPreset(presets[name], 1.0); // 1s blend transition
     }
   }, [milkdropPresetIndex, mode]);
+
+  // Hard-cut preset switch for projectM-rs when the index changes.
+  useEffect(() => {
+    if (mode !== 'milkdrop' || milkdropEngine !== 'projectm') return;
+    const engine = pmEngineRef.current;
+    const entries = projectmEntriesRef.current;
+    if (!engine || entries.length === 0) return;
+    const entry = entries[milkdropPresetIndex];
+    if (!entry) {
+      // Index out of range (e.g. a stale/filtered selection) → jump to a random
+      // valid non-transition preset; this effect re-runs with the new index.
+      setMilkdropPresetIndex(Math.floor(Math.random() * entries.length));
+      return;
+    }
+    let cancelled = false;
+    usePresetStore
+      .getState()
+      .getPresetText(entry.path)
+      .then((text) => {
+        if (cancelled || !text) return;
+        engine.load_preset(text); // hard cut
+      })
+      .catch((err) => console.error('[Visualizer] projectM preset load failed', err));
+    return () => {
+      cancelled = true;
+    };
+  }, [milkdropPresetIndex, milkdropEngine, mode]);
 
   // Auto-hide overlay
   useEffect(() => {
@@ -507,10 +660,20 @@ export default function VisualizerScreen() {
         className={`absolute inset-0 h-full w-full ${mode === 'milkdrop' ? 'hidden' : ''}`}
       />
 
-      {/* Milkdrop Canvas (Butterchurn) */}
+      {/* Milkdrop Canvas (Butterchurn — fallback when WebGPU is unavailable) */}
       <canvas
         ref={milkdropCanvasRef}
-        className={`absolute inset-0 h-full w-full ${mode === 'shader' ? 'hidden' : ''}`}
+        className={`absolute inset-0 h-full w-full ${
+          mode === 'shader' || milkdropEngine === 'projectm' ? 'hidden' : ''
+        }`}
+      />
+
+      {/* projectM-rs Canvas (WebGPU — primary Milkdrop engine when available) */}
+      <canvas
+        ref={projectmCanvasRef}
+        className={`absolute inset-0 h-full w-full ${
+          mode === 'milkdrop' && milkdropEngine === 'projectm' ? '' : 'hidden'
+        }`}
       />
 
       {/* Milkdrop loading indicator */}

@@ -15,6 +15,12 @@ export default function SettingsScreen() {
   const { accentColor, setAccentColor, lastfmApiKey, setLastfmApiKey, reduceMotion, setReduceMotion, keyboardShortcutsEnabled, setKeyboardShortcutsEnabled, streamQuality, setStreamQuality } = useUIStore();
   const { crossfadeEnabled, crossfadeDuration, setCrossfade, setCrossfadeDuration, gaplessEnabled, setGapless } = usePlayerStore();
   const { sleepFadeDuration, setSleepFadeDuration, notificationsEnabled, setNotificationsEnabled, replayGainMode, setReplayGainMode, queueSyncEnabled, setQueueSyncEnabled } = useUIStore();
+  const {
+    visualizerForceButterchurn, setVisualizerForceButterchurn,
+    visualizerAutoAdvance, setVisualizerAutoAdvance,
+    visualizerAutoAdvanceInterval, setVisualizerAutoAdvanceInterval,
+    visualizerShuffle, setVisualizerShuffle,
+  } = useUIStore();
   const eqEnabled = useEQStore((s) => s.enabled);
 
   const activeServer = servers.find((s) => s.id === activeServerId);
@@ -267,6 +273,98 @@ export default function SettingsScreen() {
                     <span
                       className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
                         keyboardShortcutsEnabled ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Visualizer */}
+          <section>
+            <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-text-muted">
+              Visualizer
+            </h2>
+            <div className="space-y-3 rounded-lg bg-bg-secondary p-4">
+              {/* Force Butterchurn */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-sm text-text-primary">Force Butterchurn engine</span>
+                  <p className="text-xs text-text-muted">Use the WebGL fallback even when WebGPU (projectM) is available</p>
+                </div>
+                <button
+                  role="switch"
+                  aria-checked={visualizerForceButterchurn}
+                  onClick={() => setVisualizerForceButterchurn(!visualizerForceButterchurn)}
+                  className={`relative h-6 w-11 rounded-full transition-colors ${
+                    visualizerForceButterchurn ? 'bg-accent' : 'bg-bg-tertiary'
+                  }`}
+                >
+                  <span
+                    className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                      visualizerForceButterchurn ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Auto-advance + interval */}
+              <div className="border-t border-border pt-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm text-text-primary">Auto-advance presets</span>
+                    <p className="text-xs text-text-muted">Cycle to the next preset automatically</p>
+                  </div>
+                  <button
+                    role="switch"
+                    aria-checked={visualizerAutoAdvance}
+                    onClick={() => setVisualizerAutoAdvance(!visualizerAutoAdvance)}
+                    className={`relative h-6 w-11 rounded-full transition-colors ${
+                      visualizerAutoAdvance ? 'bg-accent' : 'bg-bg-tertiary'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                        visualizerAutoAdvance ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+                {visualizerAutoAdvance && (
+                  <div className="mt-2 flex items-center gap-3">
+                    <span className="text-xs text-text-muted">Interval:</span>
+                    <select
+                      value={visualizerAutoAdvanceInterval}
+                      onChange={(e) => setVisualizerAutoAdvanceInterval(Number(e.target.value))}
+                      className="rounded border border-border bg-bg-tertiary px-2 py-1 text-xs text-text-primary outline-none"
+                    >
+                      {[5, 10, 15, 20, 30, 60].map((s) => (
+                        <option key={s} value={s}>{s}s</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {/* Shuffle */}
+              <div className="border-t border-border pt-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm text-text-primary">Shuffle presets</span>
+                    <p className="text-xs text-text-muted">Pick a random preset on advance instead of the next one</p>
+                  </div>
+                  <button
+                    role="switch"
+                    aria-checked={visualizerShuffle}
+                    onClick={() => setVisualizerShuffle(!visualizerShuffle)}
+                    className={`relative h-6 w-11 rounded-full transition-colors ${
+                      visualizerShuffle ? 'bg-accent' : 'bg-bg-tertiary'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                        visualizerShuffle ? 'translate-x-5' : 'translate-x-0'
                       }`}
                     />
                   </button>

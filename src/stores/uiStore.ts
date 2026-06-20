@@ -16,6 +16,7 @@ const VIS_AUTO_ADVANCE_KEY = 'vibrdrome_visualizer_auto_advance';
 const VIS_AUTO_ADVANCE_INTERVAL_KEY = 'vibrdrome_visualizer_auto_advance_interval';
 const VIS_SHUFFLE_KEY = 'vibrdrome_visualizer_shuffle';
 const VIS_SHOW_TRANSPORT_KEY = 'vibrdrome_visualizer_show_transport';
+const VIS_TRANSITION_POLISH_KEY = 'vibrdrome_visualizer_transition_polish';
 const DEFAULT_ACCENT = '#8b5cf6';
 
 type Theme = 'system' | 'dark' | 'light' | 'apple' | 'apple-dark' | 'retro' | 'terminal' | 'midnight' | 'sunset';
@@ -68,6 +69,8 @@ interface UIState {
   setVisualizerShuffle: (value: boolean) => void;
   visualizerShowTransport: boolean;
   setVisualizerShowTransport: (value: boolean) => void;
+  visualizerTransitionPolish: boolean;
+  setVisualizerTransitionPolish: (value: boolean) => void;
 
   castConnected: boolean;
   setCastConnected: (connected: boolean) => void;
@@ -230,6 +233,13 @@ export const useUIStore = create<UIState>((set) => ({
   setVisualizerShowTransport: (value) => {
     try { localStorage.setItem(VIS_SHOW_TRANSPORT_KEY, String(value)); } catch { /* ignore */ }
     set({ visualizerShowTransport: value });
+  },
+  // Subtle DOM/CSS vignette dip around the (still hard-cut) preset switch.
+  // Default off; always suppressed under reduced motion. No engine changes.
+  visualizerTransitionPolish: loadBool(VIS_TRANSITION_POLISH_KEY, false),
+  setVisualizerTransitionPolish: (value) => {
+    try { localStorage.setItem(VIS_TRANSITION_POLISH_KEY, String(value)); } catch { /* ignore */ }
+    set({ visualizerTransitionPolish: value });
   },
 
   castConnected: false,

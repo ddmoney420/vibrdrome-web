@@ -5,6 +5,8 @@ import { useUIStore } from '../stores/uiStore';
 import { usePlayerStore } from '../stores/playerStore';
 import { usePresetStore } from '../stores/presetStore';
 import VisualizerTransport from '../components/visualizer/VisualizerTransport';
+import VisualizerHud from '../components/visualizer/VisualizerHud';
+import { useMediaQuery } from '../hooks/useMediaQuery';
 import type { PresetIndexEntry } from '../types/presets';
 
 // projectM preset category that is excluded from normal selection: these are
@@ -217,8 +219,15 @@ export default function VisualizerScreen() {
     visualizerAutoAdvanceInterval, setVisualizerAutoAdvanceInterval,
     visualizerShuffle, setVisualizerShuffle,
     visualizerShowTransport,
+    visualizerTransitionPolish,
+    reduceMotion,
     keyboardShortcutsEnabled,
   } = useUIStore();
+
+  // Motion safety: suppress the transition polish under either the in-app
+  // reduce-motion setting or the OS prefers-reduced-motion media query.
+  const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+  const motionReduced = reduceMotion || prefersReducedMotion;
 
   // Subscribed only to decide whether the in-overlay transport renders (so the
   // bottom control bar / FPS overlay can shift up to make room for it).
@@ -236,6 +245,11 @@ export default function VisualizerScreen() {
   const [milkdropReady, setMilkdropReady] = useState(false);
   const [showOverlay, setShowOverlay] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  // Transient toast showing the preset name when it changes.
+  const [presetToast, setPresetToast] = useState<string | null>(null); // controls visibility
+  const [toastText, setToastText] = useState(''); // retained during the toast's fade-out
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const vignetteRef = useRef<HTMLDivElement>(null);
   // Which Milkdrop engine is active: 'projectm' (WebGPU) or 'butterchurn'
   // (fallback), decided when milkdrop mode activates.
   const [milkdropEngine, setMilkdropEngine] = useState<'projectm' | 'butterchurn' | null>(null);
@@ -809,9 +823,36 @@ export default function VisualizerScreen() {
   const displayPresetName = mode === 'shader'
     ? currentPreset.name
     : (milkdropPresetNames[milkdropPresetIndex] || 'Loading...');
-  const hudInfo = mode === 'milkdrop' && milkdropEngine
-    ? `${milkdropEngine === 'projectm' ? 'projectM' : 'butterchurn'} · ${milkdropPresetIndex + 1}/${totalPresets || '…'}`
-    : null;
+
+  // On preset change: show a brief name toast, and (when enabled and motion is
+  // not reduced) pulse a subtle DOM/CSS vignette over the still-hard-cut switch.
+  // The actual preset switch is unchanged — this is purely cosmetic overlay.
+  const prevPresetNameRef = useRef<string | null>(null);
+  useEffect(() => {
+    const name = displayPresetName;
+    const prev = prevPresetNameRef.current;
+    prevPresetNameRef.current = name;
+    // Skip the initial mount and the transient "Loading..." placeholder.
+    if (prev === null || !name || name === 'Loading...' || name === prev) return;
+
+    setToastText(name);
+    setPresetToast(name);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setPresetToast(null), 1800);
+
+    if (visualizerTransitionPolish && !motionReduced) {
+      const el = vignetteRef.current;
+      if (el && typeof el.animate === 'function') {
+        // A short darken-edges pulse (0 → subtle → 0). No white flash.
+        el.animate(
+          [{ opacity: 0 }, { opacity: 0.55, offset: 0.35 }, { opacity: 0 }],
+          { duration: 260, easing: 'ease-out' },
+        );
+      }
+    }
+  }, [displayPresetName, visualizerTransitionPolish, motionReduced]);
+
+  useEffect(() => () => { if (toastTimerRef.current) clearTimeout(toastTimerRef.current); }, []);
 
   const ctrlBtn = (on: boolean, disabled = false) =>
     `rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
@@ -886,17 +927,16 @@ export default function VisualizerScreen() {
             </svg>
           </button>
 
-          {/* Preset name + HUD info (engine · index/total · status) */}
-          <div className="flex max-w-[55%] flex-col items-center">
-            <span className="truncate text-sm font-medium text-white/80">
-              {displayPresetName}
-            </span>
-            {hudInfo && (
-              <span className="mt-0.5 text-[10px] font-medium tracking-wide text-white/40">
-                {hudInfo}{visualizerAutoAdvance ? ' · AUTO' : ''}{visualizerShuffle ? ' · SHUF' : ''}{frozen ? ' · FROZEN' : ''}
-              </span>
-            )}
-          </div>
+          {/* Preset name + status badges (engine · index/total · auto/shuffle/frozen) */}
+          <VisualizerHud
+            presetName={displayPresetName}
+            engine={mode === 'milkdrop' ? milkdropEngine : null}
+            index={milkdropPresetIndex + 1}
+            total={totalPresets}
+            autoAdvance={visualizerAutoAdvance}
+            shuffle={visualizerShuffle}
+            frozen={frozen}
+          />
 
           {/* Right controls: fullscreen toggle (when supported) + mode toggle */}
           <div className="flex items-center gap-2">
@@ -997,6 +1037,25 @@ export default function VisualizerScreen() {
           {fps} fps · {milkdropEngine === 'projectm' ? 'projectM/WebGPU' : mode === 'milkdrop' ? 'butterchurn/WebGL' : 'shader/WebGL'}
         </div>
       )}
+
+      {/* Transition polish: subtle vignette pulse on preset change (opacity
+          animated via WAAPI only when enabled + motion not reduced). Hard cut
+          underneath is unchanged. */}
+      <div
+        ref={vignetteRef}
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 opacity-0"
+        style={{ background: 'radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.7) 100%)' }}
+      />
+
+      {/* Preset-name toast — brief, independent of the auto-hiding overlay */}
+      <div
+        className={`pointer-events-none absolute top-[22%] left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-4 py-1.5 text-sm font-medium text-white/90 backdrop-blur-sm transition-opacity ${
+          motionReduced ? '' : 'duration-300'
+        } ${presetToast ? 'opacity-100' : 'opacity-0'}`}
+      >
+        {toastText}
+      </div>
     </div>
   );
 }

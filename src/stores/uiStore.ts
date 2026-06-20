@@ -17,6 +17,7 @@ const VIS_AUTO_ADVANCE_INTERVAL_KEY = 'vibrdrome_visualizer_auto_advance_interva
 const VIS_SHUFFLE_KEY = 'vibrdrome_visualizer_shuffle';
 const VIS_SHOW_TRANSPORT_KEY = 'vibrdrome_visualizer_show_transport';
 const VIS_TRANSITION_POLISH_KEY = 'vibrdrome_visualizer_transition_polish';
+const VIS_PARTICLES_KEY = 'vibrdrome_visualizer_particles';
 const DEFAULT_ACCENT = '#8b5cf6';
 
 type Theme = 'system' | 'dark' | 'light' | 'apple' | 'apple-dark' | 'retro' | 'terminal' | 'midnight' | 'sunset';
@@ -71,6 +72,8 @@ interface UIState {
   setVisualizerShowTransport: (value: boolean) => void;
   visualizerTransitionPolish: boolean;
   setVisualizerTransitionPolish: (value: boolean) => void;
+  visualizerParticles: boolean;
+  setVisualizerParticles: (value: boolean) => void;
 
   castConnected: boolean;
   setCastConnected: (connected: boolean) => void;
@@ -240,6 +243,13 @@ export const useUIStore = create<UIState>((set) => ({
   setVisualizerTransitionPolish: (value) => {
     try { localStorage.setItem(VIS_TRANSITION_POLISH_KEY, String(value)); } catch { /* ignore */ }
     set({ visualizerTransitionPolish: value });
+  },
+  // Optional 2D-canvas particle layer. Default off; force-suppressed under
+  // reduced motion by the consumer. No GL/WebGPU context involved.
+  visualizerParticles: loadBool(VIS_PARTICLES_KEY, false),
+  setVisualizerParticles: (value) => {
+    try { localStorage.setItem(VIS_PARTICLES_KEY, String(value)); } catch { /* ignore */ }
+    set({ visualizerParticles: value });
   },
 
   castConnected: false,

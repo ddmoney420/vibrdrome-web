@@ -24,6 +24,7 @@ export default function SettingsScreen() {
     visualizerTransitionPolish, setVisualizerTransitionPolish,
     visualizerParticles, setVisualizerParticles,
     visualizerPinControls, setVisualizerPinControls,
+    visualizerPresetTransition, setVisualizerPresetTransition,
   } = useUIStore();
   const eqEnabled = useEQStore((s) => s.enabled);
 
@@ -393,6 +394,30 @@ export default function SettingsScreen() {
                     <span
                       className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
                         visualizerShowTransport ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              {/* Preset crossfade (projectM/WebGPU) */}
+              <div className="border-t border-border pt-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm text-text-primary">Crossfade preset transitions</span>
+                    <p className="text-xs text-text-muted">Fade the old preset out over the new one (projectM/WebGPU only). Hard-cut otherwise. Suppressed when Reduce Motion is on</p>
+                  </div>
+                  <button
+                    role="switch"
+                    aria-checked={visualizerPresetTransition === 'fade'}
+                    onClick={() => setVisualizerPresetTransition(visualizerPresetTransition === 'fade' ? 'hard-cut' : 'fade')}
+                    className={`relative h-6 w-11 rounded-full transition-colors ${
+                      visualizerPresetTransition === 'fade' ? 'bg-accent' : 'bg-bg-tertiary'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                        visualizerPresetTransition === 'fade' ? 'translate-x-5' : 'translate-x-0'
                       }`}
                     />
                   </button>

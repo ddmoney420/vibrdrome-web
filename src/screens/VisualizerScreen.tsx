@@ -8,6 +8,7 @@ import VisualizerTransport from '../components/visualizer/VisualizerTransport';
 import VisualizerHud from '../components/visualizer/VisualizerHud';
 import ParticleOverlay from '../components/visualizer/ParticleOverlay';
 import { useMediaQuery } from '../hooks/useMediaQuery';
+import { shouldCrossfade, captureSnapshot } from '../utils/presetCrossfade';
 import type { PresetIndexEntry } from '../types/presets';
 
 // projectM preset category that is excluded from normal selection: these are
@@ -223,6 +224,7 @@ export default function VisualizerScreen() {
     visualizerTransitionPolish,
     visualizerParticles,
     visualizerPinControls, setVisualizerPinControls,
+    visualizerPresetTransition,
     reduceMotion,
     keyboardShortcutsEnabled,
   } = useUIStore();
@@ -231,6 +233,59 @@ export default function VisualizerScreen() {
   // reduce-motion setting or the OS prefers-reduced-motion media query.
   const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
   const motionReduced = reduceMotion || prefersReducedMotion;
+
+  // Frozen-frame crossfade (projectM path). Refs keep the preset-load effect from
+  // re-running when the setting/motion changes (toggling must not reload presets).
+  const fadeImgRef = useRef<HTMLImageElement>(null);
+  const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pmFadeArmedRef = useRef(false); // a projectM preset has rendered → safe to capture
+  const transitionRef = useRef(visualizerPresetTransition);
+  const motionReducedRef = useRef(motionReduced);
+  useEffect(() => { transitionRef.current = visualizerPresetTransition; }, [visualizerPresetTransition]);
+  useEffect(() => { motionReducedRef.current = motionReduced; }, [motionReduced]);
+
+  // Show the captured old frame (a JPEG data URL), then fade it out over the new
+  // live preset. Pure DOM on a ref'd <img> — no React state churn during the
+  // fade, and data URLs need no revoking. A monotonic token guards against rapid
+  // switches superseding an in-flight fade.
+  const fadeTokenRef = useRef(0);
+  const runSnapshotFade = useCallback((url: string, hardCut: () => void) => {
+    const img = fadeImgRef.current;
+    if (!img) { hardCut(); return; }
+    const token = ++fadeTokenRef.current;
+    if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current);
+    img.style.transition = 'none';
+    img.style.opacity = '1';
+    img.style.display = 'block';
+    img.src = url;
+
+    const begin = () => {
+      if (fadeTokenRef.current !== token || !fadeImgRef.current) { hardCut(); return; }
+      // The still is decoded and covering the canvas at full opacity → hard-cut
+      // the new preset underneath it, then fade the still out to reveal it.
+      hardCut();
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        if (fadeTokenRef.current !== token || !fadeImgRef.current) return;
+        fadeImgRef.current.style.transition = 'opacity 1400ms ease-out';
+        fadeImgRef.current.style.opacity = '0';
+      }));
+      fadeTimerRef.current = setTimeout(() => {
+        if (fadeTokenRef.current !== token) return;
+        if (fadeImgRef.current) { fadeImgRef.current.style.display = 'none'; fadeImgRef.current.removeAttribute('src'); }
+      }, 1500);
+    };
+
+    // Decode the still BEFORE hard-cutting. A large JPEG data URL decodes
+    // asynchronously; showing it pre-decode would leave the new preset visible
+    // underneath and read as a hard cut. decode() guarantees it actually paints.
+    if (typeof img.decode === 'function') img.decode().then(begin).catch(begin);
+    else { img.onload = begin; }
+  }, []);
+
+  // Clean up any in-flight fade timer on unmount.
+  useEffect(() => () => {
+    if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current);
+  }, []);
 
   // Subscribed only to decide whether the in-overlay transport renders (so the
   // bottom control bar / FPS overlay can shift up to make room for it).
@@ -610,6 +665,7 @@ export default function VisualizerScreen() {
       const engine = await wasm.PmEngine.create(canvas, canvas.width, canvas.height);
       if (cancelled) { engine.free(); return; }
       pmEngineRef.current = engine;
+      pmFadeArmedRef.current = false; // fresh engine: don't fade from a blank first frame
 
       // Preset library from the preset store (manifest only — shards lazy-load).
       // Exclude the "! Transition" category from the selectable list: those are
@@ -736,13 +792,33 @@ export default function VisualizerScreen() {
       .getPresetText(entry.path)
       .then((text) => {
         if (cancelled || !text) return;
-        engine.load_preset(text); // hard cut
+        const canvas = projectmCanvasRef.current;
+        const fade = shouldCrossfade({
+          transition: transitionRef.current,
+          motionReduced: motionReducedRef.current,
+          armed: pmFadeArmedRef.current,
+          hasCanvas: !!canvas,
+        });
+        // First load of a projectM session has no prior frame to fade from.
+        pmFadeArmedRef.current = true;
+        const hardCut = () => { if (!cancelled) engine.load_preset(text); };
+        if (fade && canvas) {
+          // Capture the OLD frame (synchronous). The fade decodes the still, then
+          // hard-cuts the new preset underneath it and fades the still out. Any
+          // capture failure → silent hard-cut.
+          captureSnapshot(canvas, (url) => {
+            if (url) runSnapshotFade(url, hardCut);
+            else hardCut();
+          });
+        } else {
+          hardCut();
+        }
       })
       .catch((err) => console.error('[Visualizer] projectM preset load failed', err));
     return () => {
       cancelled = true;
     };
-  }, [milkdropPresetIndex, milkdropEngine, mode]);
+  }, [milkdropPresetIndex, milkdropEngine, mode, runSnapshotFade]);
 
   // Auto-hide overlay
   useEffect(() => {
@@ -924,6 +1000,16 @@ export default function VisualizerScreen() {
         className={`absolute inset-0 h-full w-full ${
           mode === 'milkdrop' && milkdropEngine === 'projectm' ? '' : 'hidden'
         }`}
+      />
+
+      {/* Frozen-frame crossfade still — sits above the projectM canvas, briefly
+          shown then faded out on a preset change (driven imperatively via ref). */}
+      <img
+        ref={fadeImgRef}
+        alt=""
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+        style={{ display: 'none', opacity: 0 }}
       />
 
       {/* Milkdrop loading indicator */}

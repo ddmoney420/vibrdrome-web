@@ -21,6 +21,7 @@ export default function SettingsScreen() {
     visualizerAutoAdvanceInterval, setVisualizerAutoAdvanceInterval,
     visualizerShuffle, setVisualizerShuffle,
     visualizerShowTransport, setVisualizerShowTransport,
+    visualizerTransitionPolish, setVisualizerTransitionPolish,
   } = useUIStore();
   const eqEnabled = useEQStore((s) => s.enabled);
 
@@ -390,6 +391,30 @@ export default function SettingsScreen() {
                     <span
                       className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
                         visualizerShowTransport ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              {/* Transition polish */}
+              <div className="border-t border-border pt-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm text-text-primary">Transition polish</span>
+                    <p className="text-xs text-text-muted">Subtle vignette dip when a preset changes (still a hard cut). Suppressed when Reduce Motion is on</p>
+                  </div>
+                  <button
+                    role="switch"
+                    aria-checked={visualizerTransitionPolish}
+                    onClick={() => setVisualizerTransitionPolish(!visualizerTransitionPolish)}
+                    className={`relative h-6 w-11 rounded-full transition-colors ${
+                      visualizerTransitionPolish ? 'bg-accent' : 'bg-bg-tertiary'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                        visualizerTransitionPolish ? 'translate-x-5' : 'translate-x-0'
                       }`}
                     />
                   </button>

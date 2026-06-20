@@ -23,6 +23,7 @@ export default function SettingsScreen() {
     visualizerShowTransport, setVisualizerShowTransport,
     visualizerTransitionPolish, setVisualizerTransitionPolish,
     visualizerParticles, setVisualizerParticles,
+    visualizerPinControls, setVisualizerPinControls,
   } = useUIStore();
   const eqEnabled = useEQStore((s) => s.enabled);
 
@@ -440,6 +441,30 @@ export default function SettingsScreen() {
                     <span
                       className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
                         visualizerParticles ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              {/* Keep player controls on screen */}
+              <div className="border-t border-border pt-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm text-text-primary">Keep player controls on screen</span>
+                    <p className="text-xs text-text-muted">Pin the in-visualizer playback controls instead of letting them auto-hide</p>
+                  </div>
+                  <button
+                    role="switch"
+                    aria-checked={visualizerPinControls}
+                    onClick={() => setVisualizerPinControls(!visualizerPinControls)}
+                    className={`relative h-6 w-11 rounded-full transition-colors ${
+                      visualizerPinControls ? 'bg-accent' : 'bg-bg-tertiary'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                        visualizerPinControls ? 'translate-x-5' : 'translate-x-0'
                       }`}
                     />
                   </button>

@@ -20,6 +20,7 @@ export default function SettingsScreen() {
     visualizerAutoAdvance, setVisualizerAutoAdvance,
     visualizerAutoAdvanceInterval, setVisualizerAutoAdvanceInterval,
     visualizerShuffle, setVisualizerShuffle,
+    visualizerShowTransport, setVisualizerShowTransport,
   } = useUIStore();
   const eqEnabled = useEQStore((s) => s.enabled);
 
@@ -365,6 +366,30 @@ export default function SettingsScreen() {
                     <span
                       className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
                         visualizerShuffle ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              {/* Show playback controls */}
+              <div className="border-t border-border pt-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm text-text-primary">Show playback controls</span>
+                    <p className="text-xs text-text-muted">Show now-playing transport (play, skip, seek) in the visualizer overlay</p>
+                  </div>
+                  <button
+                    role="switch"
+                    aria-checked={visualizerShowTransport}
+                    onClick={() => setVisualizerShowTransport(!visualizerShowTransport)}
+                    className={`relative h-6 w-11 rounded-full transition-colors ${
+                      visualizerShowTransport ? 'bg-accent' : 'bg-bg-tertiary'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                        visualizerShowTransport ? 'translate-x-5' : 'translate-x-0'
                       }`}
                     />
                   </button>

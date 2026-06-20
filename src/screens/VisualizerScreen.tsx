@@ -2,7 +2,9 @@ import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getPlaybackManager } from '../audio/PlaybackManager';
 import { useUIStore } from '../stores/uiStore';
+import { usePlayerStore } from '../stores/playerStore';
 import { usePresetStore } from '../stores/presetStore';
+import VisualizerTransport from '../components/visualizer/VisualizerTransport';
 import type { PresetIndexEntry } from '../types/presets';
 
 // projectM preset category that is excluded from normal selection: these are
@@ -214,8 +216,15 @@ export default function VisualizerScreen() {
     visualizerAutoAdvance, setVisualizerAutoAdvance,
     visualizerAutoAdvanceInterval, setVisualizerAutoAdvanceInterval,
     visualizerShuffle, setVisualizerShuffle,
+    visualizerShowTransport,
     keyboardShortcutsEnabled,
   } = useUIStore();
+
+  // Subscribed only to decide whether the in-overlay transport renders (so the
+  // bottom control bar / FPS overlay can shift up to make room for it).
+  const transportSong = usePlayerStore((s) => s.currentSong);
+  const transportRadio = usePlayerStore((s) => s.radioMode);
+  const transportVisible = visualizerShowTransport && (!!transportSong || !!transportRadio);
 
   const [mode, setMode] = useState<'shader' | 'milkdrop'>('shader');
   const [frozen, setFrozen] = useState(false);
@@ -957,9 +966,9 @@ export default function VisualizerScreen() {
           </>
         )}
 
-        {/* Milkdrop control bar */}
+        {/* Milkdrop control bar — shifts up when the transport occupies the bottom */}
         {mode === 'milkdrop' && milkdropReady && (
-          <div className="pointer-events-auto absolute bottom-6 left-1/2 flex -translate-x-1/2 flex-wrap items-center justify-center gap-2 rounded-full bg-black/60 px-3 py-2">
+          <div className={`pointer-events-auto absolute left-1/2 flex -translate-x-1/2 flex-wrap items-center justify-center gap-2 rounded-full bg-black/60 px-3 py-2 ${transportVisible ? 'bottom-28' : 'bottom-6'}`}>
             <button onClick={(e) => { e.stopPropagation(); toggleFreeze(); }} title="Freeze / unfreeze (K)" className={ctrlBtn(frozen)}>
               {frozen ? '▶ Resume' : '⏸ Freeze'}
             </button>
@@ -977,11 +986,14 @@ export default function VisualizerScreen() {
             </button>
           </div>
         )}
+
+        {/* In-visualizer playback transport (opt-in; self-hides with no song) */}
+        {visualizerShowTransport && <VisualizerTransport onInteract={resetOverlayTimer} />}
       </div>
 
       {/* FPS overlay — persists regardless of the auto-hiding controls */}
       {showFps && (
-        <div className="pointer-events-none absolute bottom-2 left-2 rounded bg-black/60 px-2 py-1 font-mono text-xs text-green-400">
+        <div className={`pointer-events-none absolute left-2 rounded bg-black/60 px-2 py-1 font-mono text-xs text-green-400 ${transportVisible ? 'bottom-24' : 'bottom-2'}`}>
           {fps} fps · {milkdropEngine === 'projectm' ? 'projectM/WebGPU' : mode === 'milkdrop' ? 'butterchurn/WebGL' : 'shader/WebGL'}
         </div>
       )}

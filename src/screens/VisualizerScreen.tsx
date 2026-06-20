@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getPlaybackManager } from '../audio/PlaybackManager';
 import { useUIStore } from '../stores/uiStore';
@@ -180,6 +180,7 @@ export default function VisualizerScreen() {
   const navigate = useNavigate();
   const { epilepsyWarningDismissed, setEpilepsyWarningDismissed } = useUIStore();
   const [showWarning, setShowWarning] = useState(!epilepsyWarningDismissed);
+  const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const milkdropCanvasRef = useRef<HTMLCanvasElement>(null);
   const glRef = useRef<WebGLRenderingContext | null>(null);
@@ -225,6 +226,7 @@ export default function VisualizerScreen() {
   const [milkdropPresetNames, setMilkdropPresetNames] = useState<string[]>([]);
   const [milkdropReady, setMilkdropReady] = useState(false);
   const [showOverlay, setShowOverlay] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   // Which Milkdrop engine is active: 'projectm' (WebGPU) or 'butterchurn'
   // (fallback), decided when milkdrop mode activates.
   const [milkdropEngine, setMilkdropEngine] = useState<'projectm' | 'butterchurn' | null>(null);
@@ -238,6 +240,53 @@ export default function VisualizerScreen() {
     if (overlayTimeoutRef.current) clearTimeout(overlayTimeoutRef.current);
     overlayTimeoutRef.current = setTimeout(() => setShowOverlay(false), 4000);
   }, []);
+
+  // Fullscreen support is feature-detected once. iOS Safari (iPhone) only allows
+  // fullscreen on <video>, not arbitrary elements, so neither flag is set there
+  // and the toggle button is hidden entirely. Older WebKit uses the webkit prefix.
+  const fullscreenSupported = useMemo(() => {
+    if (typeof document === 'undefined') return false;
+    const doc = document as Document & { webkitFullscreenEnabled?: boolean };
+    return !!(doc.fullscreenEnabled || doc.webkitFullscreenEnabled);
+  }, []);
+
+  // Toggle fullscreen on the visualizer root container. Click-only (no shortcut),
+  // never auto-entered. requestFullscreen needs the click's user gesture; we
+  // swallow any rejection so it can never surface as a console error.
+  const toggleFullscreen = useCallback(() => {
+    const el = containerRef.current as
+      | (HTMLDivElement & { webkitRequestFullscreen?: () => void | Promise<void> })
+      | null;
+    if (!el) return;
+    const doc = document as Document & {
+      webkitFullscreenElement?: Element | null;
+      webkitExitFullscreen?: () => void | Promise<void>;
+    };
+    const active = document.fullscreenElement || doc.webkitFullscreenElement;
+    const run = active
+      ? (document.exitFullscreen ?? doc.webkitExitFullscreen)?.call(document)
+      : (el.requestFullscreen ?? el.webkitRequestFullscreen)?.call(el);
+    if (run && typeof (run as Promise<void>).catch === 'function') {
+      (run as Promise<void>).catch(() => { /* user gesture / unsupported — ignore */ });
+    }
+    resetOverlayTimer();
+  }, [resetOverlayTimer]);
+
+  // Keep the button state in sync with the actual fullscreen state, including
+  // when the user exits via ESC or the browser chrome.
+  useEffect(() => {
+    if (!fullscreenSupported) return;
+    const onChange = () => {
+      const doc = document as Document & { webkitFullscreenElement?: Element | null };
+      setIsFullscreen(!!(document.fullscreenElement || doc.webkitFullscreenElement));
+    };
+    document.addEventListener('fullscreenchange', onChange);
+    document.addEventListener('webkitfullscreenchange', onChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', onChange);
+      document.removeEventListener('webkitfullscreenchange', onChange);
+    };
+  }, [fullscreenSupported]);
 
   // Keep loop-read refs in sync with state.
   useEffect(() => { frozenRef.current = frozen; }, [frozen]);
@@ -762,6 +811,7 @@ export default function VisualizerScreen() {
 
   return (
     <div
+      ref={containerRef}
       className="relative h-screen w-screen bg-black"
       onClick={handleCanvasClick}
       onDoubleClick={handleCanvasDoubleClick}
@@ -839,17 +889,42 @@ export default function VisualizerScreen() {
             )}
           </div>
 
-          {/* Mode toggle */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setMode((m) => (m === 'shader' ? 'milkdrop' : 'shader'));
-              resetOverlayTimer();
-            }}
-            className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-white/80 transition-colors hover:bg-white/20"
-          >
-            {mode === 'shader' ? 'Milkdrop' : 'Shader'}
-          </button>
+          {/* Right controls: fullscreen toggle (when supported) + mode toggle */}
+          <div className="flex items-center gap-2">
+            {fullscreenSupported && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleFullscreen();
+                }}
+                className="flex h-10 w-10 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+                aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+                title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+              >
+                {isFullscreen ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 9V4.5M9 9H4.5M9 9 3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5 5.25 5.25" />
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
+                  </svg>
+                )}
+              </button>
+            )}
+
+            {/* Mode toggle */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setMode((m) => (m === 'shader' ? 'milkdrop' : 'shader'));
+                resetOverlayTimer();
+              }}
+              className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-white/80 transition-colors hover:bg-white/20"
+            >
+              {mode === 'shader' ? 'Milkdrop' : 'Shader'}
+            </button>
+          </div>
         </div>
 
         {/* Arrow navigation */}

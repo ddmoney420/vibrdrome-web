@@ -15,6 +15,9 @@ const VIS_FORCE_BUTTERCHURN_KEY = 'vibrdrome_visualizer_force_butterchurn';
 const VIS_AUTO_ADVANCE_KEY = 'vibrdrome_visualizer_auto_advance';
 const VIS_AUTO_ADVANCE_INTERVAL_KEY = 'vibrdrome_visualizer_auto_advance_interval';
 const VIS_SHUFFLE_KEY = 'vibrdrome_visualizer_shuffle';
+const VIS_SHOW_TRANSPORT_KEY = 'vibrdrome_visualizer_show_transport';
+const VIS_TRANSITION_POLISH_KEY = 'vibrdrome_visualizer_transition_polish';
+const VIS_PARTICLES_KEY = 'vibrdrome_visualizer_particles';
 const DEFAULT_ACCENT = '#8b5cf6';
 
 type Theme = 'system' | 'dark' | 'light' | 'apple' | 'apple-dark' | 'retro' | 'terminal' | 'midnight' | 'sunset';
@@ -65,6 +68,12 @@ interface UIState {
   setVisualizerAutoAdvanceInterval: (seconds: number) => void;
   visualizerShuffle: boolean;
   setVisualizerShuffle: (value: boolean) => void;
+  visualizerShowTransport: boolean;
+  setVisualizerShowTransport: (value: boolean) => void;
+  visualizerTransitionPolish: boolean;
+  setVisualizerTransitionPolish: (value: boolean) => void;
+  visualizerParticles: boolean;
+  setVisualizerParticles: (value: boolean) => void;
 
   castConnected: boolean;
   setCastConnected: (connected: boolean) => void;
@@ -220,6 +229,27 @@ export const useUIStore = create<UIState>((set) => ({
   setVisualizerShuffle: (value) => {
     try { localStorage.setItem(VIS_SHUFFLE_KEY, String(value)); } catch { /* ignore */ }
     set({ visualizerShuffle: value });
+  },
+  // Conservative default: off. The transport self-hides with no song, so this
+  // keeps existing behavior (and the smoke test) unchanged until opted in.
+  visualizerShowTransport: loadBool(VIS_SHOW_TRANSPORT_KEY, false),
+  setVisualizerShowTransport: (value) => {
+    try { localStorage.setItem(VIS_SHOW_TRANSPORT_KEY, String(value)); } catch { /* ignore */ }
+    set({ visualizerShowTransport: value });
+  },
+  // Subtle DOM/CSS vignette dip around the (still hard-cut) preset switch.
+  // Default off; always suppressed under reduced motion. No engine changes.
+  visualizerTransitionPolish: loadBool(VIS_TRANSITION_POLISH_KEY, false),
+  setVisualizerTransitionPolish: (value) => {
+    try { localStorage.setItem(VIS_TRANSITION_POLISH_KEY, String(value)); } catch { /* ignore */ }
+    set({ visualizerTransitionPolish: value });
+  },
+  // Optional 2D-canvas particle layer. Default off; force-suppressed under
+  // reduced motion by the consumer. No GL/WebGPU context involved.
+  visualizerParticles: loadBool(VIS_PARTICLES_KEY, false),
+  setVisualizerParticles: (value) => {
+    try { localStorage.setItem(VIS_PARTICLES_KEY, String(value)); } catch { /* ignore */ }
+    set({ visualizerParticles: value });
   },
 
   castConnected: false,

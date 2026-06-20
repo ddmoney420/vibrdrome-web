@@ -1,8 +1,13 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getPlaybackManager } from '../audio/PlaybackManager';
 import { useUIStore } from '../stores/uiStore';
+import { usePlayerStore } from '../stores/playerStore';
 import { usePresetStore } from '../stores/presetStore';
+import VisualizerTransport from '../components/visualizer/VisualizerTransport';
+import VisualizerHud from '../components/visualizer/VisualizerHud';
+import ParticleOverlay from '../components/visualizer/ParticleOverlay';
+import { useMediaQuery } from '../hooks/useMediaQuery';
 import type { PresetIndexEntry } from '../types/presets';
 
 // projectM preset category that is excluded from normal selection: these are
@@ -180,6 +185,7 @@ export default function VisualizerScreen() {
   const navigate = useNavigate();
   const { epilepsyWarningDismissed, setEpilepsyWarningDismissed } = useUIStore();
   const [showWarning, setShowWarning] = useState(!epilepsyWarningDismissed);
+  const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const milkdropCanvasRef = useRef<HTMLCanvasElement>(null);
   const glRef = useRef<WebGLRenderingContext | null>(null);
@@ -213,8 +219,23 @@ export default function VisualizerScreen() {
     visualizerAutoAdvance, setVisualizerAutoAdvance,
     visualizerAutoAdvanceInterval, setVisualizerAutoAdvanceInterval,
     visualizerShuffle, setVisualizerShuffle,
+    visualizerShowTransport,
+    visualizerTransitionPolish,
+    visualizerParticles,
+    reduceMotion,
     keyboardShortcutsEnabled,
   } = useUIStore();
+
+  // Motion safety: suppress the transition polish under either the in-app
+  // reduce-motion setting or the OS prefers-reduced-motion media query.
+  const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+  const motionReduced = reduceMotion || prefersReducedMotion;
+
+  // Subscribed only to decide whether the in-overlay transport renders (so the
+  // bottom control bar / FPS overlay can shift up to make room for it).
+  const transportSong = usePlayerStore((s) => s.currentSong);
+  const transportRadio = usePlayerStore((s) => s.radioMode);
+  const transportVisible = visualizerShowTransport && (!!transportSong || !!transportRadio);
 
   const [mode, setMode] = useState<'shader' | 'milkdrop'>('shader');
   const [frozen, setFrozen] = useState(false);
@@ -225,6 +246,12 @@ export default function VisualizerScreen() {
   const [milkdropPresetNames, setMilkdropPresetNames] = useState<string[]>([]);
   const [milkdropReady, setMilkdropReady] = useState(false);
   const [showOverlay, setShowOverlay] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  // Transient toast showing the preset name when it changes.
+  const [presetToast, setPresetToast] = useState<string | null>(null); // controls visibility
+  const [toastText, setToastText] = useState(''); // retained during the toast's fade-out
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const vignetteRef = useRef<HTMLDivElement>(null);
   // Which Milkdrop engine is active: 'projectm' (WebGPU) or 'butterchurn'
   // (fallback), decided when milkdrop mode activates.
   const [milkdropEngine, setMilkdropEngine] = useState<'projectm' | 'butterchurn' | null>(null);
@@ -238,6 +265,53 @@ export default function VisualizerScreen() {
     if (overlayTimeoutRef.current) clearTimeout(overlayTimeoutRef.current);
     overlayTimeoutRef.current = setTimeout(() => setShowOverlay(false), 4000);
   }, []);
+
+  // Fullscreen support is feature-detected once. iOS Safari (iPhone) only allows
+  // fullscreen on <video>, not arbitrary elements, so neither flag is set there
+  // and the toggle button is hidden entirely. Older WebKit uses the webkit prefix.
+  const fullscreenSupported = useMemo(() => {
+    if (typeof document === 'undefined') return false;
+    const doc = document as Document & { webkitFullscreenEnabled?: boolean };
+    return !!(doc.fullscreenEnabled || doc.webkitFullscreenEnabled);
+  }, []);
+
+  // Toggle fullscreen on the visualizer root container. Click-only (no shortcut),
+  // never auto-entered. requestFullscreen needs the click's user gesture; we
+  // swallow any rejection so it can never surface as a console error.
+  const toggleFullscreen = useCallback(() => {
+    const el = containerRef.current as
+      | (HTMLDivElement & { webkitRequestFullscreen?: () => void | Promise<void> })
+      | null;
+    if (!el) return;
+    const doc = document as Document & {
+      webkitFullscreenElement?: Element | null;
+      webkitExitFullscreen?: () => void | Promise<void>;
+    };
+    const active = document.fullscreenElement || doc.webkitFullscreenElement;
+    const run = active
+      ? (document.exitFullscreen ?? doc.webkitExitFullscreen)?.call(document)
+      : (el.requestFullscreen ?? el.webkitRequestFullscreen)?.call(el);
+    if (run && typeof (run as Promise<void>).catch === 'function') {
+      (run as Promise<void>).catch(() => { /* user gesture / unsupported — ignore */ });
+    }
+    resetOverlayTimer();
+  }, [resetOverlayTimer]);
+
+  // Keep the button state in sync with the actual fullscreen state, including
+  // when the user exits via ESC or the browser chrome.
+  useEffect(() => {
+    if (!fullscreenSupported) return;
+    const onChange = () => {
+      const doc = document as Document & { webkitFullscreenElement?: Element | null };
+      setIsFullscreen(!!(document.fullscreenElement || doc.webkitFullscreenElement));
+    };
+    document.addEventListener('fullscreenchange', onChange);
+    document.addEventListener('webkitfullscreenchange', onChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', onChange);
+      document.removeEventListener('webkitfullscreenchange', onChange);
+    };
+  }, [fullscreenSupported]);
 
   // Keep loop-read refs in sync with state.
   useEffect(() => { frozenRef.current = frozen; }, [frozen]);
@@ -751,9 +825,36 @@ export default function VisualizerScreen() {
   const displayPresetName = mode === 'shader'
     ? currentPreset.name
     : (milkdropPresetNames[milkdropPresetIndex] || 'Loading...');
-  const hudInfo = mode === 'milkdrop' && milkdropEngine
-    ? `${milkdropEngine === 'projectm' ? 'projectM' : 'butterchurn'} · ${milkdropPresetIndex + 1}/${totalPresets || '…'}`
-    : null;
+
+  // On preset change: show a brief name toast, and (when enabled and motion is
+  // not reduced) pulse a subtle DOM/CSS vignette over the still-hard-cut switch.
+  // The actual preset switch is unchanged — this is purely cosmetic overlay.
+  const prevPresetNameRef = useRef<string | null>(null);
+  useEffect(() => {
+    const name = displayPresetName;
+    const prev = prevPresetNameRef.current;
+    prevPresetNameRef.current = name;
+    // Skip the initial mount and the transient "Loading..." placeholder.
+    if (prev === null || !name || name === 'Loading...' || name === prev) return;
+
+    setToastText(name);
+    setPresetToast(name);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setPresetToast(null), 1800);
+
+    if (visualizerTransitionPolish && !motionReduced) {
+      const el = vignetteRef.current;
+      if (el && typeof el.animate === 'function') {
+        // A short darken-edges pulse (0 → subtle → 0). No white flash.
+        el.animate(
+          [{ opacity: 0 }, { opacity: 0.55, offset: 0.35 }, { opacity: 0 }],
+          { duration: 260, easing: 'ease-out' },
+        );
+      }
+    }
+  }, [displayPresetName, visualizerTransitionPolish, motionReduced]);
+
+  useEffect(() => () => { if (toastTimerRef.current) clearTimeout(toastTimerRef.current); }, []);
 
   const ctrlBtn = (on: boolean, disabled = false) =>
     `rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
@@ -762,6 +863,7 @@ export default function VisualizerScreen() {
 
   return (
     <div
+      ref={containerRef}
       className="relative h-screen w-screen bg-black"
       onClick={handleCanvasClick}
       onDoubleClick={handleCanvasDoubleClick}
@@ -805,6 +907,10 @@ export default function VisualizerScreen() {
         </div>
       )}
 
+      {/* Optional particle layer — above the engine canvases, below the
+          controls/HUD. Opt-in and force-suppressed under reduced motion. */}
+      {visualizerParticles && !motionReduced && <ParticleOverlay />}
+
       {/* Overlay */}
       <div
         className={`pointer-events-none absolute inset-0 transition-opacity duration-500 ${
@@ -827,29 +933,53 @@ export default function VisualizerScreen() {
             </svg>
           </button>
 
-          {/* Preset name + HUD info (engine · index/total · status) */}
-          <div className="flex max-w-[55%] flex-col items-center">
-            <span className="truncate text-sm font-medium text-white/80">
-              {displayPresetName}
-            </span>
-            {hudInfo && (
-              <span className="mt-0.5 text-[10px] font-medium tracking-wide text-white/40">
-                {hudInfo}{visualizerAutoAdvance ? ' · AUTO' : ''}{visualizerShuffle ? ' · SHUF' : ''}{frozen ? ' · FROZEN' : ''}
-              </span>
-            )}
-          </div>
+          {/* Preset name + status badges (engine · index/total · auto/shuffle/frozen) */}
+          <VisualizerHud
+            presetName={displayPresetName}
+            engine={mode === 'milkdrop' ? milkdropEngine : null}
+            index={milkdropPresetIndex + 1}
+            total={totalPresets}
+            autoAdvance={visualizerAutoAdvance}
+            shuffle={visualizerShuffle}
+            frozen={frozen}
+          />
 
-          {/* Mode toggle */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setMode((m) => (m === 'shader' ? 'milkdrop' : 'shader'));
-              resetOverlayTimer();
-            }}
-            className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-white/80 transition-colors hover:bg-white/20"
-          >
-            {mode === 'shader' ? 'Milkdrop' : 'Shader'}
-          </button>
+          {/* Right controls: fullscreen toggle (when supported) + mode toggle */}
+          <div className="flex items-center gap-2">
+            {fullscreenSupported && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleFullscreen();
+                }}
+                className="flex h-10 w-10 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+                aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+                title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+              >
+                {isFullscreen ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 9V4.5M9 9H4.5M9 9 3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5 5.25 5.25" />
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
+                  </svg>
+                )}
+              </button>
+            )}
+
+            {/* Mode toggle */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setMode((m) => (m === 'shader' ? 'milkdrop' : 'shader'));
+                resetOverlayTimer();
+              }}
+              className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-white/80 transition-colors hover:bg-white/20"
+            >
+              {mode === 'shader' ? 'Milkdrop' : 'Shader'}
+            </button>
+          </div>
         </div>
 
         {/* Arrow navigation */}
@@ -882,9 +1012,9 @@ export default function VisualizerScreen() {
           </>
         )}
 
-        {/* Milkdrop control bar */}
+        {/* Milkdrop control bar — shifts up when the transport occupies the bottom */}
         {mode === 'milkdrop' && milkdropReady && (
-          <div className="pointer-events-auto absolute bottom-6 left-1/2 flex -translate-x-1/2 flex-wrap items-center justify-center gap-2 rounded-full bg-black/60 px-3 py-2">
+          <div className={`pointer-events-auto absolute left-1/2 flex -translate-x-1/2 flex-wrap items-center justify-center gap-2 rounded-full bg-black/60 px-3 py-2 ${transportVisible ? 'bottom-28' : 'bottom-6'}`}>
             <button onClick={(e) => { e.stopPropagation(); toggleFreeze(); }} title="Freeze / unfreeze (K)" className={ctrlBtn(frozen)}>
               {frozen ? '▶ Resume' : '⏸ Freeze'}
             </button>
@@ -902,14 +1032,36 @@ export default function VisualizerScreen() {
             </button>
           </div>
         )}
+
+        {/* In-visualizer playback transport (opt-in; self-hides with no song) */}
+        {visualizerShowTransport && <VisualizerTransport onInteract={resetOverlayTimer} />}
       </div>
 
       {/* FPS overlay — persists regardless of the auto-hiding controls */}
       {showFps && (
-        <div className="pointer-events-none absolute bottom-2 left-2 rounded bg-black/60 px-2 py-1 font-mono text-xs text-green-400">
+        <div className={`pointer-events-none absolute left-2 rounded bg-black/60 px-2 py-1 font-mono text-xs text-green-400 ${transportVisible ? 'bottom-24' : 'bottom-2'}`}>
           {fps} fps · {milkdropEngine === 'projectm' ? 'projectM/WebGPU' : mode === 'milkdrop' ? 'butterchurn/WebGL' : 'shader/WebGL'}
         </div>
       )}
+
+      {/* Transition polish: subtle vignette pulse on preset change (opacity
+          animated via WAAPI only when enabled + motion not reduced). Hard cut
+          underneath is unchanged. */}
+      <div
+        ref={vignetteRef}
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 opacity-0"
+        style={{ background: 'radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.7) 100%)' }}
+      />
+
+      {/* Preset-name toast — brief, independent of the auto-hiding overlay */}
+      <div
+        className={`pointer-events-none absolute top-[22%] left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-4 py-1.5 text-sm font-medium text-white/90 backdrop-blur-sm transition-opacity ${
+          motionReduced ? '' : 'duration-300'
+        } ${presetToast ? 'opacity-100' : 'opacity-0'}`}
+      >
+        {toastText}
+      </div>
     </div>
   );
 }

@@ -2,6 +2,19 @@
 
 All notable changes to Vibrdrome Web are documented here.
 
+## [1.9.0-beta.3] - 2026-06-20
+
+### Added
+- Fullscreen toggle in the visualizer overlay — feature-detected, with WebKit fallbacks; hidden where the Fullscreen API is unsupported (e.g. iOS Safari).
+- Optional in-visualizer playback controls (now-playing transport: cover art, title/artist, play/pause, previous/next, seek, and desktop volume/mute), reusing the existing playback APIs and components. Default OFF.
+- Visualizer HUD polish: clearer preset name plus engine/position/auto/shuffle/frozen status badges, and a brief preset-name toast when the preset changes.
+- Optional, reduced-motion-safe transition vignette polish: a subtle DOM/CSS vignette dip around the (still hard-cut) preset switch. Default OFF.
+- Optional 2D-canvas particle overlay: a subtle audio-reactive particle layer with particle-count and device-pixel-ratio caps plus low-FPS throttling. Default OFF.
+
+### Notes
+- Particles and transition polish are opt-in and reduced-motion aware: both are suppressed when Reduce Motion or `prefers-reduced-motion: reduce` is active.
+- No projectM engine / WASM behavior changed; preset switching remains a hard cut. No real crossfade or screenshot/readback transition work is included.
+
 ## [1.9.0-beta.2] - 2026-06-20
 
 ### Fixed

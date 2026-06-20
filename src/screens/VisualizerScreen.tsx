@@ -222,6 +222,7 @@ export default function VisualizerScreen() {
     visualizerShowTransport,
     visualizerTransitionPolish,
     visualizerParticles,
+    visualizerPinControls, setVisualizerPinControls,
     reduceMotion,
     keyboardShortcutsEnabled,
   } = useUIStore();
@@ -252,6 +253,9 @@ export default function VisualizerScreen() {
   const [toastText, setToastText] = useState(''); // retained during the toast's fade-out
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const vignetteRef = useRef<HTMLDivElement>(null);
+  // Set just before an auto-advance preset change so the toast + overlay stay
+  // silent for that change (the optional vignette still plays).
+  const suppressNextToastRef = useRef(false);
   // Which Milkdrop engine is active: 'projectm' (WebGPU) or 'butterchurn'
   // (fallback), decided when milkdrop mode activates.
   const [milkdropEngine, setMilkdropEngine] = useState<'projectm' | 'butterchurn' | null>(null);
@@ -773,14 +777,30 @@ export default function VisualizerScreen() {
     resetOverlayTimer();
   };
 
+  // Silent preset change driven by the auto-advance timer: changes the preset
+  // without waking the overlay or showing the toast (the vignette still plays).
+  // Uses the functional updater so it never reads a stale index from the interval.
+  const autoAdvance = () => {
+    suppressNextToastRef.current = true;
+    if (visualizerShuffle) {
+      setActiveIndex((i) => {
+        if (totalPresets <= 1) return i;
+        let next: number;
+        do {
+          next = Math.floor(Math.random() * totalPresets);
+        } while (next === i);
+        return next;
+      });
+    } else {
+      setActiveIndex((i) => (i + 1) % totalPresets);
+    }
+  };
+
   // Auto-advance: cycle presets on the configured interval while in Milkdrop.
   useEffect(() => {
     if (mode !== 'milkdrop' || !milkdropReady || !visualizerAutoAdvance) return;
     const ms = Math.max(1, visualizerAutoAdvanceInterval) * 1000;
-    const id = setInterval(() => {
-      if (visualizerShuffle) randomPreset();
-      else nextPreset();
-    }, ms);
+    const id = setInterval(autoAdvance, ms);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, milkdropReady, visualizerAutoAdvance, visualizerAutoAdvanceInterval, visualizerShuffle]);
@@ -837,10 +857,16 @@ export default function VisualizerScreen() {
     // Skip the initial mount and the transient "Loading..." placeholder.
     if (prev === null || !name || name === 'Loading...' || name === prev) return;
 
-    setToastText(name);
-    setPresetToast(name);
-    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    toastTimerRef.current = setTimeout(() => setPresetToast(null), 1800);
+    // Auto-advance changes are silent: no toast (and the timer never woke the
+    // overlay). The vignette below still plays for smooth slideshow transitions.
+    const silent = suppressNextToastRef.current;
+    suppressNextToastRef.current = false;
+    if (!silent) {
+      setToastText(name);
+      setPresetToast(name);
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = setTimeout(() => setPresetToast(null), 1800);
+    }
 
     if (visualizerTransitionPolish && !motionReduced) {
       const el = vignetteRef.current;
@@ -1030,12 +1056,27 @@ export default function VisualizerScreen() {
             <button onClick={(e) => { e.stopPropagation(); toggleFps(); }} title="FPS overlay (F)" className={ctrlBtn(showFps)}>
               FPS
             </button>
+            {visualizerShowTransport && (
+              <button onClick={(e) => { e.stopPropagation(); setVisualizerPinControls(!visualizerPinControls); resetOverlayTimer(); }} title="Keep player controls on screen" className={ctrlBtn(visualizerPinControls)}>
+                📌 Pin
+              </button>
+            )}
           </div>
         )}
-
-        {/* In-visualizer playback transport (opt-in; self-hides with no song) */}
-        {visualizerShowTransport && <VisualizerTransport onInteract={resetOverlayTimer} />}
       </div>
+
+      {/* In-visualizer playback transport (opt-in; self-hides with no song).
+          Lives outside the auto-hiding overlay so the Pin toggle can keep just
+          the player controls on screen while the rest of the HUD still fades. */}
+      {visualizerShowTransport && (
+        <div
+          className={`transition-opacity duration-500 ${
+            showOverlay || visualizerPinControls ? 'opacity-100' : 'pointer-events-none opacity-0'
+          }`}
+        >
+          <VisualizerTransport onInteract={resetOverlayTimer} />
+        </div>
+      )}
 
       {/* FPS overlay — persists regardless of the auto-hiding controls */}
       {showFps && (

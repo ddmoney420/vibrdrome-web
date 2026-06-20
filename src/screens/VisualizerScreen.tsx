@@ -6,6 +6,7 @@ import { usePlayerStore } from '../stores/playerStore';
 import { usePresetStore } from '../stores/presetStore';
 import VisualizerTransport from '../components/visualizer/VisualizerTransport';
 import VisualizerHud from '../components/visualizer/VisualizerHud';
+import ParticleOverlay from '../components/visualizer/ParticleOverlay';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import type { PresetIndexEntry } from '../types/presets';
 
@@ -220,6 +221,7 @@ export default function VisualizerScreen() {
     visualizerShuffle, setVisualizerShuffle,
     visualizerShowTransport,
     visualizerTransitionPolish,
+    visualizerParticles,
     reduceMotion,
     keyboardShortcutsEnabled,
   } = useUIStore();
@@ -904,6 +906,10 @@ export default function VisualizerScreen() {
           <p className="text-lg text-white/60">Loading Milkdrop...</p>
         </div>
       )}
+
+      {/* Optional particle layer — above the engine canvases, below the
+          controls/HUD. Opt-in and force-suppressed under reduced motion. */}
+      {visualizerParticles && !motionReduced && <ParticleOverlay />}
 
       {/* Overlay */}
       <div

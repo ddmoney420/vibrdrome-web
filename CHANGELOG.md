@@ -2,6 +2,20 @@
 
 All notable changes to Vibrdrome Web are documented here.
 
+## [1.9.0-beta.2] - 2026-06-20
+
+### Fixed
+- Production black-screen on load: Vite 8.0.10 chunked `zustand`'s `create` into the entry chunk, creating a circular entry ↔ `uiStore` dependency — `uiStore` evaluated before `create` was initialized (`TypeError: create is not a function`), so React never mounted and `#root` stayed empty. (Regression in 1.9.0-beta.1.)
+
+### Changed
+- Pinned Vite to 8.0.9 (the chunk output that keeps `create` in a vendor chunk) pending an upstream-safe upgrade path.
+
+### Added
+- Production-preview smoke test (`npm run test:smoke`): builds the app, serves the minified bundle via `vite preview`, loads it in headless Chromium, and fails on console errors or an empty `#root`. Wired into the required CI build job so production-bundle-only crashes are caught before release.
+
+### Notes
+- No projectM visualizer behavior changed; this release is the 1.9.0-beta.1 feature set plus the production-bundle fix and smoke guard.
+
 ## [1.9.0-beta.1] - 2026-06-19
 
 ### Added

@@ -2,6 +2,20 @@
 
 All notable changes to Vibrdrome Web are documented here.
 
+## [1.9.0-beta.4] - 2026-06-20
+
+### Added
+- Optional projectM/WebGPU **frozen-frame preset crossfade** — fades the old preset out over the new one. Default off (hard-cut), with a Settings → Visualizer toggle; falls back silently to a hard cut on capture failure and is suppressed under Reduce Motion / `prefers-reduced-motion`.
+- **Pin visualizer player controls** — keep the in-visualizer playback controls on screen instead of auto-hiding (Settings + a control-bar toggle).
+
+### Changed
+- **Quiet auto-advance** — when auto-advance changes the visualizer preset, it no longer wakes the overlay or shows the preset-name toast (the optional transition vignette still plays).
+- Production dependency refresh (React, React DOM, React Router, Zustand, Tailwind Vite plugin, `@types/react`); **Vite intentionally remains pinned to `8.0.9`** and no other dependency policy changed.
+
+### Notes
+- Beta tags now publish as **GitHub prereleases** — effective once this reaches `master` (the first prerelease-flagged tag is `v1.9.0-beta.4`).
+- No projectM engine / WASM behavior changed; preset switching remains a hard cut by default.
+
 ## [1.9.0-beta.3] - 2026-06-20
 
 ### Added

@@ -18,6 +18,8 @@ const VIS_SHUFFLE_KEY = 'vibrdrome_visualizer_shuffle';
 const VIS_SHOW_TRANSPORT_KEY = 'vibrdrome_visualizer_show_transport';
 const VIS_TRANSITION_POLISH_KEY = 'vibrdrome_visualizer_transition_polish';
 const VIS_PARTICLES_KEY = 'vibrdrome_visualizer_particles';
+const VIS_PIN_CONTROLS_KEY = 'vibrdrome_visualizer_pin_controls';
+const VIS_PRESET_TRANSITION_KEY = 'vibrdrome_visualizer_preset_transition';
 const DEFAULT_ACCENT = '#8b5cf6';
 
 type Theme = 'system' | 'dark' | 'light' | 'apple' | 'apple-dark' | 'retro' | 'terminal' | 'midnight' | 'sunset';
@@ -74,6 +76,10 @@ interface UIState {
   setVisualizerTransitionPolish: (value: boolean) => void;
   visualizerParticles: boolean;
   setVisualizerParticles: (value: boolean) => void;
+  visualizerPinControls: boolean;
+  setVisualizerPinControls: (value: boolean) => void;
+  visualizerPresetTransition: 'hard-cut' | 'fade';
+  setVisualizerPresetTransition: (value: 'hard-cut' | 'fade') => void;
 
   castConnected: boolean;
   setCastConnected: (connected: boolean) => void;
@@ -250,6 +256,23 @@ export const useUIStore = create<UIState>((set) => ({
   setVisualizerParticles: (value) => {
     try { localStorage.setItem(VIS_PARTICLES_KEY, String(value)); } catch { /* ignore */ }
     set({ visualizerParticles: value });
+  },
+  // Keep the in-visualizer player controls (transport) on screen instead of
+  // auto-hiding with the rest of the overlay. Default off.
+  visualizerPinControls: loadBool(VIS_PIN_CONTROLS_KEY, false),
+  setVisualizerPinControls: (value) => {
+    try { localStorage.setItem(VIS_PIN_CONTROLS_KEY, String(value)); } catch { /* ignore */ }
+    set({ visualizerPinControls: value });
+  },
+  // Preset-change transition on the projectM/WebGPU path: 'hard-cut' (default)
+  // or 'fade' (frozen-frame crossfade). Always suppressed under reduced motion.
+  visualizerPresetTransition: (() => {
+    try { return localStorage.getItem(VIS_PRESET_TRANSITION_KEY) === 'fade' ? 'fade' : 'hard-cut'; }
+    catch { return 'hard-cut'; }
+  })(),
+  setVisualizerPresetTransition: (value) => {
+    try { localStorage.setItem(VIS_PRESET_TRANSITION_KEY, value); } catch { /* ignore */ }
+    set({ visualizerPresetTransition: value });
   },
 
   castConnected: false,

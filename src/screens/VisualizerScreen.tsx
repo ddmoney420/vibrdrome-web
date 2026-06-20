@@ -8,6 +8,7 @@ import VisualizerTransport from '../components/visualizer/VisualizerTransport';
 import VisualizerHud from '../components/visualizer/VisualizerHud';
 import ParticleOverlay from '../components/visualizer/ParticleOverlay';
 import { useMediaQuery } from '../hooks/useMediaQuery';
+import { shouldCrossfade, captureSnapshot } from '../utils/presetCrossfade';
 import type { PresetIndexEntry } from '../types/presets';
 
 // projectM preset category that is excluded from normal selection: these are
@@ -222,6 +223,8 @@ export default function VisualizerScreen() {
     visualizerShowTransport,
     visualizerTransitionPolish,
     visualizerParticles,
+    visualizerPinControls, setVisualizerPinControls,
+    visualizerPresetTransition,
     reduceMotion,
     keyboardShortcutsEnabled,
   } = useUIStore();
@@ -230,6 +233,59 @@ export default function VisualizerScreen() {
   // reduce-motion setting or the OS prefers-reduced-motion media query.
   const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
   const motionReduced = reduceMotion || prefersReducedMotion;
+
+  // Frozen-frame crossfade (projectM path). Refs keep the preset-load effect from
+  // re-running when the setting/motion changes (toggling must not reload presets).
+  const fadeImgRef = useRef<HTMLImageElement>(null);
+  const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pmFadeArmedRef = useRef(false); // a projectM preset has rendered → safe to capture
+  const transitionRef = useRef(visualizerPresetTransition);
+  const motionReducedRef = useRef(motionReduced);
+  useEffect(() => { transitionRef.current = visualizerPresetTransition; }, [visualizerPresetTransition]);
+  useEffect(() => { motionReducedRef.current = motionReduced; }, [motionReduced]);
+
+  // Show the captured old frame (a JPEG data URL), then fade it out over the new
+  // live preset. Pure DOM on a ref'd <img> — no React state churn during the
+  // fade, and data URLs need no revoking. A monotonic token guards against rapid
+  // switches superseding an in-flight fade.
+  const fadeTokenRef = useRef(0);
+  const runSnapshotFade = useCallback((url: string, hardCut: () => void) => {
+    const img = fadeImgRef.current;
+    if (!img) { hardCut(); return; }
+    const token = ++fadeTokenRef.current;
+    if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current);
+    img.style.transition = 'none';
+    img.style.opacity = '1';
+    img.style.display = 'block';
+    img.src = url;
+
+    const begin = () => {
+      if (fadeTokenRef.current !== token || !fadeImgRef.current) { hardCut(); return; }
+      // The still is decoded and covering the canvas at full opacity → hard-cut
+      // the new preset underneath it, then fade the still out to reveal it.
+      hardCut();
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        if (fadeTokenRef.current !== token || !fadeImgRef.current) return;
+        fadeImgRef.current.style.transition = 'opacity 1400ms ease-out';
+        fadeImgRef.current.style.opacity = '0';
+      }));
+      fadeTimerRef.current = setTimeout(() => {
+        if (fadeTokenRef.current !== token) return;
+        if (fadeImgRef.current) { fadeImgRef.current.style.display = 'none'; fadeImgRef.current.removeAttribute('src'); }
+      }, 1500);
+    };
+
+    // Decode the still BEFORE hard-cutting. A large JPEG data URL decodes
+    // asynchronously; showing it pre-decode would leave the new preset visible
+    // underneath and read as a hard cut. decode() guarantees it actually paints.
+    if (typeof img.decode === 'function') img.decode().then(begin).catch(begin);
+    else { img.onload = begin; }
+  }, []);
+
+  // Clean up any in-flight fade timer on unmount.
+  useEffect(() => () => {
+    if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current);
+  }, []);
 
   // Subscribed only to decide whether the in-overlay transport renders (so the
   // bottom control bar / FPS overlay can shift up to make room for it).
@@ -252,6 +308,9 @@ export default function VisualizerScreen() {
   const [toastText, setToastText] = useState(''); // retained during the toast's fade-out
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const vignetteRef = useRef<HTMLDivElement>(null);
+  // Set just before an auto-advance preset change so the toast + overlay stay
+  // silent for that change (the optional vignette still plays).
+  const suppressNextToastRef = useRef(false);
   // Which Milkdrop engine is active: 'projectm' (WebGPU) or 'butterchurn'
   // (fallback), decided when milkdrop mode activates.
   const [milkdropEngine, setMilkdropEngine] = useState<'projectm' | 'butterchurn' | null>(null);
@@ -606,6 +665,7 @@ export default function VisualizerScreen() {
       const engine = await wasm.PmEngine.create(canvas, canvas.width, canvas.height);
       if (cancelled) { engine.free(); return; }
       pmEngineRef.current = engine;
+      pmFadeArmedRef.current = false; // fresh engine: don't fade from a blank first frame
 
       // Preset library from the preset store (manifest only — shards lazy-load).
       // Exclude the "! Transition" category from the selectable list: those are
@@ -732,13 +792,33 @@ export default function VisualizerScreen() {
       .getPresetText(entry.path)
       .then((text) => {
         if (cancelled || !text) return;
-        engine.load_preset(text); // hard cut
+        const canvas = projectmCanvasRef.current;
+        const fade = shouldCrossfade({
+          transition: transitionRef.current,
+          motionReduced: motionReducedRef.current,
+          armed: pmFadeArmedRef.current,
+          hasCanvas: !!canvas,
+        });
+        // First load of a projectM session has no prior frame to fade from.
+        pmFadeArmedRef.current = true;
+        const hardCut = () => { if (!cancelled) engine.load_preset(text); };
+        if (fade && canvas) {
+          // Capture the OLD frame (synchronous). The fade decodes the still, then
+          // hard-cuts the new preset underneath it and fades the still out. Any
+          // capture failure → silent hard-cut.
+          captureSnapshot(canvas, (url) => {
+            if (url) runSnapshotFade(url, hardCut);
+            else hardCut();
+          });
+        } else {
+          hardCut();
+        }
       })
       .catch((err) => console.error('[Visualizer] projectM preset load failed', err));
     return () => {
       cancelled = true;
     };
-  }, [milkdropPresetIndex, milkdropEngine, mode]);
+  }, [milkdropPresetIndex, milkdropEngine, mode, runSnapshotFade]);
 
   // Auto-hide overlay
   useEffect(() => {
@@ -773,14 +853,30 @@ export default function VisualizerScreen() {
     resetOverlayTimer();
   };
 
+  // Silent preset change driven by the auto-advance timer: changes the preset
+  // without waking the overlay or showing the toast (the vignette still plays).
+  // Uses the functional updater so it never reads a stale index from the interval.
+  const autoAdvance = () => {
+    suppressNextToastRef.current = true;
+    if (visualizerShuffle) {
+      setActiveIndex((i) => {
+        if (totalPresets <= 1) return i;
+        let next: number;
+        do {
+          next = Math.floor(Math.random() * totalPresets);
+        } while (next === i);
+        return next;
+      });
+    } else {
+      setActiveIndex((i) => (i + 1) % totalPresets);
+    }
+  };
+
   // Auto-advance: cycle presets on the configured interval while in Milkdrop.
   useEffect(() => {
     if (mode !== 'milkdrop' || !milkdropReady || !visualizerAutoAdvance) return;
     const ms = Math.max(1, visualizerAutoAdvanceInterval) * 1000;
-    const id = setInterval(() => {
-      if (visualizerShuffle) randomPreset();
-      else nextPreset();
-    }, ms);
+    const id = setInterval(autoAdvance, ms);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, milkdropReady, visualizerAutoAdvance, visualizerAutoAdvanceInterval, visualizerShuffle]);
@@ -837,10 +933,16 @@ export default function VisualizerScreen() {
     // Skip the initial mount and the transient "Loading..." placeholder.
     if (prev === null || !name || name === 'Loading...' || name === prev) return;
 
-    setToastText(name);
-    setPresetToast(name);
-    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    toastTimerRef.current = setTimeout(() => setPresetToast(null), 1800);
+    // Auto-advance changes are silent: no toast (and the timer never woke the
+    // overlay). The vignette below still plays for smooth slideshow transitions.
+    const silent = suppressNextToastRef.current;
+    suppressNextToastRef.current = false;
+    if (!silent) {
+      setToastText(name);
+      setPresetToast(name);
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = setTimeout(() => setPresetToast(null), 1800);
+    }
 
     if (visualizerTransitionPolish && !motionReduced) {
       const el = vignetteRef.current;
@@ -898,6 +1000,16 @@ export default function VisualizerScreen() {
         className={`absolute inset-0 h-full w-full ${
           mode === 'milkdrop' && milkdropEngine === 'projectm' ? '' : 'hidden'
         }`}
+      />
+
+      {/* Frozen-frame crossfade still — sits above the projectM canvas, briefly
+          shown then faded out on a preset change (driven imperatively via ref). */}
+      <img
+        ref={fadeImgRef}
+        alt=""
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+        style={{ display: 'none', opacity: 0 }}
       />
 
       {/* Milkdrop loading indicator */}
@@ -1030,12 +1142,27 @@ export default function VisualizerScreen() {
             <button onClick={(e) => { e.stopPropagation(); toggleFps(); }} title="FPS overlay (F)" className={ctrlBtn(showFps)}>
               FPS
             </button>
+            {visualizerShowTransport && (
+              <button onClick={(e) => { e.stopPropagation(); setVisualizerPinControls(!visualizerPinControls); resetOverlayTimer(); }} title="Keep player controls on screen" className={ctrlBtn(visualizerPinControls)}>
+                📌 Pin
+              </button>
+            )}
           </div>
         )}
-
-        {/* In-visualizer playback transport (opt-in; self-hides with no song) */}
-        {visualizerShowTransport && <VisualizerTransport onInteract={resetOverlayTimer} />}
       </div>
+
+      {/* In-visualizer playback transport (opt-in; self-hides with no song).
+          Lives outside the auto-hiding overlay so the Pin toggle can keep just
+          the player controls on screen while the rest of the HUD still fades. */}
+      {visualizerShowTransport && (
+        <div
+          className={`transition-opacity duration-500 ${
+            showOverlay || visualizerPinControls ? 'opacity-100' : 'pointer-events-none opacity-0'
+          }`}
+        >
+          <VisualizerTransport onInteract={resetOverlayTimer} />
+        </div>
+      )}
 
       {/* FPS overlay — persists regardless of the auto-hiding controls */}
       {showFps && (

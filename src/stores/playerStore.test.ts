@@ -1,6 +1,17 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { usePlayerStore } from './playerStore';
 import type { Song } from '../types/subsonic';
+
+// playerStore actions (playSongs → stopRadio, seek) fire-and-forget a dynamic
+// `import('../audio/PlaybackManager')`. In tests that import can resolve AFTER
+// Vitest has torn the environment down, surfacing as an intermittent
+// `EnvironmentTeardownError` while loading PlaybackManager → SubsonicClient.
+// Mock the module here — file-local, so PlaybackManager.test.ts still exercises
+// the real implementation — so the dynamic import resolves to a no-op and never
+// loads the real module chain after teardown. Test-only; no runtime change.
+vi.mock('../audio/PlaybackManager', () => ({
+  getPlaybackManager: () => ({ seek: () => {}, stopRadio: () => {} }),
+}));
 
 // Reset store between tests
 beforeEach(() => {

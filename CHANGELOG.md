@@ -2,8 +2,34 @@
 
 All notable changes to Vibrdrome Web are documented here.
 
-## [ Unreleased ]
-- Document Picture-in-Picture support (Chrome native PiP window)
+## [1.9.0-beta.2] - 2026-06-20
+
+### Fixed
+- Production black-screen on load: Vite 8.0.10 chunked `zustand`'s `create` into the entry chunk, creating a circular entry ↔ `uiStore` dependency — `uiStore` evaluated before `create` was initialized (`TypeError: create is not a function`), so React never mounted and `#root` stayed empty. (Regression in 1.9.0-beta.1.)
+
+### Changed
+- Pinned Vite to 8.0.9 (the chunk output that keeps `create` in a vendor chunk) pending an upstream-safe upgrade path.
+
+### Added
+- Production-preview smoke test (`npm run test:smoke`): builds the app, serves the minified bundle via `vite preview`, loads it in headless Chromium, and fails on console errors or an empty `#root`. Wired into the required CI build job so production-bundle-only crashes are caught before release.
+
+### Notes
+- No projectM visualizer behavior changed; this release is the 1.9.0-beta.1 feature set plus the production-bundle fix and smoke guard.
+
+## [1.9.0-beta.1] - 2026-06-19
+
+### Added
+- **projectM Milkdrop visualizer** — a WebGPU-based Milkdrop engine using projectM-rs compiled to WebAssembly. projectM is used as the primary Milkdrop visualizer when WebGPU is available, with butterchurn retained as the WebGL fallback.
+- Official projectM preset corpus bundled with 10,347 presets as gzipped shards, cached in IndexedDB with lazy per-category loading.
+- Visualizer controls for auto-advance with interval, shuffle, freeze, single-step, FPS overlay, info HUD, and keyboard shortcuts.
+- Settings → Visualizer options for force-butterchurn engine, auto-advance, auto-advance interval, and shuffle.
+- Documented Picture-in-Picture support.
+
+### Changed
+- The Milkdrop visualizer now reacts to live playback audio through the PlaybackManager analyser.
+
+### Licensing
+- Added LGPL-2.1 license text, source availability notice, and app-visible attribution for the vendored projectM-rs visualizer engine.
 
 ## [1.8.1-beta.2] - 2026-05-05
 

@@ -33,18 +33,6 @@ const SHORTCUT_GROUPS = [
       { key: 'Ctrl + K', description: 'Command palette' },
     ],
   },
-  {
-    label: 'Visualizer',
-    shortcuts: [
-      { key: 'N', description: 'Next preset' },
-      { key: 'P', description: 'Previous preset' },
-      { key: 'A', description: 'Toggle auto-advance' },
-      { key: '[ / ]', description: 'Auto-advance interval − / +' },
-      { key: 'K', description: 'Freeze / unfreeze' },
-      { key: '.', description: 'Step one frame (while frozen)' },
-      { key: 'F', description: 'Toggle FPS overlay' },
-    ],
-  },
 ];
 
 interface ShortcutsOverlayProps {

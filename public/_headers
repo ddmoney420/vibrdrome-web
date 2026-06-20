@@ -6,8 +6,3 @@
 
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
-
-# projectM preset bundles: immutable, and served raw (.ndjson.gz is
-# decompressed in JS via DecompressionStream — do NOT add Content-Encoding).
-/presets/*
-  Cache-Control: public, max-age=31536000, immutable

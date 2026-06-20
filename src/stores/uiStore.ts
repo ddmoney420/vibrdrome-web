@@ -11,10 +11,6 @@ const NOTIFICATIONS_KEY = 'vibrdrome_notifications';
 const SLEEP_FADE_KEY = 'vibrdrome_sleep_fade_duration';
 const REPLAYGAIN_MODE_KEY = 'vibrdrome_replaygain_mode';
 const QUEUE_SYNC_KEY = 'vibrdrome_queue_sync';
-const VIS_FORCE_BUTTERCHURN_KEY = 'vibrdrome_visualizer_force_butterchurn';
-const VIS_AUTO_ADVANCE_KEY = 'vibrdrome_visualizer_auto_advance';
-const VIS_AUTO_ADVANCE_INTERVAL_KEY = 'vibrdrome_visualizer_auto_advance_interval';
-const VIS_SHUFFLE_KEY = 'vibrdrome_visualizer_shuffle';
 const DEFAULT_ACCENT = '#8b5cf6';
 
 type Theme = 'system' | 'dark' | 'light' | 'apple' | 'apple-dark' | 'retro' | 'terminal' | 'midnight' | 'sunset';
@@ -55,16 +51,6 @@ interface UIState {
 
   queueSyncEnabled: boolean;
   setQueueSyncEnabled: (value: boolean) => void;
-
-  // Visualizer (projectM / Milkdrop) preferences
-  visualizerForceButterchurn: boolean;
-  setVisualizerForceButterchurn: (value: boolean) => void;
-  visualizerAutoAdvance: boolean;
-  setVisualizerAutoAdvance: (value: boolean) => void;
-  visualizerAutoAdvanceInterval: number; // seconds
-  setVisualizerAutoAdvanceInterval: (seconds: number) => void;
-  visualizerShuffle: boolean;
-  setVisualizerShuffle: (value: boolean) => void;
 
   castConnected: boolean;
   setCastConnected: (connected: boolean) => void;
@@ -193,33 +179,6 @@ export const useUIStore = create<UIState>((set) => ({
   setQueueSyncEnabled: (value) => {
     try { localStorage.setItem(QUEUE_SYNC_KEY, String(value)); } catch { /* ignore */ }
     set({ queueSyncEnabled: value });
-  },
-
-  visualizerForceButterchurn: loadBool(VIS_FORCE_BUTTERCHURN_KEY, false),
-  setVisualizerForceButterchurn: (value) => {
-    try { localStorage.setItem(VIS_FORCE_BUTTERCHURN_KEY, String(value)); } catch { /* ignore */ }
-    set({ visualizerForceButterchurn: value });
-  },
-
-  visualizerAutoAdvance: loadBool(VIS_AUTO_ADVANCE_KEY, false),
-  setVisualizerAutoAdvance: (value) => {
-    try { localStorage.setItem(VIS_AUTO_ADVANCE_KEY, String(value)); } catch { /* ignore */ }
-    set({ visualizerAutoAdvance: value });
-  },
-
-  visualizerAutoAdvanceInterval: (() => {
-    try { return Number(localStorage.getItem(VIS_AUTO_ADVANCE_INTERVAL_KEY)) || 15; }
-    catch { return 15; }
-  })(),
-  setVisualizerAutoAdvanceInterval: (seconds) => {
-    try { localStorage.setItem(VIS_AUTO_ADVANCE_INTERVAL_KEY, String(seconds)); } catch { /* ignore */ }
-    set({ visualizerAutoAdvanceInterval: seconds });
-  },
-
-  visualizerShuffle: loadBool(VIS_SHUFFLE_KEY, false),
-  setVisualizerShuffle: (value) => {
-    try { localStorage.setItem(VIS_SHUFFLE_KEY, String(value)); } catch { /* ignore */ }
-    set({ visualizerShuffle: value });
   },
 
   castConnected: false,

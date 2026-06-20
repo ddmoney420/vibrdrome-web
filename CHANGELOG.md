@@ -2,20 +2,8 @@
 
 All notable changes to Vibrdrome Web are documented here.
 
-## [1.9.0-beta.1] - 2026-06-19
-
-### Added
-- **projectM Milkdrop visualizer** — a WebGPU-based Milkdrop engine using projectM-rs compiled to WebAssembly. projectM is used as the primary Milkdrop visualizer when WebGPU is available, with butterchurn retained as the WebGL fallback.
-- Official projectM preset corpus bundled with 10,347 presets as gzipped shards, cached in IndexedDB with lazy per-category loading.
-- Visualizer controls for auto-advance with interval, shuffle, freeze, single-step, FPS overlay, info HUD, and keyboard shortcuts.
-- Settings → Visualizer options for force-butterchurn engine, auto-advance, auto-advance interval, and shuffle.
-- Documented Picture-in-Picture support.
-
-### Changed
-- The Milkdrop visualizer now reacts to live playback audio through the PlaybackManager analyser.
-
-### Licensing
-- Added LGPL-2.1 license text, source availability notice, and app-visible attribution for the vendored projectM-rs visualizer engine.
+## [ Unreleased ]
+- Document Picture-in-Picture support (Chrome native PiP window)
 
 ## [1.8.1-beta.2] - 2026-05-05
 

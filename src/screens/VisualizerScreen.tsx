@@ -249,25 +249,37 @@ export default function VisualizerScreen() {
   // fade, and data URLs need no revoking. A monotonic token guards against rapid
   // switches superseding an in-flight fade.
   const fadeTokenRef = useRef(0);
-  const runSnapshotFade = useCallback((url: string) => {
+  const runSnapshotFade = useCallback((url: string, hardCut: () => void) => {
     const img = fadeImgRef.current;
-    if (!img) return;
+    if (!img) { hardCut(); return; }
     const token = ++fadeTokenRef.current;
     if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current);
     img.style.transition = 'none';
     img.style.opacity = '1';
-    img.src = url;
     img.style.display = 'block';
-    // Double rAF so opacity:1 paints before transitioning to 0.
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      if (fadeTokenRef.current !== token || !fadeImgRef.current) return; // superseded/unmounted
-      fadeImgRef.current.style.transition = 'opacity 450ms ease-out';
-      fadeImgRef.current.style.opacity = '0';
-    }));
-    fadeTimerRef.current = setTimeout(() => {
-      if (fadeTokenRef.current !== token) return;
-      if (fadeImgRef.current) { fadeImgRef.current.style.display = 'none'; fadeImgRef.current.removeAttribute('src'); }
-    }, 520);
+    img.src = url;
+
+    const begin = () => {
+      if (fadeTokenRef.current !== token || !fadeImgRef.current) { hardCut(); return; }
+      // The still is decoded and covering the canvas at full opacity → hard-cut
+      // the new preset underneath it, then fade the still out to reveal it.
+      hardCut();
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        if (fadeTokenRef.current !== token || !fadeImgRef.current) return;
+        fadeImgRef.current.style.transition = 'opacity 1400ms ease-out';
+        fadeImgRef.current.style.opacity = '0';
+      }));
+      fadeTimerRef.current = setTimeout(() => {
+        if (fadeTokenRef.current !== token) return;
+        if (fadeImgRef.current) { fadeImgRef.current.style.display = 'none'; fadeImgRef.current.removeAttribute('src'); }
+      }, 1500);
+    };
+
+    // Decode the still BEFORE hard-cutting. A large JPEG data URL decodes
+    // asynchronously; showing it pre-decode would leave the new preset visible
+    // underneath and read as a hard cut. decode() guarantees it actually paints.
+    if (typeof img.decode === 'function') img.decode().then(begin).catch(begin);
+    else { img.onload = begin; }
   }, []);
 
   // Clean up any in-flight fade timer on unmount.
@@ -789,15 +801,17 @@ export default function VisualizerScreen() {
         });
         // First load of a projectM session has no prior frame to fade from.
         pmFadeArmedRef.current = true;
+        const hardCut = () => { if (!cancelled) engine.load_preset(text); };
         if (fade && canvas) {
-          // Capture the OLD frame (synchronous), then hard-cut underneath the
-          // still and fade it out. Any capture failure → silent hard-cut.
+          // Capture the OLD frame (synchronous). The fade decodes the still, then
+          // hard-cuts the new preset underneath it and fades the still out. Any
+          // capture failure → silent hard-cut.
           captureSnapshot(canvas, (url) => {
-            if (url) runSnapshotFade(url);
-            engine.load_preset(text); // hard cut (hidden behind the still if captured)
+            if (url) runSnapshotFade(url, hardCut);
+            else hardCut();
           });
         } else {
-          engine.load_preset(text); // hard cut
+          hardCut();
         }
       })
       .catch((err) => console.error('[Visualizer] projectM preset load failed', err));

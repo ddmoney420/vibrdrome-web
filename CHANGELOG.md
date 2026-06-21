@@ -2,6 +2,17 @@
 
 All notable changes to Vibrdrome Web are documented here.
 
+## [1.9.0-beta.5] - 2026-06-21
+
+### Fixed
+- **projectM feedback-buffer inheritance** — feedback/transition-style Milkdrop presets that draw from the previous frame (e.g. "Angels Of Glory … Isosceles edit", "Goody – Growth effect", "nematodes (Reverse Jelly V3)", "Water Baqteria") no longer render as a black screen after a preset switch. The projectM/WebGPU engine now copies the previous preset's last completed frame into the newly-loaded preset's feedback buffer (a GPU texture-to-texture copy; a cold first-load with no prior frame is unchanged), so these presets inherit previous-frame content instead of starting from black. Ships as a re-vendored `pm-web` WASM build; engine source fix is [`projectM-rs#1`](https://github.com/ddmoney420/projectM-rs/pull/1).
+
+### Changed
+- Dev-tooling/dependency refresh (dev-dependencies group). **Vite unpinned from `8.0.9` to `8.0.16`** after explicit production-preview validation against the 1.9.0-beta.1 black-screen / entry-chunking failure (the `npm run test:smoke` guard remains wired into CI). No production-dependency policy changes.
+
+### Notes
+- No application source changed in this release beyond version metadata; the projectM fix is entirely in the re-vendored engine WASM. Preset switching remains a hard cut by default.
+
 ## [1.9.0-beta.4] - 2026-06-20
 
 ### Added

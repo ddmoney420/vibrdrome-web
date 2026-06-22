@@ -10,6 +10,8 @@ import ParticleOverlay from '../components/visualizer/ParticleOverlay';
 import PresetSearch from '../components/visualizer/PresetSearch';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { shouldCrossfade, captureSnapshot } from '../utils/presetCrossfade';
+import { usePresetFavoritesStore } from '../stores/presetFavoritesStore';
+import { favoriteKeyForIndex as resolveFavoriteKey } from '../utils/presetFavorites';
 import type { PresetIndexEntry } from '../types/presets';
 
 // projectM preset category that is excluded from normal selection: these are
@@ -306,6 +308,10 @@ export default function VisualizerScreen() {
   const [presetIndex, setPresetIndex] = useState(0);
   const [milkdropPresetIndex, setMilkdropPresetIndex] = useState(0);
   const [milkdropPresetNames, setMilkdropPresetNames] = useState<string[]>([]);
+  // Render-reactive mirror of the projectM entries (paths) for the favorite-key
+  // resolver; the preset-switch effect still uses projectmEntriesRef (effect-time
+  // ref read). Empty for butterchurn (it keys favorites by name, not path).
+  const [milkdropEntries, setMilkdropEntries] = useState<PresetIndexEntry[]>([]);
   const [milkdropReady, setMilkdropReady] = useState(false);
   const [showOverlay, setShowOverlay] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -322,6 +328,13 @@ export default function VisualizerScreen() {
   const [milkdropEngine, setMilkdropEngine] = useState<'projectm' | 'butterchurn' | null>(null);
   // Preset search/jump overlay (milkdrop only — opened with '/' or the HUD button).
   const [presetSearchOpen, setPresetSearchOpen] = useState(false);
+  // Local preset favorites (engine-prefixed keys; persisted to localStorage).
+  const favoriteKeys = usePresetFavoritesStore((s) => s.favoriteKeys);
+  const toggleFavorite = usePresetFavoritesStore((s) => s.toggleFavorite);
+  const favoriteKeyForIndex = useCallback(
+    (index: number) => resolveFavoriteKey(milkdropEngine, index, milkdropEntries, milkdropPresetNames),
+    [milkdropEngine, milkdropEntries, milkdropPresetNames],
+  );
 
   const overlayTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -558,6 +571,7 @@ export default function VisualizerScreen() {
         const presetNames = Object.keys(presets).sort();
 
         setMilkdropPresetNames(presetNames);
+        setMilkdropEntries([]); // butterchurn keys favorites by name, not path
 
         const canvas = milkdropCanvasRef.current;
         if (!canvas) return;
@@ -688,7 +702,10 @@ export default function VisualizerScreen() {
       const entries = store.listPresets().filter((e) => e.category !== TRANSITION_CATEGORY);
       if (entries.length === 0) throw new Error('no selectable presets in manifest');
       projectmEntriesRef.current = entries;
-      if (!cancelled) setMilkdropPresetNames(entries.map((e) => e.name));
+      if (!cancelled) {
+        setMilkdropPresetNames(entries.map((e) => e.name));
+        setMilkdropEntries(entries);
+      }
 
       // Start on a RANDOM non-transition preset (index 0 is alphabetical — the
       // worst case, the "! Transition" black presets). Set the index so the
@@ -765,6 +782,7 @@ export default function VisualizerScreen() {
         pmEngineRef.current = null;
       }
       projectmEntriesRef.current = [];
+      setMilkdropEntries([]);
       setMilkdropReady(false);
     };
   }, [mode, milkdropEngine, tickFps]);
@@ -862,6 +880,10 @@ export default function VisualizerScreen() {
   const totalPresets = mode === 'shader' ? SHADER_PRESETS.length : milkdropPresetNames.length;
   const activeIndex = mode === 'shader' ? presetIndex : milkdropPresetIndex;
   const setActiveIndex = mode === 'shader' ? setPresetIndex : setMilkdropPresetIndex;
+
+  // Favorite state for the currently-active milkdrop preset (null in shader mode).
+  const currentFavoriteKey = favoriteKeyForIndex(milkdropPresetIndex);
+  const currentIsFavorite = currentFavoriteKey != null && favoriteKeys.has(currentFavoriteKey);
 
   const nextPreset = () => {
     setActiveIndex((i) => (i + 1) % totalPresets);
@@ -1167,6 +1189,16 @@ export default function VisualizerScreen() {
             <button onClick={(e) => { e.stopPropagation(); setPresetSearchOpen(true); resetOverlayTimer(); }} title="Search presets (/)" className={ctrlBtn(presetSearchOpen)}>
               🔍 Find
             </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); if (currentFavoriteKey) toggleFavorite(currentFavoriteKey); resetOverlayTimer(); }}
+              disabled={!currentFavoriteKey}
+              title={currentIsFavorite ? 'Unfavorite this preset' : 'Favorite this preset'}
+              aria-label={currentIsFavorite ? 'Unfavorite preset' : 'Favorite preset'}
+              aria-pressed={currentIsFavorite}
+              className={ctrlBtn(currentIsFavorite, !currentFavoriteKey)}
+            >
+              {currentIsFavorite ? '★ Favorited' : '☆ Favorite'}
+            </button>
             <button onClick={(e) => { e.stopPropagation(); toggleFreeze(); }} title="Freeze / unfreeze (K)" className={ctrlBtn(frozen)}>
               {frozen ? '▶ Resume' : '⏸ Freeze'}
             </button>
@@ -1235,6 +1267,9 @@ export default function VisualizerScreen() {
       {presetSearchOpen && (
         <PresetSearch
           names={milkdropPresetNames}
+          favoriteKeys={favoriteKeys}
+          favoriteKeyForIndex={favoriteKeyForIndex}
+          onToggleFavorite={toggleFavorite}
           onSelect={(i) => {
             setMilkdropPresetIndex(i);
             resetOverlayTimer();

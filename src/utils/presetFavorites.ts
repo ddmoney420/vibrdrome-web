@@ -41,3 +41,57 @@ export function favoriteKeyForIndex(
   }
   return null;
 }
+
+/**
+ * Active-engine list indices whose favorite key is currently favorited, in
+ * list order. `keyForIndex` resolves a row's key (null/unresolvable → skipped).
+ */
+export function favoritedIndicesIn(
+  names: string[],
+  favoriteKeys: Set<string>,
+  keyForIndex: (index: number) => string | null,
+): number[] {
+  const out: number[] = [];
+  for (let i = 0; i < names.length; i++) {
+    const key = keyForIndex(i);
+    if (key != null && favoriteKeys.has(key)) out.push(i);
+  }
+  return out;
+}
+
+/**
+ * Pick a favorited index at random, avoiding `currentIndex` when possible.
+ * - empty list → `null`
+ * - single favorite → that index (even if it is the current one)
+ * - multiple → a random favorite, never `currentIndex`
+ * Uses a bounded selection (no unbounded retry loop). `rng` defaults to
+ * `Math.random` and is injectable for deterministic tests.
+ */
+export function randomFavoriteIndex(
+  favIndices: number[],
+  currentIndex: number,
+  rng: () => number = Math.random,
+): number | null {
+  if (favIndices.length === 0) return null;
+  if (favIndices.length === 1) return favIndices[0];
+  // Choose from the favorites excluding the current one, so we never retry.
+  const candidates = favIndices.filter((i) => i !== currentIndex);
+  const pool = candidates.length > 0 ? candidates : favIndices;
+  return pool[Math.floor(rng() * pool.length)];
+}
+
+/**
+ * The next favorited index after `currentIndex` in active-list order, wrapping.
+ * - empty list → `null`
+ * - single favorite → that index
+ * - otherwise → the first favorite with index > current, else the first favorite
+ *   (so it advances even when `currentIndex` isn't itself a favorite).
+ */
+export function nextFavoriteIndex(favIndices: number[], currentIndex: number): number | null {
+  if (favIndices.length === 0) return null;
+  if (favIndices.length === 1) return favIndices[0];
+  for (const i of favIndices) {
+    if (i > currentIndex) return i;
+  }
+  return favIndices[0];
+}

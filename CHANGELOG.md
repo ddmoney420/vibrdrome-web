@@ -2,6 +2,22 @@
 
 All notable changes to Vibrdrome Web are documented here.
 
+## [1.9.0-beta.10] - 2026-06-21
+
+### Added
+- **★ Only visualizer playback mode** — restrict hands-off playback to your favorited presets.
+- **Favorites-only random / double-click** preset selection.
+- **Favorites-only auto-advance.**
+
+### Notes
+- With shuffle enabled, auto-advance picks **random favorites**; with shuffle disabled, it advances through favorites in **active-list order**.
+- **Zero favorites falls back to global behavior**, so playback never strands or goes black.
+- **One favorite** safely parks on that favorite.
+- **next / previous remain global and unchanged.**
+- The setting persists locally via `vibrdrome_visualizer_favorites_only`.
+- No rendering, engine, crossfade, preset-bundle, dependency, workflow, or Dockerfile changes.
+- Deferred (not in this release): next/previous favorites-only cycling, HUD ★ indicator, favoriting keyboard shortcut, orphaned-favorite cleanup, and cross-device sync.
+
 ## [1.9.0-beta.9] - 2026-06-21
 
 ### Added

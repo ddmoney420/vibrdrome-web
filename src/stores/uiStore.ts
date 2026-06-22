@@ -15,6 +15,7 @@ const VIS_FORCE_BUTTERCHURN_KEY = 'vibrdrome_visualizer_force_butterchurn';
 const VIS_AUTO_ADVANCE_KEY = 'vibrdrome_visualizer_auto_advance';
 const VIS_AUTO_ADVANCE_INTERVAL_KEY = 'vibrdrome_visualizer_auto_advance_interval';
 const VIS_SHUFFLE_KEY = 'vibrdrome_visualizer_shuffle';
+const VIS_FAVORITES_ONLY_KEY = 'vibrdrome_visualizer_favorites_only';
 const VIS_SHOW_TRANSPORT_KEY = 'vibrdrome_visualizer_show_transport';
 const VIS_TRANSITION_POLISH_KEY = 'vibrdrome_visualizer_transition_polish';
 const VIS_PARTICLES_KEY = 'vibrdrome_visualizer_particles';
@@ -70,6 +71,8 @@ interface UIState {
   setVisualizerAutoAdvanceInterval: (seconds: number) => void;
   visualizerShuffle: boolean;
   setVisualizerShuffle: (value: boolean) => void;
+  visualizerFavoritesOnly: boolean;
+  setVisualizerFavoritesOnly: (value: boolean) => void;
   visualizerShowTransport: boolean;
   setVisualizerShowTransport: (value: boolean) => void;
   visualizerTransitionPolish: boolean;
@@ -235,6 +238,11 @@ export const useUIStore = create<UIState>((set) => ({
   setVisualizerShuffle: (value) => {
     try { localStorage.setItem(VIS_SHUFFLE_KEY, String(value)); } catch { /* ignore */ }
     set({ visualizerShuffle: value });
+  },
+  visualizerFavoritesOnly: loadBool(VIS_FAVORITES_ONLY_KEY, false),
+  setVisualizerFavoritesOnly: (value) => {
+    try { localStorage.setItem(VIS_FAVORITES_ONLY_KEY, String(value)); } catch { /* ignore */ }
+    set({ visualizerFavoritesOnly: value });
   },
   // Conservative default: off. The transport self-hides with no song, so this
   // keeps existing behavior (and the smoke test) unchanged until opted in.

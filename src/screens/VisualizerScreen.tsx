@@ -11,7 +11,12 @@ import PresetSearch from '../components/visualizer/PresetSearch';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { shouldCrossfade, captureSnapshot } from '../utils/presetCrossfade';
 import { usePresetFavoritesStore } from '../stores/presetFavoritesStore';
-import { favoriteKeyForIndex as resolveFavoriteKey } from '../utils/presetFavorites';
+import {
+  favoriteKeyForIndex as resolveFavoriteKey,
+  favoritedIndicesIn,
+  randomFavoriteIndex,
+  nextFavoriteIndex,
+} from '../utils/presetFavorites';
 import type { PresetIndexEntry } from '../types/presets';
 
 // projectM preset category that is excluded from normal selection: these are
@@ -228,6 +233,7 @@ export default function VisualizerScreen() {
     visualizerAutoAdvance, setVisualizerAutoAdvance,
     visualizerAutoAdvanceInterval, setVisualizerAutoAdvanceInterval,
     visualizerShuffle, setVisualizerShuffle,
+    visualizerFavoritesOnly, setVisualizerFavoritesOnly,
     visualizerShowTransport,
     visualizerTransitionPolish,
     visualizerParticles,
@@ -885,6 +891,19 @@ export default function VisualizerScreen() {
   const currentFavoriteKey = favoriteKeyForIndex(milkdropPresetIndex);
   const currentIsFavorite = currentFavoriteKey != null && favoriteKeys.has(currentFavoriteKey);
 
+  // Active-engine favorited indices, for favorites-only random / auto-advance.
+  const favoritedIndices = useMemo(
+    () => favoritedIndicesIn(milkdropPresetNames, favoriteKeys, favoriteKeyForIndex),
+    [milkdropPresetNames, favoriteKeys, favoriteKeyForIndex],
+  );
+  const hasActiveFavorites = favoritedIndices.length > 0;
+  // Refs so the interval-captured auto-advance always reads current values
+  // (favorites can change while it runs without re-subscribing the interval).
+  const favoritesOnlyRef = useRef(visualizerFavoritesOnly);
+  const favoritedIndicesRef = useRef<number[]>(favoritedIndices);
+  useEffect(() => { favoritesOnlyRef.current = visualizerFavoritesOnly; }, [visualizerFavoritesOnly]);
+  useEffect(() => { favoritedIndicesRef.current = favoritedIndices; }, [favoritedIndices]);
+
   const nextPreset = () => {
     setActiveIndex((i) => (i + 1) % totalPresets);
     resetOverlayTimer();
@@ -897,6 +916,15 @@ export default function VisualizerScreen() {
 
   const randomPreset = () => {
     if (totalPresets <= 1) return;
+    // Favorites-only: pick a favorited preset; fall back to global if none.
+    if (visualizerFavoritesOnly) {
+      const fav = randomFavoriteIndex(favoritedIndices, activeIndex);
+      if (fav != null) {
+        setActiveIndex(fav);
+        resetOverlayTimer();
+        return;
+      }
+    }
     let next: number;
     do {
       next = Math.floor(Math.random() * totalPresets);
@@ -910,18 +938,24 @@ export default function VisualizerScreen() {
   // Uses the functional updater so it never reads a stale index from the interval.
   const autoAdvance = () => {
     suppressNextToastRef.current = true;
-    if (visualizerShuffle) {
-      setActiveIndex((i) => {
-        if (totalPresets <= 1) return i;
+    setActiveIndex((i) => {
+      if (totalPresets <= 1) return i;
+      // Favorites-only: advance within favorites (random when shuffle, else the
+      // next favorite in list order). Falls back to global if no favorites.
+      if (favoritesOnlyRef.current) {
+        const favIdx = favoritedIndicesRef.current;
+        const pick = visualizerShuffle ? randomFavoriteIndex(favIdx, i) : nextFavoriteIndex(favIdx, i);
+        if (pick != null) return pick;
+      }
+      if (visualizerShuffle) {
         let next: number;
         do {
           next = Math.floor(Math.random() * totalPresets);
         } while (next === i);
         return next;
-      });
-    } else {
-      setActiveIndex((i) => (i + 1) % totalPresets);
-    }
+      }
+      return (i + 1) % totalPresets;
+    });
   };
 
   // Auto-advance: cycle presets on the configured interval while in Milkdrop.
@@ -1210,6 +1244,15 @@ export default function VisualizerScreen() {
             </button>
             <button onClick={(e) => { e.stopPropagation(); setVisualizerShuffle(!visualizerShuffle); resetOverlayTimer(); }} title="Shuffle on advance" className={ctrlBtn(visualizerShuffle)}>
               🔀 Shuffle
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); setVisualizerFavoritesOnly(!visualizerFavoritesOnly); resetOverlayTimer(); }}
+              disabled={!hasActiveFavorites}
+              title={hasActiveFavorites ? 'Random / auto-advance only among favorites' : 'Favorite some presets first'}
+              aria-pressed={visualizerFavoritesOnly}
+              className={ctrlBtn(visualizerFavoritesOnly, !hasActiveFavorites)}
+            >
+              ★ Only
             </button>
             <button onClick={(e) => { e.stopPropagation(); toggleFps(); }} title="FPS overlay (F)" className={ctrlBtn(showFps)}>
               FPS

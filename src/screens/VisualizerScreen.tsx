@@ -16,6 +16,7 @@ import {
   favoritedIndicesIn,
   randomFavoriteIndex,
   nextFavoriteIndex,
+  previousFavoriteIndex,
 } from '../utils/presetFavorites';
 import type { PresetIndexEntry } from '../types/presets';
 
@@ -905,11 +906,29 @@ export default function VisualizerScreen() {
   useEffect(() => { favoritedIndicesRef.current = favoritedIndices; }, [favoritedIndices]);
 
   const nextPreset = () => {
+    // ★ Only: cycle to the next favorite; fall back to global if none.
+    if (visualizerFavoritesOnly) {
+      const fav = nextFavoriteIndex(favoritedIndices, activeIndex);
+      if (fav != null) {
+        setActiveIndex(fav);
+        resetOverlayTimer();
+        return;
+      }
+    }
     setActiveIndex((i) => (i + 1) % totalPresets);
     resetOverlayTimer();
   };
 
   const prevPreset = () => {
+    // ★ Only: cycle to the previous favorite; fall back to global if none.
+    if (visualizerFavoritesOnly) {
+      const fav = previousFavoriteIndex(favoritedIndices, activeIndex);
+      if (fav != null) {
+        setActiveIndex(fav);
+        resetOverlayTimer();
+        return;
+      }
+    }
     setActiveIndex((i) => (i - 1 + totalPresets) % totalPresets);
     resetOverlayTimer();
   };

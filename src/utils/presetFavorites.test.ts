@@ -6,6 +6,7 @@ import {
   favoritedIndicesIn,
   randomFavoriteIndex,
   nextFavoriteIndex,
+  previousFavoriteIndex,
 } from './presetFavorites';
 import type { PresetIndexEntry } from '../types/presets';
 
@@ -104,5 +105,42 @@ describe('nextFavoriteIndex', () => {
     expect(nextFavoriteIndex([2, 5, 9], 9)).toBe(2); // wraps
     expect(nextFavoriteIndex([2, 5, 9], 6)).toBe(9); // current not itself a favorite
     expect(nextFavoriteIndex([2, 5, 9], 12)).toBe(2); // past the end → wrap
+  });
+});
+
+describe('previousFavoriteIndex', () => {
+  it('returns null for an empty list', () => {
+    expect(previousFavoriteIndex([], 0)).toBeNull();
+  });
+  it('returns the only favorite', () => {
+    expect(previousFavoriteIndex([7], 3)).toBe(7);
+    expect(previousFavoriteIndex([7], 9)).toBe(7);
+  });
+  it('returns the previous favorite before current', () => {
+    expect(previousFavoriteIndex([2, 5, 9], 9)).toBe(5);
+    expect(previousFavoriteIndex([2, 5, 9], 5)).toBe(2);
+  });
+  it('wraps to the last favorite when current is before/at the first favorite', () => {
+    expect(previousFavoriteIndex([2, 5, 9], 2)).toBe(9); // current == first fav → wrap to last
+    expect(previousFavoriteIndex([2, 5, 9], 0)).toBe(9); // before all favs → wrap to last
+  });
+  it('handles current not being a favorite', () => {
+    expect(previousFavoriteIndex([2, 5, 9], 7)).toBe(5); // largest fav < 7
+    expect(previousFavoriteIndex([2, 5, 9], 12)).toBe(9); // past the end → last
+  });
+  it('does not mutate the input', () => {
+    const favs = [2, 5, 9];
+    const copy = [...favs];
+    previousFavoriteIndex(favs, 5);
+    expect(favs).toEqual(copy);
+  });
+});
+
+describe('favoritedIndicesIn ascending order', () => {
+  it('produces indices in ascending active-list order', () => {
+    const names = ['a', 'b', 'c', 'd', 'e'];
+    const keyForIndex = (i: number) => `k:${i}`;
+    const favs = new Set(['k:4', 'k:1', 'k:3']); // out-of-order set
+    expect(favoritedIndicesIn(names, favs, keyForIndex)).toEqual([1, 3, 4]); // ascending
   });
 });

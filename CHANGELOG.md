@@ -2,6 +2,17 @@
 
 All notable changes to Vibrdrome Web are documented here.
 
+## [1.9.0-beta.6] - 2026-06-21
+
+### Changed
+- **Live engine-level projectM/WebGPU preset crossfade.** When the existing "Crossfade preset transitions" (`fade`) setting is on, projectM/WebGPU preset switches now blend in the **engine** — both the outgoing and incoming presets keep rendering live and their outputs are mixed across the transition — instead of fading a frozen still of the old frame. Re-vendored `pm-web` WASM exposing the new `transition_to_preset` API; engine source fix is [`projectM-rs#2`](https://github.com/ddmoney420/projectM-rs/pull/2).
+
+### Notes
+- **Hard-cut remains the default**; the live crossfade only applies when `fade` is enabled.
+- **Reduced motion** (in-app setting or `prefers-reduced-motion`) still suppresses the transition (hard-cut).
+- **Butterchurn** (WebGL fallback) behavior is unchanged.
+- The previous **frozen-frame crossfade remains as a fallback** for older/unavailable pm-web builds (feature-detected). No UI/settings change.
+
 ## [1.9.0-beta.5] - 2026-06-21
 
 ### Fixed

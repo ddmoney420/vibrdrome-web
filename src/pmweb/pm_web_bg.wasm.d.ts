@@ -7,6 +7,7 @@ export const pmengine_load_preset: (a: number, b: number, c: number) => number;
 export const pmengine_push_audio: (a: number, b: number, c: number) => void;
 export const pmengine_render: (a: number, b: number) => void;
 export const pmengine_resize: (a: number, b: number, c: number) => void;
+export const pmengine_transition_to_preset: (a: number, b: number, c: number, d: number) => number;
 export const start: () => void;
 export const wasm_bindgen__convert__closures_____invoke__h52736e2325688b52: (a: number, b: number, c: any) => [number, number];
 export const wasm_bindgen__convert__closures_____invoke__h6bbcfc28ee49126f: (a: number, b: number, c: any, d: any) => void;

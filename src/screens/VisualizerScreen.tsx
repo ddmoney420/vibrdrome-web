@@ -7,6 +7,7 @@ import { usePresetStore } from '../stores/presetStore';
 import VisualizerTransport from '../components/visualizer/VisualizerTransport';
 import VisualizerHud from '../components/visualizer/VisualizerHud';
 import ParticleOverlay from '../components/visualizer/ParticleOverlay';
+import PresetSearch from '../components/visualizer/PresetSearch';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { shouldCrossfade, captureSnapshot } from '../utils/presetCrossfade';
 import type { PresetIndexEntry } from '../types/presets';
@@ -319,6 +320,8 @@ export default function VisualizerScreen() {
   // Which Milkdrop engine is active: 'projectm' (WebGPU) or 'butterchurn'
   // (fallback), decided when milkdrop mode activates.
   const [milkdropEngine, setMilkdropEngine] = useState<'projectm' | 'butterchurn' | null>(null);
+  // Preset search/jump overlay (milkdrop only — opened with '/' or the HUD button).
+  const [presetSearchOpen, setPresetSearchOpen] = useState(false);
 
   const overlayTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -834,6 +837,19 @@ export default function VisualizerScreen() {
     };
   }, [milkdropPresetIndex, milkdropEngine, mode, runSnapshotFade]);
 
+  // Optional deep-link: `?preset=<name substring>` jumps to a matching preset
+  // once milkdrop is ready (handy for bug repros / sharing a specific preset).
+  // Read-only — it never writes the URL and only runs on first-ready.
+  useEffect(() => {
+    if (mode !== 'milkdrop' || !milkdropReady) return;
+    const q = new URLSearchParams(window.location.search).get('preset');
+    if (!q) return;
+    const idx = milkdropPresetNames.findIndex((n) => n.toLowerCase().includes(q.toLowerCase()));
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot deep-link jump on ready
+    if (idx >= 0) setMilkdropPresetIndex(idx);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once when milkdrop becomes ready
+  }, [milkdropReady, mode]);
+
   // Auto-hide overlay
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- show overlay on mount
@@ -914,6 +930,13 @@ export default function VisualizerScreen() {
         case 'k': case 'K': toggleFreeze(); break;
         case '.': stepFrame(); break;
         case 'f': case 'F': toggleFps(); break;
+        case '/':
+          if (mode === 'milkdrop' && milkdropReady) {
+            e.preventDefault();
+            setPresetSearchOpen(true);
+            resetOverlayTimer();
+          }
+          break;
         default: break;
       }
     };
@@ -1141,6 +1164,9 @@ export default function VisualizerScreen() {
         {/* Milkdrop control bar — shifts up when the transport occupies the bottom */}
         {mode === 'milkdrop' && milkdropReady && (
           <div className={`pointer-events-auto absolute left-1/2 flex -translate-x-1/2 flex-wrap items-center justify-center gap-2 rounded-full bg-black/60 px-3 py-2 ${transportVisible ? 'bottom-28' : 'bottom-6'}`}>
+            <button onClick={(e) => { e.stopPropagation(); setPresetSearchOpen(true); resetOverlayTimer(); }} title="Search presets (/)" className={ctrlBtn(presetSearchOpen)}>
+              🔍 Find
+            </button>
             <button onClick={(e) => { e.stopPropagation(); toggleFreeze(); }} title="Freeze / unfreeze (K)" className={ctrlBtn(frozen)}>
               {frozen ? '▶ Resume' : '⏸ Freeze'}
             </button>
@@ -1203,6 +1229,20 @@ export default function VisualizerScreen() {
       >
         {toastText}
       </div>
+
+      {/* Preset search/jump overlay — selecting a result sets the active index,
+          reusing the normal switch path (hard-cut / live crossfade / etc.). */}
+      {presetSearchOpen && (
+        <PresetSearch
+          names={milkdropPresetNames}
+          onSelect={(i) => {
+            setMilkdropPresetIndex(i);
+            resetOverlayTimer();
+            setPresetSearchOpen(false);
+          }}
+          onClose={() => setPresetSearchOpen(false)}
+        />
+      )}
     </div>
   );
 }

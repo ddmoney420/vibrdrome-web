@@ -2,6 +2,14 @@
 
 All notable changes to Vibrdrome Web are documented here.
 
+## [1.9.0-beta.7] - 2026-06-21
+
+### Changed
+- Updated the Cloudflare Pages deploy action from `cloudflare/wrangler-action@v3` to `@v4`. This clears the Node 20 deprecation warning seen during recent (successful) production deploys.
+
+### Notes
+- Deploy-maintenance beta only — **no app runtime changes, no visualizer changes, no dependency changes.**
+
 ## [1.9.0-beta.6] - 2026-06-21
 
 ### Changed

@@ -2,6 +2,16 @@
 
 All notable changes to Vibrdrome Web are documented here.
 
+## [1.9.0-beta.8] - 2026-06-21
+
+### Added
+- **Visualizer preset search** — find and jump to a Milkdrop preset by name. Open it with the `/` shortcut or the **🔍 Find** button in the visualizer controls; fuzzy-filters the active engine's preset list (projectM/WebGPU or butterchurn), with results capped for performance and a "refine your search" hint when there are more matches.
+- **Read-only `?preset=` deep-link** — opening the visualizer with `?preset=<name>` jumps to the first matching preset (handy for sharing / bug reports). It never rewrites the URL.
+
+### Notes
+- Selecting a search result reuses the existing preset-switch path, so **hard-cut, live engine crossfade (`fade`), reduced-motion suppression, and butterchurn behavior are all preserved** unchanged.
+- No rendering, engine, preset-bundle, dependency, workflow, or Dockerfile changes.
+
 ## [1.9.0-beta.7] - 2026-06-21
 
 ### Changed

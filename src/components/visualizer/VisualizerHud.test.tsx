@@ -44,6 +44,88 @@ describe('VisualizerHud', () => {
     expect(screen.queryByText('Shuffle')).not.toBeInTheDocument();
   });
 
+  it('shows the ★ favorite indicator when isFavorite and a Milkdrop preset is shown', () => {
+    render(
+      <VisualizerHud
+        presetName="Geiss - Cosmic"
+        engine="projectm"
+        index={3}
+        total={120}
+        autoAdvance={false}
+        shuffle={false}
+        frozen={false}
+        isFavorite
+      />,
+    );
+    const star = screen.getByLabelText('Favorited');
+    expect(star).toBeInTheDocument();
+    expect(star).toHaveTextContent('★');
+    // Name still renders alongside the star.
+    expect(screen.getByText('Geiss - Cosmic')).toBeInTheDocument();
+  });
+
+  it('does not show the ★ when isFavorite is false or omitted', () => {
+    const { rerender } = render(
+      <VisualizerHud
+        presetName="Geiss - Cosmic"
+        engine="projectm"
+        index={3}
+        total={120}
+        autoAdvance={false}
+        shuffle={false}
+        frozen={false}
+        isFavorite={false}
+      />,
+    );
+    expect(screen.queryByLabelText('Favorited')).not.toBeInTheDocument();
+    // Omitted prop → defaults to not favorited.
+    rerender(
+      <VisualizerHud
+        presetName="Geiss - Cosmic"
+        engine="projectm"
+        index={3}
+        total={120}
+        autoAdvance={false}
+        shuffle={false}
+        frozen={false}
+      />,
+    );
+    expect(screen.queryByLabelText('Favorited')).not.toBeInTheDocument();
+  });
+
+  it('does not show the ★ in shader mode even when isFavorite is true', () => {
+    render(
+      <VisualizerHud
+        presetName="Plasma"
+        engine={null}
+        index={1}
+        total={6}
+        autoAdvance={false}
+        shuffle={false}
+        frozen={false}
+        isFavorite
+      />,
+    );
+    expect(screen.queryByLabelText('Favorited')).not.toBeInTheDocument();
+    expect(screen.getByText('Plasma')).toBeInTheDocument();
+  });
+
+  it('shows the ★ for a favorited butterchurn preset', () => {
+    render(
+      <VisualizerHud
+        presetName="Fallback"
+        engine="butterchurn"
+        index={1}
+        total={50}
+        autoAdvance={false}
+        shuffle={false}
+        frozen={false}
+        isFavorite
+      />,
+    );
+    expect(screen.getByLabelText('Favorited')).toBeInTheDocument();
+  });
+
   it('labels the butterchurn engine badge', () => {
     render(
       <VisualizerHud

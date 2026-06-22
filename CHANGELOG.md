@@ -2,6 +2,21 @@
 
 All notable changes to Vibrdrome Web are documented here.
 
+## [1.9.0-beta.9] - 2026-06-21
+
+### Added
+- **Visualizer preset favorites** (local-only) — save the presets you like and jump back to them.
+- ☆/★ **favorite toggle for the current preset** in the visualizer controls.
+- **Per-row favorite stars** inside preset search.
+- A **Favorites filter** inside preset search to show only favorited presets.
+
+### Notes
+- Favorites are stored **locally** in a versioned `localStorage` blob; bad/old data degrades safely to empty.
+- Identity: projectM favorites use the stable preset **path**; butterchurn favorites use the engine-prefixed preset **name**.
+- Selecting a favorite reuses the existing preset-switch path, so hard-cut / live crossfade / reduced-motion / butterchurn / next-prev-random / auto-advance behavior is unchanged.
+- No rendering, engine, crossfade, preset-bundle, dependency, workflow, or Dockerfile changes.
+- Deferred (not in this release): HUD ★ indicator beside the preset name, a favoriting keyboard shortcut, favorites-only random/auto-advance, orphaned-favorite cleanup, and cross-device sync.
+
 ## [1.9.0-beta.8] - 2026-06-21
 
 ### Added

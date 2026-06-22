@@ -2,6 +2,21 @@
 
 All notable changes to Vibrdrome Web are documented here.
 
+## [1.9.0-beta.11] - 2026-06-21
+
+### Added
+- **Favorites-only next / previous** visualizer navigation — completes ★ Only mode so manual navigation respects your favorites too.
+
+### Notes
+- When **★ Only** is enabled and active-engine favorites exist, next/previous cycle through favorites in active-list order (wrapping).
+- When **★ Only** is disabled, next/previous remain **global**.
+- **Zero favorites falls back to global behavior**, so playback never strands.
+- **One favorite** safely parks on that favorite.
+- **Search and `?preset=` remain global / explicit** — you can still reach any preset in ★ Only mode.
+- **Random and auto-advance behavior are unchanged** from beta.10.
+- No rendering, engine, crossfade, preset-bundle, dependency, workflow, or Dockerfile changes.
+- Deferred (not in this release): HUD ★ indicator, favoriting keyboard shortcut, orphaned-favorite cleanup, and cross-device sync.
+
 ## [1.9.0-beta.10] - 2026-06-21
 
 ### Added

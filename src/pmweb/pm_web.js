@@ -44,9 +44,11 @@ export class PmEngine {
         return ret;
     }
     /**
-     * Parse and load a `.milk` preset, (re)building the engine at the current
-     * resolution. Returns `false` (without disturbing the current preset) if
-     * the text fails to parse, so the host can skip it and advance.
+     * Parse and **hard-cut** to a `.milk` preset at the current resolution.
+     * Returns `false` (without disturbing the current preset) if the text fails
+     * to parse, so the host can skip it and advance. Behaviour is unchanged
+     * from before engine-level transitions existed: this is always an instant
+     * cut (with feedback inheritance, so feedback presets don't start black).
      * @param {string} text
      * @returns {boolean}
      */
@@ -82,6 +84,24 @@ export class PmEngine {
      */
     resize(width, height) {
         wasm.pmengine_resize(this.__wbg_ptr, width, height);
+    }
+    /**
+     * Like [`PmEngine::load_preset`], but **crossfades** from the current preset
+     * over `duration_ms` milliseconds: both presets keep rendering live and
+     * their composited outputs are blended (an engine-level transition, not a
+     * frozen still). `duration_ms <= 0`, NaN, or any non-finite value falls
+     * back to a hard cut, so it never panics. The host chooses the duration —
+     * pm-web invents no default. Returns `false` on parse failure, leaving the
+     * current preset untouched.
+     * @param {string} text
+     * @param {number} duration_ms
+     * @returns {boolean}
+     */
+    transition_to_preset(text, duration_ms) {
+        const ptr0 = passStringToWasm0(text, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.pmengine_transition_to_preset(this.__wbg_ptr, ptr0, len0, duration_ms);
+        return ret !== 0;
     }
 }
 if (Symbol.dispose) PmEngine.prototype[Symbol.dispose] = PmEngine.prototype.free;

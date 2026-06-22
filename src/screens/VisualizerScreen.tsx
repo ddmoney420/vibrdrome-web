@@ -15,6 +15,11 @@ import type { PresetIndexEntry } from '../types/presets';
 // transition effects that fade to black by design, not standalone visuals.
 const TRANSITION_CATEGORY = '! Transition';
 
+// Preset crossfade length (ms) for the projectM/WebGPU 'fade' setting. Matches
+// the existing frozen-frame fallback fade in `runSnapshotFade` so the two paths
+// feel the same; not a new user-facing setting.
+const PRESET_CROSSFADE_MS = 1400;
+
 // --- Shader Presets ---
 
 const VERTEX_SHADER = `
@@ -803,13 +808,22 @@ export default function VisualizerScreen() {
         pmFadeArmedRef.current = true;
         const hardCut = () => { if (!cancelled) engine.load_preset(text); };
         if (fade && canvas) {
-          // Capture the OLD frame (synchronous). The fade decodes the still, then
-          // hard-cuts the new preset underneath it and fades the still out. Any
-          // capture failure → silent hard-cut.
-          captureSnapshot(canvas, (url) => {
-            if (url) runSnapshotFade(url, hardCut);
-            else hardCut();
-          });
+          if (typeof engine.transition_to_preset === 'function') {
+            // Engine-level live crossfade: both presets keep rendering and their
+            // outputs are blended in the engine (no frozen still). On a parse
+            // failure it returns false and the engine keeps the current preset —
+            // same outcome as a failed load_preset, so nothing extra to do here.
+            if (!cancelled) engine.transition_to_preset(text, PRESET_CROSSFADE_MS);
+          } else {
+            // Fallback for an older vendored WASM without the engine transition:
+            // capture the OLD frame (synchronous), decode the still, hard-cut the
+            // new preset underneath, and fade the still out. Capture failure →
+            // silent hard-cut.
+            captureSnapshot(canvas, (url) => {
+              if (url) runSnapshotFade(url, hardCut);
+              else hardCut();
+            });
+          }
         } else {
           hardCut();
         }

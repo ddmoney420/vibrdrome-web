@@ -25,9 +25,11 @@ export class PmEngine {
      */
     static create(canvas: HTMLCanvasElement, width: number, height: number): Promise<PmEngine>;
     /**
-     * Parse and load a `.milk` preset, (re)building the engine at the current
-     * resolution. Returns `false` (without disturbing the current preset) if
-     * the text fails to parse, so the host can skip it and advance.
+     * Parse and **hard-cut** to a `.milk` preset at the current resolution.
+     * Returns `false` (without disturbing the current preset) if the text fails
+     * to parse, so the host can skip it and advance. Behaviour is unchanged
+     * from before engine-level transitions existed: this is always an instant
+     * cut (with feedback inheritance, so feedback presets don't start black).
      */
     load_preset(text: string): boolean;
     /**
@@ -45,6 +47,16 @@ export class PmEngine {
      * internal render targets match). Call when the canvas's pixel size changes.
      */
     resize(width: number, height: number): void;
+    /**
+     * Like [`PmEngine::load_preset`], but **crossfades** from the current preset
+     * over `duration_ms` milliseconds: both presets keep rendering live and
+     * their composited outputs are blended (an engine-level transition, not a
+     * frozen still). `duration_ms <= 0`, NaN, or any non-finite value falls
+     * back to a hard cut, so it never panics. The host chooses the duration —
+     * pm-web invents no default. Returns `false` on parse failure, leaving the
+     * current preset untouched.
+     */
+    transition_to_preset(text: string, duration_ms: number): boolean;
 }
 
 /**
@@ -62,6 +74,7 @@ export interface InitOutput {
     readonly pmengine_push_audio: (a: number, b: number, c: number) => void;
     readonly pmengine_render: (a: number, b: number) => void;
     readonly pmengine_resize: (a: number, b: number, c: number) => void;
+    readonly pmengine_transition_to_preset: (a: number, b: number, c: number, d: number) => number;
     readonly start: () => void;
     readonly wasm_bindgen__convert__closures_____invoke__h52736e2325688b52: (a: number, b: number, c: any) => [number, number];
     readonly wasm_bindgen__convert__closures_____invoke__h6bbcfc28ee49126f: (a: number, b: number, c: any, d: any) => void;

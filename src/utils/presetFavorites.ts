@@ -95,3 +95,21 @@ export function nextFavoriteIndex(favIndices: number[], currentIndex: number): n
   }
   return favIndices[0];
 }
+
+/**
+ * The previous favorited index before `currentIndex` in active-list order,
+ * wrapping. Mirror of {@link nextFavoriteIndex}.
+ * - empty list → `null`
+ * - single favorite → that index
+ * - otherwise → the largest favorite with index < current, else wrap to the last
+ *   favorite (so it moves even when `currentIndex` isn't itself a favorite).
+ * Assumes `favIndices` is in ascending order; does not mutate it.
+ */
+export function previousFavoriteIndex(favIndices: number[], currentIndex: number): number | null {
+  if (favIndices.length === 0) return null;
+  if (favIndices.length === 1) return favIndices[0];
+  for (let k = favIndices.length - 1; k >= 0; k--) {
+    if (favIndices[k] < currentIndex) return favIndices[k];
+  }
+  return favIndices[favIndices.length - 1];
+}

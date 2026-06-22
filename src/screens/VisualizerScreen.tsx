@@ -1166,6 +1166,7 @@ export default function VisualizerScreen() {
             autoAdvance={visualizerAutoAdvance}
             shuffle={visualizerShuffle}
             frozen={frozen}
+            isFavorite={currentIsFavorite}
           />
 
           {/* Right controls: fullscreen toggle (when supported) + mode toggle */}

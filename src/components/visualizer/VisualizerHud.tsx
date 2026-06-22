@@ -7,6 +7,8 @@ interface VisualizerHudProps {
   autoAdvance: boolean;
   shuffle: boolean;
   frozen: boolean;
+  /** Whether the current preset is favorited — shows a leading ★ in Milkdrop mode. */
+  isFavorite?: boolean;
 }
 
 const badge = 'rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide';
@@ -16,10 +18,17 @@ const badge = 'rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase trac
  * status badges (engine, position, auto/shuffle/frozen). Pure/presentational —
  * the toast and transition polish live in VisualizerScreen.
  */
-export default function VisualizerHud({ presetName, engine, index, total, autoAdvance, shuffle, frozen }: VisualizerHudProps) {
+export default function VisualizerHud({ presetName, engine, index, total, autoAdvance, shuffle, frozen, isFavorite = false }: VisualizerHudProps) {
+  // The ★ is a passive indicator; favorites only apply in Milkdrop mode (engine set).
+  const showFavorite = isFavorite && engine != null;
   return (
     <div className="flex max-w-[60%] flex-col items-center gap-1">
-      <span className="truncate text-sm font-medium text-white/90">{presetName}</span>
+      <span className="flex min-w-0 items-center gap-1 text-sm font-medium text-white/90">
+        {showFavorite && (
+          <span role="img" aria-label="Favorited" className="shrink-0 text-amber-300">★</span>
+        )}
+        <span className="truncate">{presetName}</span>
+      </span>
       {engine && (
         <div className="flex flex-wrap items-center justify-center gap-1">
           <span className={`${badge} flex items-center gap-1 bg-white/10 text-white/70`}>

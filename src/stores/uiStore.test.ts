@@ -120,4 +120,17 @@ describe('uiStore', () => {
       expect(useUIStore.getState().epilepsyWarningDismissed).toBe(true);
     });
   });
+
+  describe('visualizerFavoritesOnly', () => {
+    it('defaults to off', () => {
+      expect(useUIStore.getState().visualizerFavoritesOnly).toBe(false);
+    });
+
+    it('toggles', () => {
+      useUIStore.getState().setVisualizerFavoritesOnly(true);
+      expect(useUIStore.getState().visualizerFavoritesOnly).toBe(true);
+      useUIStore.getState().setVisualizerFavoritesOnly(false);
+      expect(useUIStore.getState().visualizerFavoritesOnly).toBe(false);
+    });
+  });
 });

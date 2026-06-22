@@ -2,6 +2,22 @@
 
 All notable changes to Vibrdrome Web are documented here.
 
+## [1.9.0-beta.12] - 2026-06-21
+
+### Added
+- **Display-only HUD ★ indicator** for favorited visualizer presets.
+
+### Notes
+- The ★ appears beside the HUD preset name when the current preset is favorited.
+- The indicator is **display-only and not clickable**.
+- The existing control-bar **☆/★ button remains the only favorite toggle**.
+- **No outline ☆** is shown for non-favorites.
+- **Shader / non-Milkdrop mode does not show the indicator.**
+- **Favorite identity/storage is unchanged.**
+- **Search, ★ Only, next/previous, random, auto-advance, and `?preset=` are unchanged.**
+- No rendering, engine, crossfade, preset-bundle, dependency, workflow, or Dockerfile changes.
+- Deferred (not in this release): favoriting keyboard shortcut, orphaned-favorite cleanup, and cross-device sync.
+
 ## [1.9.0-beta.11] - 2026-06-21
 
 ### Added

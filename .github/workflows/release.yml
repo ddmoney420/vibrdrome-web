@@ -27,3 +27,4 @@ jobs:
         with:
           body: ${{ steps.changelog.outputs.body }}
           generate_release_notes: false
+          prerelease: ${{ contains(github.ref_name, '-beta.') }}

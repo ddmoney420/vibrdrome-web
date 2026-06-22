@@ -37,6 +37,12 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      # Browser smoke test of the *minified* production bundle. Catches
+      # production-only crashes that `tsc`/Vitest miss (e.g. the vite-8.0.10
+      # chunking regression that black-screened 1.9.0-beta.1: zustand `create`
+      # landed in the entry chunk → circular init → blank #root).
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:smoke
 
   docker:
     runs-on: ubuntu-latest

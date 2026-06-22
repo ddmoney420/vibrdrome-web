@@ -1,7 +1,24 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getPlaybackManager } from '../audio/PlaybackManager';
 import { useUIStore } from '../stores/uiStore';
+import { usePlayerStore } from '../stores/playerStore';
+import { usePresetStore } from '../stores/presetStore';
+import VisualizerTransport from '../components/visualizer/VisualizerTransport';
+import VisualizerHud from '../components/visualizer/VisualizerHud';
+import ParticleOverlay from '../components/visualizer/ParticleOverlay';
+import { useMediaQuery } from '../hooks/useMediaQuery';
+import { shouldCrossfade, captureSnapshot } from '../utils/presetCrossfade';
+import type { PresetIndexEntry } from '../types/presets';
+
+// projectM preset category that is excluded from normal selection: these are
+// transition effects that fade to black by design, not standalone visuals.
+const TRANSITION_CATEGORY = '! Transition';
+
+// Preset crossfade length (ms) for the projectM/WebGPU 'fade' setting. Matches
+// the existing frozen-frame fallback fade in `runSnapshotFade` so the two paths
+// feel the same; not a new user-facing setting.
+const PRESET_CROSSFADE_MS = 1400;
 
 // --- Shader Presets ---
 
@@ -174,6 +191,7 @@ export default function VisualizerScreen() {
   const navigate = useNavigate();
   const { epilepsyWarningDismissed, setEpilepsyWarningDismissed } = useUIStore();
   const [showWarning, setShowWarning] = useState(!epilepsyWarningDismissed);
+  const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const milkdropCanvasRef = useRef<HTMLCanvasElement>(null);
   const glRef = useRef<WebGLRenderingContext | null>(null);
@@ -185,12 +203,122 @@ export default function VisualizerScreen() {
   const butterchurnRef = useRef<any>(null);
   const fallbackCtxRef = useRef<AudioContext | null>(null);
 
+  // projectM-rs (WASM/WebGPU) engine — the primary Milkdrop engine when WebGPU
+  // is available. Renders on its own canvas; butterchurn stays the fallback.
+  const projectmCanvasRef = useRef<HTMLCanvasElement>(null);
+  const pmEngineRef = useRef<import('../pmweb/pm_web').PmEngine | null>(null);
+  const pmFrameRef = useRef<number>(0);
+  const projectmEntriesRef = useRef<PresetIndexEntry[]>([]);
+
+  // Freeze/step + FPS, read by the (closure-captured) render loops via refs.
+  const frozenRef = useRef(false);
+  const stepRef = useRef(0);
+  const clockRef = useRef(0); // projectM time in seconds (held while frozen)
+  const lastTickRef = useRef(0);
+  const frameCountRef = useRef(0);
+  const fpsLastRef = useRef(0);
+  const showFpsRef = useRef(false);
+
+  // Visualizer settings (persisted) + the keyboard-shortcuts master toggle.
+  const {
+    visualizerForceButterchurn,
+    visualizerAutoAdvance, setVisualizerAutoAdvance,
+    visualizerAutoAdvanceInterval, setVisualizerAutoAdvanceInterval,
+    visualizerShuffle, setVisualizerShuffle,
+    visualizerShowTransport,
+    visualizerTransitionPolish,
+    visualizerParticles,
+    visualizerPinControls, setVisualizerPinControls,
+    visualizerPresetTransition,
+    reduceMotion,
+    keyboardShortcutsEnabled,
+  } = useUIStore();
+
+  // Motion safety: suppress the transition polish under either the in-app
+  // reduce-motion setting or the OS prefers-reduced-motion media query.
+  const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+  const motionReduced = reduceMotion || prefersReducedMotion;
+
+  // Frozen-frame crossfade (projectM path). Refs keep the preset-load effect from
+  // re-running when the setting/motion changes (toggling must not reload presets).
+  const fadeImgRef = useRef<HTMLImageElement>(null);
+  const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pmFadeArmedRef = useRef(false); // a projectM preset has rendered → safe to capture
+  const transitionRef = useRef(visualizerPresetTransition);
+  const motionReducedRef = useRef(motionReduced);
+  useEffect(() => { transitionRef.current = visualizerPresetTransition; }, [visualizerPresetTransition]);
+  useEffect(() => { motionReducedRef.current = motionReduced; }, [motionReduced]);
+
+  // Show the captured old frame (a JPEG data URL), then fade it out over the new
+  // live preset. Pure DOM on a ref'd <img> — no React state churn during the
+  // fade, and data URLs need no revoking. A monotonic token guards against rapid
+  // switches superseding an in-flight fade.
+  const fadeTokenRef = useRef(0);
+  const runSnapshotFade = useCallback((url: string, hardCut: () => void) => {
+    const img = fadeImgRef.current;
+    if (!img) { hardCut(); return; }
+    const token = ++fadeTokenRef.current;
+    if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current);
+    img.style.transition = 'none';
+    img.style.opacity = '1';
+    img.style.display = 'block';
+    img.src = url;
+
+    const begin = () => {
+      if (fadeTokenRef.current !== token || !fadeImgRef.current) { hardCut(); return; }
+      // The still is decoded and covering the canvas at full opacity → hard-cut
+      // the new preset underneath it, then fade the still out to reveal it.
+      hardCut();
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        if (fadeTokenRef.current !== token || !fadeImgRef.current) return;
+        fadeImgRef.current.style.transition = 'opacity 1400ms ease-out';
+        fadeImgRef.current.style.opacity = '0';
+      }));
+      fadeTimerRef.current = setTimeout(() => {
+        if (fadeTokenRef.current !== token) return;
+        if (fadeImgRef.current) { fadeImgRef.current.style.display = 'none'; fadeImgRef.current.removeAttribute('src'); }
+      }, 1500);
+    };
+
+    // Decode the still BEFORE hard-cutting. A large JPEG data URL decodes
+    // asynchronously; showing it pre-decode would leave the new preset visible
+    // underneath and read as a hard cut. decode() guarantees it actually paints.
+    if (typeof img.decode === 'function') img.decode().then(begin).catch(begin);
+    else { img.onload = begin; }
+  }, []);
+
+  // Clean up any in-flight fade timer on unmount.
+  useEffect(() => () => {
+    if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current);
+  }, []);
+
+  // Subscribed only to decide whether the in-overlay transport renders (so the
+  // bottom control bar / FPS overlay can shift up to make room for it).
+  const transportSong = usePlayerStore((s) => s.currentSong);
+  const transportRadio = usePlayerStore((s) => s.radioMode);
+  const transportVisible = visualizerShowTransport && (!!transportSong || !!transportRadio);
+
   const [mode, setMode] = useState<'shader' | 'milkdrop'>('shader');
+  const [frozen, setFrozen] = useState(false);
+  const [showFps, setShowFps] = useState(false);
+  const [fps, setFps] = useState(0);
   const [presetIndex, setPresetIndex] = useState(0);
   const [milkdropPresetIndex, setMilkdropPresetIndex] = useState(0);
   const [milkdropPresetNames, setMilkdropPresetNames] = useState<string[]>([]);
   const [milkdropReady, setMilkdropReady] = useState(false);
   const [showOverlay, setShowOverlay] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  // Transient toast showing the preset name when it changes.
+  const [presetToast, setPresetToast] = useState<string | null>(null); // controls visibility
+  const [toastText, setToastText] = useState(''); // retained during the toast's fade-out
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const vignetteRef = useRef<HTMLDivElement>(null);
+  // Set just before an auto-advance preset change so the toast + overlay stay
+  // silent for that change (the optional vignette still plays).
+  const suppressNextToastRef = useRef(false);
+  // Which Milkdrop engine is active: 'projectm' (WebGPU) or 'butterchurn'
+  // (fallback), decided when milkdrop mode activates.
+  const [milkdropEngine, setMilkdropEngine] = useState<'projectm' | 'butterchurn' | null>(null);
 
   const overlayTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -201,6 +329,73 @@ export default function VisualizerScreen() {
     if (overlayTimeoutRef.current) clearTimeout(overlayTimeoutRef.current);
     overlayTimeoutRef.current = setTimeout(() => setShowOverlay(false), 4000);
   }, []);
+
+  // Fullscreen support is feature-detected once. iOS Safari (iPhone) only allows
+  // fullscreen on <video>, not arbitrary elements, so neither flag is set there
+  // and the toggle button is hidden entirely. Older WebKit uses the webkit prefix.
+  const fullscreenSupported = useMemo(() => {
+    if (typeof document === 'undefined') return false;
+    const doc = document as Document & { webkitFullscreenEnabled?: boolean };
+    return !!(doc.fullscreenEnabled || doc.webkitFullscreenEnabled);
+  }, []);
+
+  // Toggle fullscreen on the visualizer root container. Click-only (no shortcut),
+  // never auto-entered. requestFullscreen needs the click's user gesture; we
+  // swallow any rejection so it can never surface as a console error.
+  const toggleFullscreen = useCallback(() => {
+    const el = containerRef.current as
+      | (HTMLDivElement & { webkitRequestFullscreen?: () => void | Promise<void> })
+      | null;
+    if (!el) return;
+    const doc = document as Document & {
+      webkitFullscreenElement?: Element | null;
+      webkitExitFullscreen?: () => void | Promise<void>;
+    };
+    const active = document.fullscreenElement || doc.webkitFullscreenElement;
+    const run = active
+      ? (document.exitFullscreen ?? doc.webkitExitFullscreen)?.call(document)
+      : (el.requestFullscreen ?? el.webkitRequestFullscreen)?.call(el);
+    if (run && typeof (run as Promise<void>).catch === 'function') {
+      (run as Promise<void>).catch(() => { /* user gesture / unsupported — ignore */ });
+    }
+    resetOverlayTimer();
+  }, [resetOverlayTimer]);
+
+  // Keep the button state in sync with the actual fullscreen state, including
+  // when the user exits via ESC or the browser chrome.
+  useEffect(() => {
+    if (!fullscreenSupported) return;
+    const onChange = () => {
+      const doc = document as Document & { webkitFullscreenElement?: Element | null };
+      setIsFullscreen(!!(document.fullscreenElement || doc.webkitFullscreenElement));
+    };
+    document.addEventListener('fullscreenchange', onChange);
+    document.addEventListener('webkitfullscreenchange', onChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', onChange);
+      document.removeEventListener('webkitfullscreenchange', onChange);
+    };
+  }, [fullscreenSupported]);
+
+  // Keep loop-read refs in sync with state.
+  useEffect(() => { frozenRef.current = frozen; }, [frozen]);
+  useEffect(() => { showFpsRef.current = showFps; }, [showFps]);
+
+  // Shared FPS counter, called once per rendered frame by the active loop.
+  const tickFps = useCallback(() => {
+    frameCountRef.current++;
+    const now = performance.now();
+    if (now - fpsLastRef.current >= 500) {
+      const value = (frameCountRef.current * 1000) / (now - fpsLastRef.current);
+      frameCountRef.current = 0;
+      fpsLastRef.current = now;
+      if (showFpsRef.current) setFps(Math.round(value));
+    }
+  }, []);
+
+  const toggleFreeze = useCallback(() => { setFrozen((f) => !f); resetOverlayTimer(); }, [resetOverlayTimer]);
+  const stepFrame = useCallback(() => { stepRef.current += 1; resetOverlayTimer(); }, [resetOverlayTimer]);
+  const toggleFps = useCallback(() => { setShowFps((s) => !s); resetOverlayTimer(); }, [resetOverlayTimer]);
 
   // Set start time on mount
   useEffect(() => {
@@ -317,9 +512,25 @@ export default function VisualizerScreen() {
     };
   }, [mode, presetIndex]);
 
-  // Initialize Butterchurn when switching to milkdrop mode
+  // Decide the Milkdrop engine when the mode activates: projectM-rs when WebGPU
+  // is available, else butterchurn. A projectM failure flips this to
+  // 'butterchurn' from the projectM effect below.
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- engine choice derives from mode + WebGPU availability */
     if (mode !== 'milkdrop') {
+      setMilkdropEngine(null);
+      return;
+    }
+    const hasWebGPU = typeof navigator !== 'undefined' && 'gpu' in navigator;
+    setMilkdropPresetIndex(0);
+    setFrozen(false);
+    setMilkdropEngine(hasWebGPU && !visualizerForceButterchurn ? 'projectm' : 'butterchurn');
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [mode, visualizerForceButterchurn]);
+
+  // Initialize Butterchurn when it's the chosen Milkdrop engine (fallback).
+  useEffect(() => {
+    if (mode !== 'milkdrop' || milkdropEngine !== 'butterchurn') {
       if (milkdropFrameRef.current) cancelAnimationFrame(milkdropFrameRef.current);
       return;
     }
@@ -403,7 +614,16 @@ export default function VisualizerScreen() {
             }
           }
 
-          visualizer.render();
+          // Freeze skips render() so the last frame holds; a step renders once.
+          let doRender = true;
+          if (frozenRef.current) {
+            if (stepRef.current > 0) stepRef.current -= 1;
+            else doRender = false;
+          }
+          if (doRender) {
+            visualizer.render();
+            tickFps();
+          }
           milkdropFrameRef.current = requestAnimationFrame(renderMilkdrop);
         };
 
@@ -426,9 +646,127 @@ export default function VisualizerScreen() {
       setMilkdropReady(false);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode]);
+  }, [mode, milkdropEngine]);
 
-  // Update milkdrop preset when index changes
+  // Initialize projectM-rs (WASM, WebGPU) when it's the chosen Milkdrop engine.
+  useEffect(() => {
+    if (mode !== 'milkdrop' || milkdropEngine !== 'projectm') return;
+    let cancelled = false;
+
+    async function initProjectM() {
+      const canvas = projectmCanvasRef.current;
+      if (!canvas) return;
+
+      // Lazy-load the WASM module only now (code-split chunk + .wasm).
+      const wasm = await import('../pmweb/pm_web.js');
+      if (cancelled) return;
+      await wasm.default();
+      wasm.start();
+
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.floor(canvas.clientWidth * dpr);
+      canvas.height = Math.floor(canvas.clientHeight * dpr);
+
+      const engine = await wasm.PmEngine.create(canvas, canvas.width, canvas.height);
+      if (cancelled) { engine.free(); return; }
+      pmEngineRef.current = engine;
+      pmFadeArmedRef.current = false; // fresh engine: don't fade from a blank first frame
+
+      // Preset library from the preset store (manifest only — shards lazy-load).
+      // Exclude the "! Transition" category from the selectable list: those are
+      // transition effects that fade to black by design, not standalone visuals.
+      // They stay in the bundle/manifest/IndexedDB cache — only filtered out of
+      // normal next/prev/random/startup selection.
+      // TODO: stray black presets *outside* this category aren't caught here.
+      // Async GPU black-frame detection (a non-blocking readback) could skip
+      // those later if it becomes a real problem in practice.
+      const store = usePresetStore.getState();
+      await store.init();
+      const entries = store.listPresets().filter((e) => e.category !== TRANSITION_CATEGORY);
+      if (entries.length === 0) throw new Error('no selectable presets in manifest');
+      projectmEntriesRef.current = entries;
+      if (!cancelled) setMilkdropPresetNames(entries.map((e) => e.name));
+
+      // Start on a RANDOM non-transition preset (index 0 is alphabetical — the
+      // worst case, the "! Transition" black presets). Set the index so the
+      // overlay name + nav stay consistent, then load it (hard cut).
+      const startIdx = Math.floor(Math.random() * entries.length);
+      if (!cancelled) setMilkdropPresetIndex(startIdx);
+      const text = await store.getPresetText(entries[startIdx].path);
+      if (cancelled) return;
+      if (text) engine.load_preset(text);
+      if (!cancelled) setMilkdropReady(true);
+
+      // Render loop — React owns rAF; feed the app's real playback audio.
+      // Freeze holds the clock (and skips rendering so the last frame stays);
+      // a single step advances exactly one 1/60s frame while frozen.
+      let audioBuf: Float32Array<ArrayBuffer> | null = null;
+      clockRef.current = 0;
+      lastTickRef.current = 0;
+      const loop = (tMs: number) => {
+        if (cancelled) return;
+        const c = projectmCanvasRef.current;
+        if (c) {
+          const w = Math.floor(c.clientWidth * dpr);
+          const h = Math.floor(c.clientHeight * dpr);
+          if (c.width !== w || c.height !== h) {
+            c.width = w;
+            c.height = h;
+            engine.resize(w, h);
+          }
+        }
+
+        const dt = lastTickRef.current ? Math.min((tMs - lastTickRef.current) / 1000, 0.1) : 1 / 60;
+        lastTickRef.current = tMs;
+
+        let doRender = true;
+        if (frozenRef.current) {
+          if (stepRef.current > 0) {
+            clockRef.current += 1 / 60;
+            stepRef.current -= 1;
+          } else {
+            doRender = false;
+          }
+        } else {
+          clockRef.current += dt;
+        }
+
+        if (doRender) {
+          const analyser = getPlaybackManager().getAnalyser();
+          if (analyser) {
+            if (!audioBuf || audioBuf.length !== analyser.fftSize) {
+              audioBuf = new Float32Array(analyser.fftSize);
+            }
+            analyser.getFloatTimeDomainData(audioBuf);
+            engine.push_audio(audioBuf);
+          }
+          engine.render(clockRef.current);
+          tickFps();
+        }
+        pmFrameRef.current = requestAnimationFrame(loop);
+      };
+      pmFrameRef.current = requestAnimationFrame(loop);
+    }
+
+    initProjectM().catch((err) => {
+      console.error('[Visualizer] projectM-rs init failed → falling back to butterchurn', err);
+      if (!cancelled) setMilkdropEngine('butterchurn');
+    });
+
+    return () => {
+      cancelled = true;
+      if (pmFrameRef.current) cancelAnimationFrame(pmFrameRef.current);
+      pmFrameRef.current = 0;
+      if (pmEngineRef.current) {
+        try { pmEngineRef.current.free(); } catch { /* ignore */ }
+        pmEngineRef.current = null;
+      }
+      projectmEntriesRef.current = [];
+      setMilkdropReady(false);
+    };
+  }, [mode, milkdropEngine, tickFps]);
+
+  // Update milkdrop preset when index changes (butterchurn).
   useEffect(() => {
     const bc = butterchurnRef.current;
     if (!bc || mode !== 'milkdrop') return;
@@ -439,6 +777,62 @@ export default function VisualizerScreen() {
       visualizer.loadPreset(presets[name], 1.0); // 1s blend transition
     }
   }, [milkdropPresetIndex, mode]);
+
+  // Hard-cut preset switch for projectM-rs when the index changes.
+  useEffect(() => {
+    if (mode !== 'milkdrop' || milkdropEngine !== 'projectm') return;
+    const engine = pmEngineRef.current;
+    const entries = projectmEntriesRef.current;
+    if (!engine || entries.length === 0) return;
+    const entry = entries[milkdropPresetIndex];
+    if (!entry) {
+      // Index out of range (e.g. a stale/filtered selection) → jump to a random
+      // valid non-transition preset; this effect re-runs with the new index.
+      setMilkdropPresetIndex(Math.floor(Math.random() * entries.length));
+      return;
+    }
+    let cancelled = false;
+    usePresetStore
+      .getState()
+      .getPresetText(entry.path)
+      .then((text) => {
+        if (cancelled || !text) return;
+        const canvas = projectmCanvasRef.current;
+        const fade = shouldCrossfade({
+          transition: transitionRef.current,
+          motionReduced: motionReducedRef.current,
+          armed: pmFadeArmedRef.current,
+          hasCanvas: !!canvas,
+        });
+        // First load of a projectM session has no prior frame to fade from.
+        pmFadeArmedRef.current = true;
+        const hardCut = () => { if (!cancelled) engine.load_preset(text); };
+        if (fade && canvas) {
+          if (typeof engine.transition_to_preset === 'function') {
+            // Engine-level live crossfade: both presets keep rendering and their
+            // outputs are blended in the engine (no frozen still). On a parse
+            // failure it returns false and the engine keeps the current preset —
+            // same outcome as a failed load_preset, so nothing extra to do here.
+            if (!cancelled) engine.transition_to_preset(text, PRESET_CROSSFADE_MS);
+          } else {
+            // Fallback for an older vendored WASM without the engine transition:
+            // capture the OLD frame (synchronous), decode the still, hard-cut the
+            // new preset underneath, and fade the still out. Capture failure →
+            // silent hard-cut.
+            captureSnapshot(canvas, (url) => {
+              if (url) runSnapshotFade(url, hardCut);
+              else hardCut();
+            });
+          }
+        } else {
+          hardCut();
+        }
+      })
+      .catch((err) => console.error('[Visualizer] projectM preset load failed', err));
+    return () => {
+      cancelled = true;
+    };
+  }, [milkdropPresetIndex, milkdropEngine, mode, runSnapshotFade]);
 
   // Auto-hide overlay
   useEffect(() => {
@@ -473,6 +867,63 @@ export default function VisualizerScreen() {
     resetOverlayTimer();
   };
 
+  // Silent preset change driven by the auto-advance timer: changes the preset
+  // without waking the overlay or showing the toast (the vignette still plays).
+  // Uses the functional updater so it never reads a stale index from the interval.
+  const autoAdvance = () => {
+    suppressNextToastRef.current = true;
+    if (visualizerShuffle) {
+      setActiveIndex((i) => {
+        if (totalPresets <= 1) return i;
+        let next: number;
+        do {
+          next = Math.floor(Math.random() * totalPresets);
+        } while (next === i);
+        return next;
+      });
+    } else {
+      setActiveIndex((i) => (i + 1) % totalPresets);
+    }
+  };
+
+  // Auto-advance: cycle presets on the configured interval while in Milkdrop.
+  useEffect(() => {
+    if (mode !== 'milkdrop' || !milkdropReady || !visualizerAutoAdvance) return;
+    const ms = Math.max(1, visualizerAutoAdvanceInterval) * 1000;
+    const id = setInterval(autoAdvance, ms);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, milkdropReady, visualizerAutoAdvance, visualizerAutoAdvanceInterval, visualizerShuffle]);
+
+  // Visualizer-scoped keyboard controls. A no-deps effect keeps the latest
+  // logic in a ref so the document listener (added once) always sees current
+  // state without re-subscribing every render. Mirrors the app's conventions:
+  // honors the master shortcuts toggle and ignores typing in form fields.
+  const keyHandlerRef = useRef<(e: KeyboardEvent) => void>(() => {});
+  useEffect(() => {
+    keyHandlerRef.current = (e: KeyboardEvent) => {
+      if (!keyboardShortcutsEnabled) return;
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      switch (e.key) {
+        case 'n': case 'N': nextPreset(); break;
+        case 'p': case 'P': prevPreset(); break;
+        case 'a': case 'A': setVisualizerAutoAdvance(!visualizerAutoAdvance); resetOverlayTimer(); break;
+        case '[': setVisualizerAutoAdvanceInterval(Math.max(5, visualizerAutoAdvanceInterval - 5)); resetOverlayTimer(); break;
+        case ']': setVisualizerAutoAdvanceInterval(Math.min(60, visualizerAutoAdvanceInterval + 5)); resetOverlayTimer(); break;
+        case 'k': case 'K': toggleFreeze(); break;
+        case '.': stepFrame(); break;
+        case 'f': case 'F': toggleFps(); break;
+        default: break;
+      }
+    };
+  });
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => keyHandlerRef.current(e);
+    document.addEventListener('keydown', h);
+    return () => document.removeEventListener('keydown', h);
+  }, []);
+
   const handleCanvasClick = () => {
     resetOverlayTimer();
   };
@@ -485,8 +936,50 @@ export default function VisualizerScreen() {
     ? currentPreset.name
     : (milkdropPresetNames[milkdropPresetIndex] || 'Loading...');
 
+  // On preset change: show a brief name toast, and (when enabled and motion is
+  // not reduced) pulse a subtle DOM/CSS vignette over the still-hard-cut switch.
+  // The actual preset switch is unchanged — this is purely cosmetic overlay.
+  const prevPresetNameRef = useRef<string | null>(null);
+  useEffect(() => {
+    const name = displayPresetName;
+    const prev = prevPresetNameRef.current;
+    prevPresetNameRef.current = name;
+    // Skip the initial mount and the transient "Loading..." placeholder.
+    if (prev === null || !name || name === 'Loading...' || name === prev) return;
+
+    // Auto-advance changes are silent: no toast (and the timer never woke the
+    // overlay). The vignette below still plays for smooth slideshow transitions.
+    const silent = suppressNextToastRef.current;
+    suppressNextToastRef.current = false;
+    if (!silent) {
+      setToastText(name);
+      setPresetToast(name);
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = setTimeout(() => setPresetToast(null), 1800);
+    }
+
+    if (visualizerTransitionPolish && !motionReduced) {
+      const el = vignetteRef.current;
+      if (el && typeof el.animate === 'function') {
+        // A short darken-edges pulse (0 → subtle → 0). No white flash.
+        el.animate(
+          [{ opacity: 0 }, { opacity: 0.55, offset: 0.35 }, { opacity: 0 }],
+          { duration: 260, easing: 'ease-out' },
+        );
+      }
+    }
+  }, [displayPresetName, visualizerTransitionPolish, motionReduced]);
+
+  useEffect(() => () => { if (toastTimerRef.current) clearTimeout(toastTimerRef.current); }, []);
+
+  const ctrlBtn = (on: boolean, disabled = false) =>
+    `rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+      on ? 'bg-accent text-white' : 'bg-white/10 text-white/80 hover:bg-white/20'
+    } ${disabled ? 'opacity-40' : ''}`;
+
   return (
     <div
+      ref={containerRef}
       className="relative h-screen w-screen bg-black"
       onClick={handleCanvasClick}
       onDoubleClick={handleCanvasDoubleClick}
@@ -507,10 +1000,30 @@ export default function VisualizerScreen() {
         className={`absolute inset-0 h-full w-full ${mode === 'milkdrop' ? 'hidden' : ''}`}
       />
 
-      {/* Milkdrop Canvas (Butterchurn) */}
+      {/* Milkdrop Canvas (Butterchurn — fallback when WebGPU is unavailable) */}
       <canvas
         ref={milkdropCanvasRef}
-        className={`absolute inset-0 h-full w-full ${mode === 'shader' ? 'hidden' : ''}`}
+        className={`absolute inset-0 h-full w-full ${
+          mode === 'shader' || milkdropEngine === 'projectm' ? 'hidden' : ''
+        }`}
+      />
+
+      {/* projectM-rs Canvas (WebGPU — primary Milkdrop engine when available) */}
+      <canvas
+        ref={projectmCanvasRef}
+        className={`absolute inset-0 h-full w-full ${
+          mode === 'milkdrop' && milkdropEngine === 'projectm' ? '' : 'hidden'
+        }`}
+      />
+
+      {/* Frozen-frame crossfade still — sits above the projectM canvas, briefly
+          shown then faded out on a preset change (driven imperatively via ref). */}
+      <img
+        ref={fadeImgRef}
+        alt=""
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+        style={{ display: 'none', opacity: 0 }}
       />
 
       {/* Milkdrop loading indicator */}
@@ -519,6 +1032,10 @@ export default function VisualizerScreen() {
           <p className="text-lg text-white/60">Loading Milkdrop...</p>
         </div>
       )}
+
+      {/* Optional particle layer — above the engine canvases, below the
+          controls/HUD. Opt-in and force-suppressed under reduced motion. */}
+      {visualizerParticles && !motionReduced && <ParticleOverlay />}
 
       {/* Overlay */}
       <div
@@ -542,22 +1059,53 @@ export default function VisualizerScreen() {
             </svg>
           </button>
 
-          {/* Preset name */}
-          <span className="max-w-[50%] truncate text-sm font-medium text-white/80">
-            {displayPresetName}
-          </span>
+          {/* Preset name + status badges (engine · index/total · auto/shuffle/frozen) */}
+          <VisualizerHud
+            presetName={displayPresetName}
+            engine={mode === 'milkdrop' ? milkdropEngine : null}
+            index={milkdropPresetIndex + 1}
+            total={totalPresets}
+            autoAdvance={visualizerAutoAdvance}
+            shuffle={visualizerShuffle}
+            frozen={frozen}
+          />
 
-          {/* Mode toggle */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setMode((m) => (m === 'shader' ? 'milkdrop' : 'shader'));
-              resetOverlayTimer();
-            }}
-            className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-white/80 transition-colors hover:bg-white/20"
-          >
-            {mode === 'shader' ? 'Milkdrop' : 'Shader'}
-          </button>
+          {/* Right controls: fullscreen toggle (when supported) + mode toggle */}
+          <div className="flex items-center gap-2">
+            {fullscreenSupported && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleFullscreen();
+                }}
+                className="flex h-10 w-10 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+                aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+                title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+              >
+                {isFullscreen ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 9V4.5M9 9H4.5M9 9 3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5 5.25 5.25" />
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
+                  </svg>
+                )}
+              </button>
+            )}
+
+            {/* Mode toggle */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setMode((m) => (m === 'shader' ? 'milkdrop' : 'shader'));
+                resetOverlayTimer();
+              }}
+              className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-white/80 transition-colors hover:bg-white/20"
+            >
+              {mode === 'shader' ? 'Milkdrop' : 'Shader'}
+            </button>
+          </div>
         </div>
 
         {/* Arrow navigation */}
@@ -589,6 +1137,71 @@ export default function VisualizerScreen() {
             </button>
           </>
         )}
+
+        {/* Milkdrop control bar — shifts up when the transport occupies the bottom */}
+        {mode === 'milkdrop' && milkdropReady && (
+          <div className={`pointer-events-auto absolute left-1/2 flex -translate-x-1/2 flex-wrap items-center justify-center gap-2 rounded-full bg-black/60 px-3 py-2 ${transportVisible ? 'bottom-28' : 'bottom-6'}`}>
+            <button onClick={(e) => { e.stopPropagation(); toggleFreeze(); }} title="Freeze / unfreeze (K)" className={ctrlBtn(frozen)}>
+              {frozen ? '▶ Resume' : '⏸ Freeze'}
+            </button>
+            <button onClick={(e) => { e.stopPropagation(); stepFrame(); }} disabled={!frozen} title="Step one frame while frozen (.)" className={ctrlBtn(false, !frozen)}>
+              ⏭ Step
+            </button>
+            <button onClick={(e) => { e.stopPropagation(); setVisualizerAutoAdvance(!visualizerAutoAdvance); resetOverlayTimer(); }} title="Auto-advance (A)" className={ctrlBtn(visualizerAutoAdvance)}>
+              ⏩ Auto
+            </button>
+            <button onClick={(e) => { e.stopPropagation(); setVisualizerShuffle(!visualizerShuffle); resetOverlayTimer(); }} title="Shuffle on advance" className={ctrlBtn(visualizerShuffle)}>
+              🔀 Shuffle
+            </button>
+            <button onClick={(e) => { e.stopPropagation(); toggleFps(); }} title="FPS overlay (F)" className={ctrlBtn(showFps)}>
+              FPS
+            </button>
+            {visualizerShowTransport && (
+              <button onClick={(e) => { e.stopPropagation(); setVisualizerPinControls(!visualizerPinControls); resetOverlayTimer(); }} title="Keep player controls on screen" className={ctrlBtn(visualizerPinControls)}>
+                📌 Pin
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* In-visualizer playback transport (opt-in; self-hides with no song).
+          Lives outside the auto-hiding overlay so the Pin toggle can keep just
+          the player controls on screen while the rest of the HUD still fades. */}
+      {visualizerShowTransport && (
+        <div
+          className={`transition-opacity duration-500 ${
+            showOverlay || visualizerPinControls ? 'opacity-100' : 'pointer-events-none opacity-0'
+          }`}
+        >
+          <VisualizerTransport onInteract={resetOverlayTimer} />
+        </div>
+      )}
+
+      {/* FPS overlay — persists regardless of the auto-hiding controls */}
+      {showFps && (
+        <div className={`pointer-events-none absolute left-2 rounded bg-black/60 px-2 py-1 font-mono text-xs text-green-400 ${transportVisible ? 'bottom-24' : 'bottom-2'}`}>
+          {fps} fps · {milkdropEngine === 'projectm' ? 'projectM/WebGPU' : mode === 'milkdrop' ? 'butterchurn/WebGL' : 'shader/WebGL'}
+        </div>
+      )}
+
+      {/* Transition polish: subtle vignette pulse on preset change (opacity
+          animated via WAAPI only when enabled + motion not reduced). Hard cut
+          underneath is unchanged. */}
+      <div
+        ref={vignetteRef}
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 opacity-0"
+        style={{ background: 'radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.7) 100%)' }}
+      />
+
+      {/* Preset-name toast — brief, independent of the auto-hiding overlay */}
+      <div
+        className={`pointer-events-none absolute top-[22%] left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-4 py-1.5 text-sm font-medium text-white/90 backdrop-blur-sm transition-opacity ${
+          motionReduced ? '' : 'duration-300'
+        } ${presetToast ? 'opacity-100' : 'opacity-0'}`}
+      >
+        {toastText}
       </div>
     </div>
   );

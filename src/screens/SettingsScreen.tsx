@@ -15,6 +15,17 @@ export default function SettingsScreen() {
   const { accentColor, setAccentColor, lastfmApiKey, setLastfmApiKey, reduceMotion, setReduceMotion, keyboardShortcutsEnabled, setKeyboardShortcutsEnabled, streamQuality, setStreamQuality } = useUIStore();
   const { crossfadeEnabled, crossfadeDuration, setCrossfade, setCrossfadeDuration, gaplessEnabled, setGapless } = usePlayerStore();
   const { sleepFadeDuration, setSleepFadeDuration, notificationsEnabled, setNotificationsEnabled, replayGainMode, setReplayGainMode, queueSyncEnabled, setQueueSyncEnabled } = useUIStore();
+  const {
+    visualizerForceButterchurn, setVisualizerForceButterchurn,
+    visualizerAutoAdvance, setVisualizerAutoAdvance,
+    visualizerAutoAdvanceInterval, setVisualizerAutoAdvanceInterval,
+    visualizerShuffle, setVisualizerShuffle,
+    visualizerShowTransport, setVisualizerShowTransport,
+    visualizerTransitionPolish, setVisualizerTransitionPolish,
+    visualizerParticles, setVisualizerParticles,
+    visualizerPinControls, setVisualizerPinControls,
+    visualizerPresetTransition, setVisualizerPresetTransition,
+  } = useUIStore();
   const eqEnabled = useEQStore((s) => s.enabled);
 
   const activeServer = servers.find((s) => s.id === activeServerId);
@@ -275,6 +286,218 @@ export default function SettingsScreen() {
             </div>
           </section>
 
+          {/* Visualizer */}
+          <section>
+            <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-text-muted">
+              Visualizer
+            </h2>
+            <div className="space-y-3 rounded-lg bg-bg-secondary p-4">
+              {/* Force Butterchurn */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-sm text-text-primary">Force Butterchurn engine</span>
+                  <p className="text-xs text-text-muted">Use the WebGL fallback even when WebGPU (projectM) is available</p>
+                </div>
+                <button
+                  role="switch"
+                  aria-checked={visualizerForceButterchurn}
+                  onClick={() => setVisualizerForceButterchurn(!visualizerForceButterchurn)}
+                  className={`relative h-6 w-11 rounded-full transition-colors ${
+                    visualizerForceButterchurn ? 'bg-accent' : 'bg-bg-tertiary'
+                  }`}
+                >
+                  <span
+                    className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                      visualizerForceButterchurn ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Auto-advance + interval */}
+              <div className="border-t border-border pt-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm text-text-primary">Auto-advance presets</span>
+                    <p className="text-xs text-text-muted">Cycle to the next preset automatically</p>
+                  </div>
+                  <button
+                    role="switch"
+                    aria-checked={visualizerAutoAdvance}
+                    onClick={() => setVisualizerAutoAdvance(!visualizerAutoAdvance)}
+                    className={`relative h-6 w-11 rounded-full transition-colors ${
+                      visualizerAutoAdvance ? 'bg-accent' : 'bg-bg-tertiary'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                        visualizerAutoAdvance ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+                {visualizerAutoAdvance && (
+                  <div className="mt-2 flex items-center gap-3">
+                    <span className="text-xs text-text-muted">Interval:</span>
+                    <select
+                      value={visualizerAutoAdvanceInterval}
+                      onChange={(e) => setVisualizerAutoAdvanceInterval(Number(e.target.value))}
+                      className="rounded border border-border bg-bg-tertiary px-2 py-1 text-xs text-text-primary outline-none"
+                    >
+                      {[5, 10, 15, 20, 30, 60].map((s) => (
+                        <option key={s} value={s}>{s}s</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {/* Shuffle */}
+              <div className="border-t border-border pt-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm text-text-primary">Shuffle presets</span>
+                    <p className="text-xs text-text-muted">Pick a random preset on advance instead of the next one</p>
+                  </div>
+                  <button
+                    role="switch"
+                    aria-checked={visualizerShuffle}
+                    onClick={() => setVisualizerShuffle(!visualizerShuffle)}
+                    className={`relative h-6 w-11 rounded-full transition-colors ${
+                      visualizerShuffle ? 'bg-accent' : 'bg-bg-tertiary'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                        visualizerShuffle ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              {/* Show playback controls */}
+              <div className="border-t border-border pt-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm text-text-primary">Show playback controls</span>
+                    <p className="text-xs text-text-muted">Show now-playing transport (play, skip, seek) in the visualizer overlay</p>
+                  </div>
+                  <button
+                    role="switch"
+                    aria-checked={visualizerShowTransport}
+                    onClick={() => setVisualizerShowTransport(!visualizerShowTransport)}
+                    className={`relative h-6 w-11 rounded-full transition-colors ${
+                      visualizerShowTransport ? 'bg-accent' : 'bg-bg-tertiary'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                        visualizerShowTransport ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              {/* Preset crossfade (projectM/WebGPU) */}
+              <div className="border-t border-border pt-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm text-text-primary">Crossfade preset transitions</span>
+                    <p className="text-xs text-text-muted">Fade the old preset out over the new one (projectM/WebGPU only). Hard-cut otherwise. Suppressed when Reduce Motion is on</p>
+                  </div>
+                  <button
+                    role="switch"
+                    aria-checked={visualizerPresetTransition === 'fade'}
+                    onClick={() => setVisualizerPresetTransition(visualizerPresetTransition === 'fade' ? 'hard-cut' : 'fade')}
+                    className={`relative h-6 w-11 rounded-full transition-colors ${
+                      visualizerPresetTransition === 'fade' ? 'bg-accent' : 'bg-bg-tertiary'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                        visualizerPresetTransition === 'fade' ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              {/* Transition polish */}
+              <div className="border-t border-border pt-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm text-text-primary">Transition polish</span>
+                    <p className="text-xs text-text-muted">Subtle vignette dip when a preset changes (still a hard cut). Suppressed when Reduce Motion is on</p>
+                  </div>
+                  <button
+                    role="switch"
+                    aria-checked={visualizerTransitionPolish}
+                    onClick={() => setVisualizerTransitionPolish(!visualizerTransitionPolish)}
+                    className={`relative h-6 w-11 rounded-full transition-colors ${
+                      visualizerTransitionPolish ? 'bg-accent' : 'bg-bg-tertiary'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                        visualizerTransitionPolish ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              {/* Particle layer */}
+              <div className="border-t border-border pt-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm text-text-primary">Particle effects</span>
+                    <p className="text-xs text-text-muted">Subtle audio-reactive particle layer over the visualizer. Suppressed when Reduce Motion is on</p>
+                  </div>
+                  <button
+                    role="switch"
+                    aria-checked={visualizerParticles}
+                    onClick={() => setVisualizerParticles(!visualizerParticles)}
+                    className={`relative h-6 w-11 rounded-full transition-colors ${
+                      visualizerParticles ? 'bg-accent' : 'bg-bg-tertiary'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                        visualizerParticles ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              {/* Keep player controls on screen */}
+              <div className="border-t border-border pt-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm text-text-primary">Keep player controls on screen</span>
+                    <p className="text-xs text-text-muted">Pin the in-visualizer playback controls instead of letting them auto-hide</p>
+                  </div>
+                  <button
+                    role="switch"
+                    aria-checked={visualizerPinControls}
+                    onClick={() => setVisualizerPinControls(!visualizerPinControls)}
+                    className={`relative h-6 w-11 rounded-full transition-colors ${
+                      visualizerPinControls ? 'bg-accent' : 'bg-bg-tertiary'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                        visualizerPinControls ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+
           {/* Integrations */}
           <section>
             <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-text-muted">
@@ -424,8 +647,26 @@ export default function SettingsScreen() {
             <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-text-muted">
               About
             </h2>
-            <div className="rounded-lg bg-bg-secondary p-4">
-              <p className="text-sm text-text-muted">Vibrdrome Web v1.8.1-beta.2</p>
+            <div className="space-y-3 rounded-lg bg-bg-secondary p-4">
+              <p className="text-sm text-text-muted">Vibrdrome Web v1.9.0-beta.6</p>
+              <div className="border-t border-border pt-3">
+                <p className="text-xs font-medium text-text-secondary">Open-source components</p>
+                <p className="mt-1 text-xs text-text-muted">
+                  The Milkdrop visualizer uses{' '}
+                  <a
+                    href="https://github.com/ddmoney420/projectM-rs"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-accent hover:underline"
+                  >
+                    projectM-rs
+                  </a>{' '}
+                  (a projectM / Milkdrop derivative), licensed under LGPL-2.1.
+                  See <span className="font-mono">src/pmweb/NOTICE.md</span> and{' '}
+                  <span className="font-mono">COPYING</span> for the license and
+                  corresponding-source details.
+                </p>
+              </div>
             </div>
           </section>
 

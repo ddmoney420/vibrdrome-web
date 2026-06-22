@@ -2,8 +2,83 @@
 
 All notable changes to Vibrdrome Web are documented here.
 
-## [ Unreleased ]
-- Document Picture-in-Picture support (Chrome native PiP window)
+## [1.9.0-beta.6] - 2026-06-21
+
+### Changed
+- **Live engine-level projectM/WebGPU preset crossfade.** When the existing "Crossfade preset transitions" (`fade`) setting is on, projectM/WebGPU preset switches now blend in the **engine** — both the outgoing and incoming presets keep rendering live and their outputs are mixed across the transition — instead of fading a frozen still of the old frame. Re-vendored `pm-web` WASM exposing the new `transition_to_preset` API; engine source fix is [`projectM-rs#2`](https://github.com/ddmoney420/projectM-rs/pull/2).
+
+### Notes
+- **Hard-cut remains the default**; the live crossfade only applies when `fade` is enabled.
+- **Reduced motion** (in-app setting or `prefers-reduced-motion`) still suppresses the transition (hard-cut).
+- **Butterchurn** (WebGL fallback) behavior is unchanged.
+- The previous **frozen-frame crossfade remains as a fallback** for older/unavailable pm-web builds (feature-detected). No UI/settings change.
+
+## [1.9.0-beta.5] - 2026-06-21
+
+### Fixed
+- **projectM feedback-buffer inheritance** — feedback/transition-style Milkdrop presets that draw from the previous frame (e.g. "Angels Of Glory … Isosceles edit", "Goody – Growth effect", "nematodes (Reverse Jelly V3)", "Water Baqteria") no longer render as a black screen after a preset switch. The projectM/WebGPU engine now copies the previous preset's last completed frame into the newly-loaded preset's feedback buffer (a GPU texture-to-texture copy; a cold first-load with no prior frame is unchanged), so these presets inherit previous-frame content instead of starting from black. Ships as a re-vendored `pm-web` WASM build; engine source fix is [`projectM-rs#1`](https://github.com/ddmoney420/projectM-rs/pull/1).
+
+### Changed
+- Dev-tooling/dependency refresh (dev-dependencies group). **Vite unpinned from `8.0.9` to `8.0.16`** after explicit production-preview validation against the 1.9.0-beta.1 black-screen / entry-chunking failure (the `npm run test:smoke` guard remains wired into CI). No production-dependency policy changes.
+
+### Notes
+- No application source changed in this release beyond version metadata; the projectM fix is entirely in the re-vendored engine WASM. Preset switching remains a hard cut by default.
+
+## [1.9.0-beta.4] - 2026-06-20
+
+### Added
+- Optional projectM/WebGPU **frozen-frame preset crossfade** — fades the old preset out over the new one. Default off (hard-cut), with a Settings → Visualizer toggle; falls back silently to a hard cut on capture failure and is suppressed under Reduce Motion / `prefers-reduced-motion`.
+- **Pin visualizer player controls** — keep the in-visualizer playback controls on screen instead of auto-hiding (Settings + a control-bar toggle).
+
+### Changed
+- **Quiet auto-advance** — when auto-advance changes the visualizer preset, it no longer wakes the overlay or shows the preset-name toast (the optional transition vignette still plays).
+- Production dependency refresh (React, React DOM, React Router, Zustand, Tailwind Vite plugin, `@types/react`); **Vite intentionally remains pinned to `8.0.9`** and no other dependency policy changed.
+
+### Notes
+- Beta tags now publish as **GitHub prereleases** — effective once this reaches `master` (the first prerelease-flagged tag is `v1.9.0-beta.4`).
+- No projectM engine / WASM behavior changed; preset switching remains a hard cut by default.
+
+## [1.9.0-beta.3] - 2026-06-20
+
+### Added
+- Fullscreen toggle in the visualizer overlay — feature-detected, with WebKit fallbacks; hidden where the Fullscreen API is unsupported (e.g. iOS Safari).
+- Optional in-visualizer playback controls (now-playing transport: cover art, title/artist, play/pause, previous/next, seek, and desktop volume/mute), reusing the existing playback APIs and components. Default OFF.
+- Visualizer HUD polish: clearer preset name plus engine/position/auto/shuffle/frozen status badges, and a brief preset-name toast when the preset changes.
+- Optional, reduced-motion-safe transition vignette polish: a subtle DOM/CSS vignette dip around the (still hard-cut) preset switch. Default OFF.
+- Optional 2D-canvas particle overlay: a subtle audio-reactive particle layer with particle-count and device-pixel-ratio caps plus low-FPS throttling. Default OFF.
+
+### Notes
+- Particles and transition polish are opt-in and reduced-motion aware: both are suppressed when Reduce Motion or `prefers-reduced-motion: reduce` is active.
+- No projectM engine / WASM behavior changed; preset switching remains a hard cut. No real crossfade or screenshot/readback transition work is included.
+
+## [1.9.0-beta.2] - 2026-06-20
+
+### Fixed
+- Production black-screen on load: Vite 8.0.10 chunked `zustand`'s `create` into the entry chunk, creating a circular entry ↔ `uiStore` dependency — `uiStore` evaluated before `create` was initialized (`TypeError: create is not a function`), so React never mounted and `#root` stayed empty. (Regression in 1.9.0-beta.1.)
+
+### Changed
+- Pinned Vite to 8.0.9 (the chunk output that keeps `create` in a vendor chunk) pending an upstream-safe upgrade path.
+
+### Added
+- Production-preview smoke test (`npm run test:smoke`): builds the app, serves the minified bundle via `vite preview`, loads it in headless Chromium, and fails on console errors or an empty `#root`. Wired into the required CI build job so production-bundle-only crashes are caught before release.
+
+### Notes
+- No projectM visualizer behavior changed; this release is the 1.9.0-beta.1 feature set plus the production-bundle fix and smoke guard.
+
+## [1.9.0-beta.1] - 2026-06-19
+
+### Added
+- **projectM Milkdrop visualizer** — a WebGPU-based Milkdrop engine using projectM-rs compiled to WebAssembly. projectM is used as the primary Milkdrop visualizer when WebGPU is available, with butterchurn retained as the WebGL fallback.
+- Official projectM preset corpus bundled with 10,347 presets as gzipped shards, cached in IndexedDB with lazy per-category loading.
+- Visualizer controls for auto-advance with interval, shuffle, freeze, single-step, FPS overlay, info HUD, and keyboard shortcuts.
+- Settings → Visualizer options for force-butterchurn engine, auto-advance, auto-advance interval, and shuffle.
+- Documented Picture-in-Picture support.
+
+### Changed
+- The Milkdrop visualizer now reacts to live playback audio through the PlaybackManager analyser.
+
+### Licensing
+- Added LGPL-2.1 license text, source availability notice, and app-visible attribution for the vendored projectM-rs visualizer engine.
 
 ## [1.8.1-beta.2] - 2026-05-05
 

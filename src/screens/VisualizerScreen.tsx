@@ -309,7 +309,9 @@ export default function VisualizerScreen() {
   const transportRadio = usePlayerStore((s) => s.radioMode);
   const transportVisible = visualizerShowTransport && (!!transportSong || !!transportRadio);
 
-  const [mode, setMode] = useState<'shader' | 'milkdrop'>('shader');
+  // Persisted across reloads (uiStore) so the engine choice survives a refresh.
+  const mode = useUIStore((s) => s.visualizerMode);
+  const setVisualizerMode = useUIStore((s) => s.setVisualizerMode);
   const [frozen, setFrozen] = useState(false);
   const [showFps, setShowFps] = useState(false);
   const [fps, setFps] = useState(0);
@@ -1231,7 +1233,7 @@ export default function VisualizerScreen() {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                setMode((m) => (m === 'shader' ? 'milkdrop' : 'shader'));
+                setVisualizerMode(mode === 'shader' ? 'milkdrop' : 'shader');
                 resetOverlayTimer();
               }}
               className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-white/80 transition-colors hover:bg-white/20"

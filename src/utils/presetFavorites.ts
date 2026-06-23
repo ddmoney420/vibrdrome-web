@@ -113,3 +113,46 @@ export function previousFavoriteIndex(favIndices: number[], currentIndex: number
   }
   return favIndices[favIndices.length - 1];
 }
+
+const PROJECTM_PREFIX = 'projectm:';
+const BUTTERCHURN_PREFIX = 'butterchurn:';
+
+/**
+ * Identify favorite keys that are *positively* orphaned — i.e. their preset is
+ * known to be absent from a **loaded** corpus for that key's engine.
+ *
+ * Safety is the entire point. A key is flagged ONLY when its engine's corpus is
+ * actually present and non-empty. If a corpus is absent or empty (e.g. the
+ * butterchurn presets aren't loaded because projectM/WebGPU is active, or the
+ * manifest hasn't loaded yet), that engine's keys are treated as "not
+ * evaluable" and are NEVER flagged — so callers can't wipe the inactive
+ * engine's favorites or delete during a load race. Unknown prefixes are never
+ * flagged. Pure: does not mutate input, touch storage, or call store actions —
+ * it only reads the corpora explicitly passed in.
+ *
+ * - projectM keys (`projectm:${path}`): orphaned iff `projectmPaths` is provided
+ *   and non-empty and does not contain the stripped path.
+ * - butterchurn keys (`butterchurn:${name}`): orphaned iff `butterchurnNames` is
+ *   provided and non-empty and does not contain the stripped name.
+ */
+export function orphanedFavorites(
+  favoriteKeys: Iterable<string>,
+  corpora: { projectmPaths?: Set<string>; butterchurnNames?: Set<string> },
+): string[] {
+  const { projectmPaths, butterchurnNames } = corpora;
+  const orphans: string[] = [];
+  for (const key of favoriteKeys) {
+    if (key.startsWith(PROJECTM_PREFIX)) {
+      // Evaluate only against a loaded (present + non-empty) projectM corpus.
+      if (projectmPaths && projectmPaths.size > 0 && !projectmPaths.has(key.slice(PROJECTM_PREFIX.length))) {
+        orphans.push(key);
+      }
+    } else if (key.startsWith(BUTTERCHURN_PREFIX)) {
+      if (butterchurnNames && butterchurnNames.size > 0 && !butterchurnNames.has(key.slice(BUTTERCHURN_PREFIX.length))) {
+        orphans.push(key);
+      }
+    }
+    // Unknown prefix → never flagged (no accidental deletion semantics).
+  }
+  return orphans;
+}

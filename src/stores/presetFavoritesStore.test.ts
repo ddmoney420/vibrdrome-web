@@ -68,4 +68,61 @@ describe('presetFavoritesStore', () => {
     expect(loadFavorites().size).toBe(1); // non-strings filtered out
     expect(loadFavorites().has('projectm:ok')).toBe(true);
   });
+
+  describe('removeFavorites (bulk)', () => {
+    const seed = (keys: string[]) => {
+      const s = usePresetFavoritesStore.getState();
+      keys.forEach((k) => s.addFavorite(k));
+    };
+
+    it('removes exactly the requested keys and leaves the rest', () => {
+      seed(['projectm:a', 'projectm:b', 'projectm:c', 'butterchurn:x']);
+      usePresetFavoritesStore.getState().removeFavorites(['projectm:a', 'projectm:c']);
+      const keys = usePresetFavoritesStore.getState().favoriteKeys;
+      expect([...keys].sort()).toEqual(['butterchurn:x', 'projectm:b']);
+    });
+
+    it('does not throw when asked to remove absent keys, and leaves others intact', () => {
+      seed(['projectm:a', 'butterchurn:x']);
+      expect(() =>
+        usePresetFavoritesStore.getState().removeFavorites(['projectm:ghost', 'nope:none']),
+      ).not.toThrow();
+      expect([...usePresetFavoritesStore.getState().favoriteKeys].sort()).toEqual([
+        'butterchurn:x',
+        'projectm:a',
+      ]);
+    });
+
+    it('is a no-op for an empty iterable (state ref unchanged → no set())', () => {
+      seed(['projectm:a']);
+      const before = usePresetFavoritesStore.getState().favoriteKeys;
+      usePresetFavoritesStore.getState().removeFavorites([]);
+      expect(usePresetFavoritesStore.getState().favoriteKeys).toBe(before);
+    });
+
+    it('is a no-op when none of the keys are present (no state churn)', () => {
+      seed(['projectm:a']);
+      const before = usePresetFavoritesStore.getState().favoriteKeys;
+      usePresetFavoritesStore.getState().removeFavorites(['projectm:ghost']);
+      expect(usePresetFavoritesStore.getState().favoriteKeys).toBe(before);
+    });
+
+    it('persists the surviving keys once, in the versioned shape', () => {
+      seed(['projectm:a', 'projectm:b', 'butterchurn:x']);
+      usePresetFavoritesStore.getState().removeFavorites(['projectm:b']);
+      const raw = localStorage.getItem(STORAGE_KEY);
+      expect(raw).toBeTruthy();
+      const parsed = JSON.parse(raw!);
+      expect(parsed.v).toBe(1);
+      expect([...parsed.keys].sort()).toEqual(['butterchurn:x', 'projectm:a']);
+      // round-trips back into a Set with exactly the survivors
+      expect([...loadFavorites()].sort()).toEqual(['butterchurn:x', 'projectm:a']);
+    });
+
+    it('accepts a Set as input', () => {
+      seed(['projectm:a', 'projectm:b']);
+      usePresetFavoritesStore.getState().removeFavorites(new Set(['projectm:a']));
+      expect([...usePresetFavoritesStore.getState().favoriteKeys]).toEqual(['projectm:b']);
+    });
+  });
 });

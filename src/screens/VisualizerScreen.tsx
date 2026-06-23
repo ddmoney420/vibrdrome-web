@@ -1004,7 +1004,15 @@ export default function VisualizerScreen() {
         case ']': setVisualizerAutoAdvanceInterval(Math.min(60, visualizerAutoAdvanceInterval + 5)); resetOverlayTimer(); break;
         case 'k': case 'K': toggleFreeze(); break;
         case '.': stepFrame(); break;
-        case 'f': case 'F': toggleFps(); break;
+        case 'f': toggleFps(); break;
+        case 'F':
+          // Shift+F toggles favorite for the current preset (same path as the
+          // control-bar ☆/★ button). Ignore key-repeat to avoid flapping on hold.
+          if (!e.repeat && currentFavoriteKey) {
+            toggleFavorite(currentFavoriteKey);
+            resetOverlayTimer();
+          }
+          break;
         case '/':
           if (mode === 'milkdrop' && milkdropReady) {
             e.preventDefault();
@@ -1246,7 +1254,7 @@ export default function VisualizerScreen() {
             <button
               onClick={(e) => { e.stopPropagation(); if (currentFavoriteKey) toggleFavorite(currentFavoriteKey); resetOverlayTimer(); }}
               disabled={!currentFavoriteKey}
-              title={currentIsFavorite ? 'Unfavorite this preset' : 'Favorite this preset'}
+              title={currentIsFavorite ? 'Unfavorite this preset (⇧F)' : 'Favorite this preset (⇧F)'}
               aria-label={currentIsFavorite ? 'Unfavorite preset' : 'Favorite preset'}
               aria-pressed={currentIsFavorite}
               className={ctrlBtn(currentIsFavorite, !currentFavoriteKey)}
@@ -1274,7 +1282,7 @@ export default function VisualizerScreen() {
             >
               ★ Only
             </button>
-            <button onClick={(e) => { e.stopPropagation(); toggleFps(); }} title="FPS overlay (F)" className={ctrlBtn(showFps)}>
+            <button onClick={(e) => { e.stopPropagation(); toggleFps(); }} title="FPS overlay (f)" className={ctrlBtn(showFps)}>
               FPS
             </button>
             {visualizerShowTransport && (

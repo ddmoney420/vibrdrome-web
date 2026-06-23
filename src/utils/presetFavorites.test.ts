@@ -7,6 +7,7 @@ import {
   randomFavoriteIndex,
   nextFavoriteIndex,
   previousFavoriteIndex,
+  orphanedFavorites,
 } from './presetFavorites';
 import type { PresetIndexEntry } from '../types/presets';
 
@@ -142,5 +143,94 @@ describe('favoritedIndicesIn ascending order', () => {
     const keyForIndex = (i: number) => `k:${i}`;
     const favs = new Set(['k:4', 'k:1', 'k:3']); // out-of-order set
     expect(favoritedIndicesIn(names, favs, keyForIndex)).toEqual([1, 3, 4]); // ascending
+  });
+});
+
+describe('orphanedFavorites', () => {
+  const pmPaths = new Set(['packA/cool.milk', 'packB/warm.milk']);
+  const bcNames = new Set(['Flexi - mom', 'Geiss - Cosmic']);
+
+  it('does NOT flag a valid projectM key when the projectM corpus is loaded', () => {
+    expect(orphanedFavorites(['projectm:packA/cool.milk'], { projectmPaths: pmPaths })).toEqual([]);
+  });
+
+  it('detects an invalid projectM key when the projectM corpus is loaded', () => {
+    expect(orphanedFavorites(['projectm:packZ/gone.milk'], { projectmPaths: pmPaths })).toEqual([
+      'projectm:packZ/gone.milk',
+    ]);
+  });
+
+  it('does NOT evaluate projectM keys when projectmPaths is absent (corpus not loaded)', () => {
+    expect(orphanedFavorites(['projectm:packZ/gone.milk'], {})).toEqual([]);
+    expect(orphanedFavorites(['projectm:packZ/gone.milk'], { butterchurnNames: bcNames })).toEqual([]);
+  });
+
+  it('does NOT evaluate projectM keys when projectmPaths is empty (load race)', () => {
+    expect(orphanedFavorites(['projectm:packZ/gone.milk'], { projectmPaths: new Set() })).toEqual([]);
+  });
+
+  it('does NOT flag a valid butterchurn key when the butterchurn corpus is loaded', () => {
+    expect(orphanedFavorites(['butterchurn:Flexi - mom'], { butterchurnNames: bcNames })).toEqual([]);
+  });
+
+  it('detects an invalid butterchurn key when the butterchurn corpus is loaded', () => {
+    expect(orphanedFavorites(['butterchurn:Deleted - preset'], { butterchurnNames: bcNames })).toEqual([
+      'butterchurn:Deleted - preset',
+    ]);
+  });
+
+  it('does NOT evaluate butterchurn keys when butterchurnNames is absent (corpus not loaded)', () => {
+    expect(orphanedFavorites(['butterchurn:Deleted - preset'], {})).toEqual([]);
+    expect(orphanedFavorites(['butterchurn:Deleted - preset'], { projectmPaths: pmPaths })).toEqual([]);
+  });
+
+  it('does NOT evaluate butterchurn keys when butterchurnNames is empty (load race)', () => {
+    expect(orphanedFavorites(['butterchurn:Deleted - preset'], { butterchurnNames: new Set() })).toEqual([]);
+  });
+
+  it('with mixed favorites, only flags keys for engines whose corpus is loaded', () => {
+    // projectM corpus loaded, butterchurn corpus NOT loaded.
+    const favs = [
+      'projectm:packA/cool.milk', // valid pm → not flagged
+      'projectm:packZ/gone.milk', // invalid pm → flagged
+      'butterchurn:Flexi - mom', // bc corpus absent → not evaluable
+      'butterchurn:Deleted - preset', // bc corpus absent → not evaluable
+    ];
+    expect(orphanedFavorites(favs, { projectmPaths: pmPaths })).toEqual(['projectm:packZ/gone.milk']);
+  });
+
+  it('never flags inactive/absent-engine favorites even when they would be invalid', () => {
+    // A butterchurn-only session: projectM corpus absent. The (invalid-looking)
+    // projectM key must be left untouched — we cannot see its corpus.
+    expect(
+      orphanedFavorites(['projectm:packZ/gone.milk', 'butterchurn:Flexi - mom'], {
+        butterchurnNames: bcNames,
+      }),
+    ).toEqual([]);
+  });
+
+  it('does not mutate its inputs', () => {
+    const favs = ['projectm:packZ/gone.milk', 'butterchurn:Flexi - mom'];
+    const favsCopy = [...favs];
+    const pm = new Set(pmPaths);
+    const bc = new Set(bcNames);
+    orphanedFavorites(favs, { projectmPaths: pm, butterchurnNames: bc });
+    expect(favs).toEqual(favsCopy);
+    expect([...pm]).toEqual([...pmPaths]);
+    expect([...bc]).toEqual([...bcNames]);
+  });
+
+  it('never flags unknown-prefix keys', () => {
+    expect(
+      orphanedFavorites(['weird:thing', 'no-prefix', 'projectm:packZ/gone.milk'], {
+        projectmPaths: pmPaths,
+        butterchurnNames: bcNames,
+      }),
+    ).toEqual(['projectm:packZ/gone.milk']); // only the real pm orphan, never the unknowns
+  });
+
+  it('returns an empty array for an empty favorite set', () => {
+    expect(orphanedFavorites([], { projectmPaths: pmPaths, butterchurnNames: bcNames })).toEqual([]);
+    expect(orphanedFavorites(new Set<string>(), { projectmPaths: pmPaths })).toEqual([]);
   });
 });

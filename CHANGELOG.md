@@ -2,6 +2,25 @@
 
 All notable changes to Vibrdrome Web are documented here.
 
+## [1.9.0-beta.14] - 2026-06-21
+
+### Added
+- **Explicit cleanup for unavailable visualizer favorites** — tidy favorites whose presets are no longer in the loaded list.
+- **Safe orphaned-favorite detection helper** used by the cleanup.
+
+### Notes
+- Cleanup appears in PresetSearch **only when active-engine unavailable favorites are detected**.
+- Cleanup is **user-initiated and requires confirmation**.
+- Cleanup removes **only positively detected unavailable favorites for the active engine**.
+- **Inactive-engine favorites are not counted or removed.**
+- **Valid favorites are not removed.**
+- **Unknown-prefix favorites are not removed.**
+- **No automatic cleanup** on app load or search open.
+- Favorite storage shape remains `{ v: 1, keys: [...] }`.
+- **Search, ★ Only, next/previous, random, auto-advance, HUD ★, Shift+F, and `?preset=` are unchanged.**
+- No rendering, engine, crossfade, preset-bundle, dependency, workflow, or Dockerfile changes.
+- Deferred (not in this release): cross-device sync.
+
 ## [1.9.0-beta.13] - 2026-06-21
 
 ### Added

@@ -17,6 +17,7 @@ import {
   randomFavoriteIndex,
   nextFavoriteIndex,
   previousFavoriteIndex,
+  orphanedFavorites,
 } from '../utils/presetFavorites';
 import type { PresetIndexEntry } from '../types/presets';
 
@@ -338,6 +339,7 @@ export default function VisualizerScreen() {
   // Local preset favorites (engine-prefixed keys; persisted to localStorage).
   const favoriteKeys = usePresetFavoritesStore((s) => s.favoriteKeys);
   const toggleFavorite = usePresetFavoritesStore((s) => s.toggleFavorite);
+  const removeFavorites = usePresetFavoritesStore((s) => s.removeFavorites);
   const favoriteKeyForIndex = useCallback(
     (index: number) => resolveFavoriteKey(milkdropEngine, index, milkdropEntries, milkdropPresetNames),
     [milkdropEngine, milkdropEntries, milkdropPresetNames],
@@ -898,6 +900,30 @@ export default function VisualizerScreen() {
     [milkdropPresetNames, favoriteKeys, favoriteKeyForIndex],
   );
   const hasActiveFavorites = favoritedIndices.length > 0;
+
+  // Active-engine orphan favorites: keys whose preset is no longer in the loaded
+  // corpus FOR THE ACTIVE ENGINE only. We pass *only* the active engine's corpus
+  // to orphanedFavorites, so the inactive engine's keys are never evaluable and
+  // can never be counted or removed (no cross-engine wipe, no load-race wipe).
+  const computeOrphanFavorites = useCallback((): string[] => {
+    if (mode !== 'milkdrop' || !milkdropReady) return [];
+    if (milkdropEngine === 'projectm') {
+      return orphanedFavorites(favoriteKeys, { projectmPaths: new Set(milkdropEntries.map((e) => e.path)) });
+    }
+    if (milkdropEngine === 'butterchurn') {
+      return orphanedFavorites(favoriteKeys, { butterchurnNames: new Set(milkdropPresetNames) });
+    }
+    return [];
+  }, [mode, milkdropReady, milkdropEngine, milkdropEntries, milkdropPresetNames, favoriteKeys]);
+  const orphanFavoriteCount = useMemo(() => computeOrphanFavorites().length, [computeOrphanFavorites]);
+  const orphanEngineLabel =
+    milkdropEngine === 'projectm' ? 'projectM' : milkdropEngine === 'butterchurn' ? 'butterchurn' : undefined;
+  // Recompute fresh at click time so cleanup never acts on a stale list.
+  const handleCleanupOrphans = useCallback(() => {
+    const keys = computeOrphanFavorites();
+    if (keys.length > 0) removeFavorites(keys);
+  }, [computeOrphanFavorites, removeFavorites]);
+
   // Refs so the interval-captured auto-advance always reads current values
   // (favorites can change while it runs without re-subscribing the interval).
   const favoritesOnlyRef = useRef(visualizerFavoritesOnly);
@@ -1347,6 +1373,9 @@ export default function VisualizerScreen() {
             setPresetSearchOpen(false);
           }}
           onClose={() => setPresetSearchOpen(false)}
+          orphanCount={orphanFavoriteCount}
+          engineLabel={orphanEngineLabel}
+          onCleanupOrphans={handleCleanupOrphans}
         />
       )}
     </div>

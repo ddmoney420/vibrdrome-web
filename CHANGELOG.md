@@ -2,6 +2,21 @@
 
 All notable changes to Vibrdrome Web are documented here.
 
+## [1.9.0-beta.16] - 2026-06-22
+
+### Added
+- **Visualizer mode now persists across reloads** — your `shader` / `milkdrop` choice is remembered.
+
+### Notes
+- The selected `shader` or `milkdrop` mode is saved to `vibrdrome_visualizer_mode`.
+- First-run default remains `shader`.
+- Invalid persisted values fall back to `shader`.
+- No WebGPU-based auto-selection.
+- No default-mode product change.
+- No auth/password/token/encryption changes.
+- No rendering, engine, crossfade, preset-bundle, dependency, workflow, Dockerfile, projectM-rs, or `src/pmweb/*` changes.
+- Deferred: password-to-token auth storage hardening remains a separate future track.
+
 ## [1.9.0-beta.15] - 2026-06-22
 
 ### Added

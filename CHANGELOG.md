@@ -2,6 +2,22 @@
 
 All notable changes to Vibrdrome Web are documented here.
 
+## [1.9.0-beta.13] - 2026-06-21
+
+### Added
+- **`Shift+F` keyboard shortcut** to favorite / unfavorite the current visualizer preset.
+
+### Notes
+- Lowercase `f` still toggles the FPS overlay.
+- The shortcut uses the existing favorite-toggle path.
+- Repeated `Shift+F` keydown events are ignored to avoid rapid toggle flapping.
+- Shortcut handling is suppressed while typing in inputs / search.
+- The control-bar favorite button now advertises `(⇧F)`.
+- **Favorite identity/storage is unchanged.**
+- **Search, ★ Only, next/previous, random, auto-advance, and `?preset=` are unchanged.**
+- No rendering, engine, crossfade, preset-bundle, dependency, workflow, or Dockerfile changes.
+- Deferred (not in this release): orphaned-favorite cleanup and cross-device sync.
+
 ## [1.9.0-beta.12] - 2026-06-21
 
 ### Added

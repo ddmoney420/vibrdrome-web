@@ -6,6 +6,7 @@ import { usePlayerStore } from '../stores/playerStore';
 import { useEQStore } from '../stores/eqStore';
 import { isValidHex } from '../utils/color';
 import { exportSettings, importSettings } from '../utils/settingsIO';
+import { exportFavorites, importFavoritesMerge } from '../utils/favoritesIO';
 import { Header } from '../components/common';
 import ThemePicker from '../components/settings/ThemePicker';
 
@@ -637,6 +638,37 @@ export default function SettingsScreen() {
                   className="rounded-lg border border-border px-4 py-2 text-sm text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-text-primary"
                 >
                   Import Settings
+                </button>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2 border-t border-border pt-3">
+                <button
+                  onClick={() => exportFavorites()}
+                  className="rounded-lg border border-border px-4 py-2 text-sm text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-text-primary"
+                >
+                  Export visualizer favorites
+                </button>
+                <button
+                  onClick={() => {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = '.json';
+                    input.onchange = async () => {
+                      const file = input.files?.[0];
+                      if (!file) return;
+                      try {
+                        const result = await importFavoritesMerge(file);
+                        alert(
+                          `Imported favorites: added ${result.added}, ${result.alreadyPresent} already present.`,
+                        );
+                      } catch {
+                        alert('Could not import favorites. Choose a valid Vibrdrome favorites export.');
+                      }
+                    };
+                    input.click();
+                  }}
+                  className="rounded-lg border border-border px-4 py-2 text-sm text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-text-primary"
+                >
+                  Import visualizer favorites
                 </button>
               </div>
             </div>

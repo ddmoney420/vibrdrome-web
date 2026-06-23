@@ -26,6 +26,12 @@ interface PresetSearchProps {
   /** Called with the ORIGINAL index into `names` for the chosen preset. */
   onSelect: (index: number) => void;
   onClose: () => void;
+  /** Count of active-engine favorites that no longer resolve to a preset. */
+  orphanCount?: number;
+  /** Active engine label for the cleanup confirmation copy (e.g. 'projectM'). */
+  engineLabel?: string;
+  /** Remove the active-engine orphans (caller recomputes + bulk-removes). */
+  onCleanupOrphans?: () => void;
 }
 
 export default function PresetSearch({
@@ -35,10 +41,14 @@ export default function PresetSearch({
   onToggleFavorite,
   onSelect,
   onClose,
+  orphanCount = 0,
+  engineLabel,
+  onCleanupOrphans,
 }: PresetSearchProps) {
   const [query, setQuery] = useState('');
   const [highlight, setHighlight] = useState(0);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [confirmingCleanup, setConfirmingCleanup] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
@@ -208,6 +218,51 @@ export default function PresetSearch({
         {overflow > 0 && (
           <div className="border-t border-white/10 px-4 py-2 text-xs text-white/50">
             Showing {shown.length} of {matches.length} — refine your search to narrow results.
+          </div>
+        )}
+        {orphanCount > 0 && (
+          <div className="border-t border-white/10 px-4 py-2 text-xs">
+            {!confirmingCleanup ? (
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-white/50">
+                  {orphanCount === 1 ? '1 unavailable favorite' : `${orphanCount} unavailable favorites`}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setConfirmingCleanup(true)}
+                  className="shrink-0 rounded-full bg-white/10 px-3 py-1 text-white/70 hover:text-white"
+                >
+                  Clean up unavailable
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <span className="text-white/70">
+                  {`Remove ${orphanCount} unavailable ${engineLabel ? `${engineLabel} ` : ''}favorite${
+                    orphanCount === 1 ? '' : 's'
+                  } from this device? This only removes favorites that no longer match the loaded preset list.`}
+                </span>
+                <div className="flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingCleanup(false)}
+                    className="rounded-full bg-white/10 px-3 py-1 text-white/70 hover:text-white"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onCleanupOrphans?.();
+                      setConfirmingCleanup(false);
+                    }}
+                    className="rounded-full bg-red-500/30 px-3 py-1 text-white hover:bg-red-500/40"
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

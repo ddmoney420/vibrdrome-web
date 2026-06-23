@@ -37,6 +37,7 @@ interface PresetFavoritesState {
   isFavorite: (key: string) => boolean;
   addFavorite: (key: string) => void;
   removeFavorite: (key: string) => void;
+  removeFavorites: (keys: Iterable<string>) => void;
   toggleFavorite: (key: string) => void;
 }
 
@@ -54,6 +55,18 @@ export const usePresetFavoritesStore = create<PresetFavoritesState>((set, get) =
     if (!get().favoriteKeys.has(key)) return;
     const next = new Set(get().favoriteKeys);
     next.delete(key);
+    persist(next);
+    set({ favoriteKeys: next });
+  },
+  // Atomic bulk removal (one persist + one state update). No-op if nothing in
+  // `keys` was actually present — used by explicit orphan cleanup.
+  removeFavorites: (keys) => {
+    const next = new Set(get().favoriteKeys);
+    let changed = false;
+    for (const key of keys) {
+      if (next.delete(key)) changed = true;
+    }
+    if (!changed) return;
     persist(next);
     set({ favoriteKeys: next });
   },

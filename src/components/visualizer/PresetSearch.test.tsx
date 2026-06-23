@@ -97,4 +97,79 @@ describe('PresetSearch', () => {
     fireEvent.click(screen.getByLabelText('Show favorites only'));
     expect(screen.getByText('No favorited presets yet')).toBeInTheDocument();
   });
+
+  // --- orphan cleanup affordance ---
+
+  it('hides the cleanup affordance when orphanCount is 0 or omitted', () => {
+    const { rerender } = renderSearch();
+    expect(screen.queryByText('Clean up unavailable')).not.toBeInTheDocument();
+    rerender(
+      <PresetSearch
+        names={NAMES}
+        favoriteKeys={new Set()}
+        favoriteKeyForIndex={(i) => `fav:${i}`}
+        onToggleFavorite={() => {}}
+        onSelect={() => {}}
+        onClose={() => {}}
+        orphanCount={0}
+      />,
+    );
+    expect(screen.queryByText('Clean up unavailable')).not.toBeInTheDocument();
+  });
+
+  it('shows a singular count label', () => {
+    renderSearch({ orphanCount: 1, engineLabel: 'projectM' });
+    expect(screen.getByText('1 unavailable favorite')).toBeInTheDocument();
+    expect(screen.getByText('Clean up unavailable')).toBeInTheDocument();
+  });
+
+  it('shows a plural count label', () => {
+    renderSearch({ orphanCount: 3, engineLabel: 'projectM' });
+    expect(screen.getByText('3 unavailable favorites')).toBeInTheDocument();
+  });
+
+  it('clicking "Clean up unavailable" reveals the confirmation and does NOT delete', () => {
+    const onCleanupOrphans = vi.fn();
+    renderSearch({ orphanCount: 1, engineLabel: 'projectM', onCleanupOrphans });
+    fireEvent.click(screen.getByText('Clean up unavailable'));
+    expect(screen.getByText('Cancel')).toBeInTheDocument();
+    expect(screen.getByText('Remove')).toBeInTheDocument();
+    expect(onCleanupOrphans).not.toHaveBeenCalled(); // first click never deletes
+  });
+
+  it('confirmation text includes the engine label and count', () => {
+    renderSearch({ orphanCount: 2, engineLabel: 'projectM' });
+    fireEvent.click(screen.getByText('Clean up unavailable'));
+    expect(
+      screen.getByText(/Remove 2 unavailable projectM favorites from this device\?/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/only removes favorites that no longer match the loaded preset list/),
+    ).toBeInTheDocument();
+  });
+
+  it('Cancel hides the confirmation and calls nothing', () => {
+    const onCleanupOrphans = vi.fn();
+    renderSearch({ orphanCount: 1, engineLabel: 'projectM', onCleanupOrphans });
+    fireEvent.click(screen.getByText('Clean up unavailable'));
+    fireEvent.click(screen.getByText('Cancel'));
+    expect(onCleanupOrphans).not.toHaveBeenCalled();
+    expect(screen.queryByText('Remove')).not.toBeInTheDocument();
+    expect(screen.getByText('Clean up unavailable')).toBeInTheDocument(); // back to the affordance
+  });
+
+  it('Remove calls onCleanupOrphans exactly once', () => {
+    const onCleanupOrphans = vi.fn();
+    renderSearch({ orphanCount: 1, engineLabel: 'projectM', onCleanupOrphans });
+    fireEvent.click(screen.getByText('Clean up unavailable'));
+    fireEvent.click(screen.getByText('Remove'));
+    expect(onCleanupOrphans).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps normal row-star behavior unchanged when the cleanup affordance is present', () => {
+    const onToggleFavorite = vi.fn();
+    renderSearch({ orphanCount: 1, engineLabel: 'projectM', onToggleFavorite });
+    fireEvent.click(screen.getAllByLabelText('Favorite preset')[0]);
+    expect(onToggleFavorite).toHaveBeenCalledWith('fav:0');
+  });
 });

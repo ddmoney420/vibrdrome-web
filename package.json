@@ -1,7 +1,7 @@
 {
   "name": "vibrdrome-web",
   "private": true,
-  "version": "1.9.0-beta.12",
+  "version": "1.9.0-beta.13",
   "type": "module",
   "scripts": {
     "dev": "vite",

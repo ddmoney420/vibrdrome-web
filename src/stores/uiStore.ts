@@ -21,6 +21,7 @@ const VIS_TRANSITION_POLISH_KEY = 'vibrdrome_visualizer_transition_polish';
 const VIS_PARTICLES_KEY = 'vibrdrome_visualizer_particles';
 const VIS_PIN_CONTROLS_KEY = 'vibrdrome_visualizer_pin_controls';
 const VIS_PRESET_TRANSITION_KEY = 'vibrdrome_visualizer_preset_transition';
+const VIS_MODE_KEY = 'vibrdrome_visualizer_mode';
 const DEFAULT_ACCENT = '#8b5cf6';
 
 type Theme = 'system' | 'dark' | 'light' | 'apple' | 'apple-dark' | 'retro' | 'terminal' | 'midnight' | 'sunset';
@@ -83,6 +84,8 @@ interface UIState {
   setVisualizerPinControls: (value: boolean) => void;
   visualizerPresetTransition: 'hard-cut' | 'fade';
   setVisualizerPresetTransition: (value: 'hard-cut' | 'fade') => void;
+  visualizerMode: 'shader' | 'milkdrop';
+  setVisualizerMode: (value: 'shader' | 'milkdrop') => void;
 
   castConnected: boolean;
   setCastConnected: (connected: boolean) => void;
@@ -281,6 +284,17 @@ export const useUIStore = create<UIState>((set) => ({
   setVisualizerPresetTransition: (value) => {
     try { localStorage.setItem(VIS_PRESET_TRANSITION_KEY, value); } catch { /* ignore */ }
     set({ visualizerPresetTransition: value });
+  },
+
+  // Last-selected visualizer engine: 'shader' (default) or 'milkdrop'. Persisted
+  // so the choice survives reloads; only those two values are accepted.
+  visualizerMode: (() => {
+    try { return localStorage.getItem(VIS_MODE_KEY) === 'milkdrop' ? 'milkdrop' : 'shader'; }
+    catch { return 'shader'; }
+  })(),
+  setVisualizerMode: (value) => {
+    try { localStorage.setItem(VIS_MODE_KEY, value); } catch { /* ignore */ }
+    set({ visualizerMode: value });
   },
 
   castConnected: false,

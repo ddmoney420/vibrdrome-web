@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { useUIStore } from './uiStore';
 
 beforeEach(() => {
@@ -132,5 +132,62 @@ describe('uiStore', () => {
       useUIStore.getState().setVisualizerFavoritesOnly(false);
       expect(useUIStore.getState().visualizerFavoritesOnly).toBe(false);
     });
+  });
+});
+
+// visualizerMode persistence: the init reads localStorage at module-load time,
+// so the load/fallback cases re-import the module with a stubbed localStorage.
+describe('uiStore visualizerMode persistence', () => {
+  const MODE_KEY = 'vibrdrome_visualizer_mode';
+  const stub = (initial: Record<string, string> = {}) => {
+    const backing: Record<string, string> = { ...initial };
+    vi.stubGlobal('localStorage', {
+      getItem: (k: string) => (k in backing ? backing[k] : null),
+      setItem: (k: string, v: string) => { backing[k] = String(v); },
+      removeItem: (k: string) => { delete backing[k]; },
+      clear: () => { for (const k of Object.keys(backing)) delete backing[k]; },
+    });
+    return backing;
+  };
+  const freshStore = async () => {
+    vi.resetModules();
+    return (await import('./uiStore')).useUIStore;
+  };
+  afterEach(() => { vi.unstubAllGlobals(); vi.resetModules(); });
+
+  it('defaults to shader when nothing is persisted', async () => {
+    stub({});
+    expect((await freshStore()).getState().visualizerMode).toBe('shader');
+  });
+
+  it('loads a persisted milkdrop value', async () => {
+    stub({ [MODE_KEY]: 'milkdrop' });
+    expect((await freshStore()).getState().visualizerMode).toBe('milkdrop');
+  });
+
+  it('loads a persisted shader value', async () => {
+    stub({ [MODE_KEY]: 'shader' });
+    expect((await freshStore()).getState().visualizerMode).toBe('shader');
+  });
+
+  it('falls back to shader for an invalid persisted value', async () => {
+    stub({ [MODE_KEY]: 'bogus-engine' });
+    expect((await freshStore()).getState().visualizerMode).toBe('shader');
+  });
+
+  it('setter persists milkdrop', async () => {
+    const backing = stub({});
+    const store = await freshStore();
+    store.getState().setVisualizerMode('milkdrop');
+    expect(store.getState().visualizerMode).toBe('milkdrop');
+    expect(backing[MODE_KEY]).toBe('milkdrop');
+  });
+
+  it('setter persists shader', async () => {
+    const backing = stub({ [MODE_KEY]: 'milkdrop' });
+    const store = await freshStore();
+    store.getState().setVisualizerMode('shader');
+    expect(store.getState().visualizerMode).toBe('shader');
+    expect(backing[MODE_KEY]).toBe('shader');
   });
 });

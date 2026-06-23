@@ -36,6 +36,7 @@ interface PresetFavoritesState {
   favoriteKeys: Set<string>;
   isFavorite: (key: string) => boolean;
   addFavorite: (key: string) => void;
+  addFavorites: (keys: Iterable<string>) => void;
   removeFavorite: (key: string) => void;
   removeFavorites: (keys: Iterable<string>) => void;
   toggleFavorite: (key: string) => void;
@@ -48,6 +49,21 @@ export const usePresetFavoritesStore = create<PresetFavoritesState>((set, get) =
     if (get().favoriteKeys.has(key)) return;
     const next = new Set(get().favoriteKeys);
     next.add(key);
+    persist(next);
+    set({ favoriteKeys: next });
+  },
+  // Atomic bulk union (one persist + one state update). No-op if every key is
+  // already present — used by favorites import (union merge, never removes).
+  addFavorites: (keys) => {
+    const next = new Set(get().favoriteKeys);
+    let changed = false;
+    for (const key of keys) {
+      if (!next.has(key)) {
+        next.add(key);
+        changed = true;
+      }
+    }
+    if (!changed) return;
     persist(next);
     set({ favoriteKeys: next });
   },

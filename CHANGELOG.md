@@ -2,6 +2,22 @@
 
 All notable changes to Vibrdrome Web are documented here.
 
+## [1.9.0-beta.15] - 2026-06-22
+
+### Added
+- **Visualizer favorites export / import** — move your visualizer favorites between devices via a JSON file.
+
+### Notes
+- Export is favorites-scoped and writes a JSON file containing **only visualizer favorite keys**.
+- Export **excludes server URL, username, password, `vibrdrome_servers`, and all other settings**.
+- Import **union-merges** favorites and **never removes or replaces** existing favorites.
+- Invalid or unsupported imports **fail safely without changing local favorites**.
+- The existing whole-settings export/import remains unchanged.
+- Favorite key identity and storage shape remain unchanged: `{ v: 1, keys: [...] }`.
+- No backend, account system, automatic sync, Cloudflare Worker/KV/D1/R2, or Subsonic/Navidrome metadata/playlist sync.
+- No rendering, engine, crossfade, preset-bundle, dependency, workflow, Dockerfile, projectM-rs, or `src/pmweb/*` changes.
+- Deferred: true backend cross-device sync remains intentionally deferred.
+
 ## [1.9.0-beta.14] - 2026-06-21
 
 ### Added

@@ -125,4 +125,52 @@ describe('presetFavoritesStore', () => {
       expect([...usePresetFavoritesStore.getState().favoriteKeys]).toEqual(['projectm:b']);
     });
   });
+
+  describe('addFavorites (bulk union)', () => {
+    const seed = (keys: string[]) => {
+      const s = usePresetFavoritesStore.getState();
+      keys.forEach((k) => s.addFavorite(k));
+    };
+
+    it('adds only the missing keys and leaves existing keys intact', () => {
+      seed(['projectm:a', 'butterchurn:x']);
+      usePresetFavoritesStore.getState().addFavorites(['projectm:a', 'projectm:b', 'butterchurn:y']);
+      expect([...usePresetFavoritesStore.getState().favoriteKeys].sort()).toEqual([
+        'butterchurn:x',
+        'butterchurn:y',
+        'projectm:a',
+        'projectm:b',
+      ]);
+    });
+
+    it('is a no-op for an empty iterable (state ref unchanged → no set())', () => {
+      seed(['projectm:a']);
+      const before = usePresetFavoritesStore.getState().favoriteKeys;
+      usePresetFavoritesStore.getState().addFavorites([]);
+      expect(usePresetFavoritesStore.getState().favoriteKeys).toBe(before);
+    });
+
+    it('is a no-op when all keys already exist (no churn)', () => {
+      seed(['projectm:a', 'projectm:b']);
+      const before = usePresetFavoritesStore.getState().favoriteKeys;
+      usePresetFavoritesStore.getState().addFavorites(['projectm:a', 'projectm:b']);
+      expect(usePresetFavoritesStore.getState().favoriteKeys).toBe(before);
+    });
+
+    it('persists once, round-tripping the union in the versioned shape', () => {
+      seed(['projectm:a']);
+      usePresetFavoritesStore.getState().addFavorites(['butterchurn:x']);
+      const raw = localStorage.getItem(STORAGE_KEY);
+      const parsed = JSON.parse(raw!);
+      expect(parsed.v).toBe(1);
+      expect([...parsed.keys].sort()).toEqual(['butterchurn:x', 'projectm:a']);
+      expect([...loadFavorites()].sort()).toEqual(['butterchurn:x', 'projectm:a']);
+    });
+
+    it('accepts a Set as input', () => {
+      seed(['projectm:a']);
+      usePresetFavoritesStore.getState().addFavorites(new Set(['projectm:b']));
+      expect([...usePresetFavoritesStore.getState().favoriteKeys].sort()).toEqual(['projectm:a', 'projectm:b']);
+    });
+  });
 });

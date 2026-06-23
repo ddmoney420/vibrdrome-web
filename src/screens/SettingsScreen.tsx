@@ -6,6 +6,7 @@ import { usePlayerStore } from '../stores/playerStore';
 import { useEQStore } from '../stores/eqStore';
 import { isValidHex } from '../utils/color';
 import { exportSettings, importSettings } from '../utils/settingsIO';
+import { exportFavorites, importFavoritesMerge } from '../utils/favoritesIO';
 import { Header } from '../components/common';
 import ThemePicker from '../components/settings/ThemePicker';
 
@@ -639,6 +640,37 @@ export default function SettingsScreen() {
                   Import Settings
                 </button>
               </div>
+              <div className="mt-3 flex flex-wrap gap-2 border-t border-border pt-3">
+                <button
+                  onClick={() => exportFavorites()}
+                  className="rounded-lg border border-border px-4 py-2 text-sm text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-text-primary"
+                >
+                  Export visualizer favorites
+                </button>
+                <button
+                  onClick={() => {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = '.json';
+                    input.onchange = async () => {
+                      const file = input.files?.[0];
+                      if (!file) return;
+                      try {
+                        const result = await importFavoritesMerge(file);
+                        alert(
+                          `Imported favorites: added ${result.added}, ${result.alreadyPresent} already present.`,
+                        );
+                      } catch {
+                        alert('Could not import favorites. Choose a valid Vibrdrome favorites export.');
+                      }
+                    };
+                    input.click();
+                  }}
+                  className="rounded-lg border border-border px-4 py-2 text-sm text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-text-primary"
+                >
+                  Import visualizer favorites
+                </button>
+              </div>
             </div>
           </section>
 
@@ -648,7 +680,7 @@ export default function SettingsScreen() {
               About
             </h2>
             <div className="space-y-3 rounded-lg bg-bg-secondary p-4">
-              <p className="text-sm text-text-muted">Vibrdrome Web v1.9.0-beta.14</p>
+              <p className="text-sm text-text-muted">Vibrdrome Web v1.9.0-beta.15</p>
               <div className="border-t border-border pt-3">
                 <p className="text-xs font-medium text-text-secondary">Open-source components</p>
                 <p className="mt-1 text-xs text-text-muted">

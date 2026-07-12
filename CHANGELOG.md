@@ -8,13 +8,20 @@ All notable changes to Vibrdrome Web are documented here.
 - **Folder browsing** — opening a library folder no longer fails with "Folder not found."
 - **Music folder picker** — the active-library checkmark now persists correctly across reloads.
 
+### Security
+- **Alpine runtime package floors raised** to clear four HIGH findings reported by Trivy:
+  - `libexpat >= 2.8.2-r0` — CVE-2026-56131, CVE-2026-56407, CVE-2026-56408
+  - `c-ares >= 1.34.8-r0` — CVE-2026-33630
+- Both fixed packages come from the Alpine 3.23 main repository already configured in the
+  `nginx:alpine` base image. No repository, base image, or other Docker changes.
+
 ### Notes
 - Music folder IDs and directory IDs are separate namespaces in Subsonic. Library roots are now browsed with `getIndexes` on `/folders/:musicFolderId`; only the directory IDs it returns are passed to `getMusicDirectory` on `/folder/:folderId`.
 - `getIndexes` now returns the full `indexes` payload rather than just the index array, so spec-defined root-level file entries are preserved when a server returns them.
 - Music folder IDs are normalized to strings in `getMusicFolders`. Servers send them as JSON numbers (Navidrome `1`, Gonic `0`) while the type declared `string`, so strict comparisons never matched. Gonic uses id `0`, so these IDs must never be tested for truthiness.
 - Verified against live Navidrome 0.60.3 and Gonic 0.22.0.
 - No auth/password/token/encryption changes.
-- No visualizer, engine, preset, dependency, workflow, or Dockerfile changes.
+- No application dependency, workflow, visualizer, engine, or preset changes.
 - Fixes #92.
 
 ## [1.9.0-beta.16] - 2026-06-22

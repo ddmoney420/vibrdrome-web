@@ -2,6 +2,21 @@
 
 All notable changes to Vibrdrome Web are documented here.
 
+## [1.9.0-beta.17] - 2026-07-12
+
+### Fixed
+- **Folder browsing** — opening a library folder no longer fails with "Folder not found."
+- **Music folder picker** — the active-library checkmark now persists correctly across reloads.
+
+### Notes
+- Music folder IDs and directory IDs are separate namespaces in Subsonic. Library roots are now browsed with `getIndexes` on `/folders/:musicFolderId`; only the directory IDs it returns are passed to `getMusicDirectory` on `/folder/:folderId`.
+- `getIndexes` now returns the full `indexes` payload rather than just the index array, so spec-defined root-level file entries are preserved when a server returns them.
+- Music folder IDs are normalized to strings in `getMusicFolders`. Servers send them as JSON numbers (Navidrome `1`, Gonic `0`) while the type declared `string`, so strict comparisons never matched. Gonic uses id `0`, so these IDs must never be tested for truthiness.
+- Verified against live Navidrome 0.60.3 and Gonic 0.22.0.
+- No auth/password/token/encryption changes.
+- No visualizer, engine, preset, dependency, workflow, or Dockerfile changes.
+- Fixes #92.
+
 ## [1.9.0-beta.16] - 2026-06-22
 
 ### Added

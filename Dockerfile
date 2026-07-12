@@ -14,10 +14,15 @@ LABEL org.opencontainers.image.title="Vibrdrome Web" \
 
 # Pull in latest Alpine security patches so the image isn't pinned to whatever
 # nginx:alpine shipped with (e.g. CVE-2026-27135 in nghttp2-libs).
-# Explicitly ensure libexpat >= 2.8.1-r0 to clear CVE-2026-45186 (HIGH, DoS via
-# crafted XML) — the fixed package is in the Alpine 3.23 main repo. The explicit
-# line also busts stale CI build cache so the upgrade actually re-runs.
-RUN apk upgrade --no-cache && apk add --no-cache "libexpat>=2.8.1-r0"
+# Explicit floors for packages Trivy flags HIGH, both fixed in the Alpine 3.23
+# main repo already configured in the base image:
+#   libexpat >= 2.8.2-r0 — CVE-2026-56131 (missing handler call depth tracking),
+#                          CVE-2026-56407 and CVE-2026-56408 (integer overflows)
+#   c-ares   >= 1.34.8-r0 — CVE-2026-33630 (use-after-free / double-free in
+#                          query-completion handling)
+# The explicit floors also bust stale CI build cache so the upgrade re-runs.
+RUN apk upgrade --no-cache && \
+    apk add --no-cache "libexpat>=2.8.2-r0" "c-ares>=1.34.8-r0"
 
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf

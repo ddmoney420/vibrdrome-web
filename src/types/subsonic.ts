@@ -148,6 +148,12 @@ export interface MusicDirectory {
   child?: DirectoryChild[];
 }
 
+/** Top level of a music folder: indexed directories plus any loose files at the root. */
+export interface Indexes {
+  index?: ArtistIndex[];
+  child?: DirectoryChild[];
+}
+
 export interface DirectoryChild {
   id: string;
   title?: string;

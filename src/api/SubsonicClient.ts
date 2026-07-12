@@ -5,6 +5,7 @@ import type {
   Artist,
   ArtistIndex,
   Genre,
+  Indexes,
   InternetRadioStation,
   MusicDirectory,
   MusicFolder,
@@ -202,14 +203,20 @@ class SubsonicClient {
 
   async getMusicFolders(): Promise<MusicFolder[]> {
     const data = await this.request<{ musicFolders: { musicFolder?: MusicFolder[] } }>('getMusicFolders');
-    return data.musicFolders?.musicFolder ?? [];
+    // Servers send these IDs as JSON numbers (Navidrome 1, Gonic 0) while every
+    // other ID in the API is a string. Normalize so comparisons and route params
+    // don't have to care. Note Gonic uses 0, so never test these IDs for truthiness.
+    return (data.musicFolders?.musicFolder ?? []).map((f) => ({ ...f, id: String(f.id) }));
   }
 
-  async getIndexes(musicFolderId?: string): Promise<ArtistIndex[]> {
-    const data = await this.request<{ indexes: { index?: ArtistIndex[] } }>('getIndexes', {
-      musicFolderId,
-    });
-    return data.indexes?.index ?? [];
+  /**
+   * Top-level contents of a music folder. Music folder IDs are a separate namespace
+   * from directory IDs, so a library root must be browsed with this rather than
+   * getMusicDirectory.
+   */
+  async getIndexes(musicFolderId?: string): Promise<Indexes> {
+    const data = await this.request<{ indexes: Indexes }>('getIndexes', { musicFolderId });
+    return data.indexes ?? {};
   }
 
   async getMusicDirectory(id: string): Promise<MusicDirectory> {

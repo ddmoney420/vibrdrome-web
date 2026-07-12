@@ -206,6 +206,12 @@ export default function App() {
               path="/folders"
               element={isAuthenticated ? <FolderBrowserScreen /> : <Navigate to="/login" replace />}
             />
+            {/* Library root — browsed by music folder ID via getIndexes */}
+            <Route
+              path="/folders/:musicFolderId"
+              element={isAuthenticated ? <FolderDetailScreen /> : <Navigate to="/login" replace />}
+            />
+            {/* Any directory below the root — browsed by directory ID via getMusicDirectory */}
             <Route
               path="/folder/:folderId"
               element={isAuthenticated ? <FolderDetailScreen /> : <Navigate to="/login" replace />}

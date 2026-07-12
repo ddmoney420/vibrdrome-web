@@ -42,7 +42,7 @@ export default function FolderBrowserScreen() {
           {folders.map((folder) => (
             <button
               key={folder.id}
-              onClick={() => navigate(`/folder/${folder.id}`)}
+              onClick={() => navigate(`/folders/${folder.id}`)}
               className="flex flex-col items-center gap-2 rounded-xl bg-bg-secondary p-5 text-center transition-colors hover:bg-bg-tertiary"
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-10 w-10 text-accent">
